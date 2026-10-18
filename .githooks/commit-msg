@@ -1,0 +1,35 @@
+#!/bin/sh
+# Valida a mensagem de commit no padrão Conventional Commits.
+# Uso: commit-msg <arquivo-da-mensagem>
+
+set -eu
+
+TYPES="feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
+PATTERN="^($TYPES)(\([a-z0-9._/-]+\))?!?: [^ ].*"
+MAX_LENGTH=100
+
+header=$(grep -v '^#' "$1" | sed '/^[[:space:]]*$/d' | head -n 1)
+
+case "$header" in
+  "Merge "* | "Revert \""* | "fixup! "* | "squash! "* | "amend! "*)
+    exit 0
+    ;;
+esac
+
+if ! printf '%s\n' "$header" | grep -Eq "$PATTERN"; then
+  cat >&2 <<EOF
+Mensagem de commit fora do padrão Conventional Commits:
+
+  $header
+
+Formato: <tipo>(<escopo opcional>): <descrição>
+Tipos:   feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+Exemplo: feat(queue): retomar fila após reinício
+EOF
+  exit 1
+fi
+
+if [ "${#header}" -gt "$MAX_LENGTH" ]; then
+  echo "A primeira linha do commit tem ${#header} caracteres (máximo: $MAX_LENGTH)." >&2
+  exit 1
+fi

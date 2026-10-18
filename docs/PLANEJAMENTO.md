@@ -643,10 +643,10 @@ Voxel/
 ### 12.1 Qualidade de código
 
 - Rust: `rustfmt`, `clippy` (avisos tratados como erro).
-- TypeScript: ESLint + Prettier (ou Biome), `tsc --noEmit` estrito.
-- Python: `ruff` (lint + formatação), `pyright` ou `mypy`.
-- Hooks de pré-commit para rodar formatação e lint.
-- Commits no padrão Conventional Commits.
+- TypeScript: Biome (lint + formatação), `tsc` estrito.
+- Python: `ruff` (lint + formatação), `mypy` estrito.
+- Hooks do git em `.githooks/` (ativados com `make hooks`): `pre-commit` roda formatação e lint; `commit-msg` valida o padrão.
+- Commits no padrão Conventional Commits (regras no README).
 
 ### 12.2 CI (GitHub Actions)
 

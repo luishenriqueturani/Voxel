@@ -25,11 +25,11 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Qualidade de código
 
-- [ ] Rust: `rustfmt` + `clippy` com avisos como erro
-- [ ] TypeScript: ESLint + Prettier (ou Biome) e `tsc --noEmit` estrito
-- [ ] Python: `ruff` (lint + formatação) e `pyright`/`mypy`
-- [ ] Hooks de pré-commit rodando formatação e lint
-- [ ] Definir padrão Conventional Commits (documentar no README)
+- [x] Rust: `rustfmt` + `clippy` com avisos como erro
+- [x] TypeScript: Biome (lint + formatação) e `tsc` estrito
+- [x] Python: `ruff` (lint + formatação) e `mypy` estrito
+- [x] Hooks de pré-commit rodando formatação e lint
+- [x] Definir padrão Conventional Commits (documentar no README e validar no hook `commit-msg`)
 
 ### Testes e CI
 

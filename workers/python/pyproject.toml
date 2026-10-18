@@ -8,7 +8,12 @@ requires-python = ">=3.12,<3.13"
 dependencies = []
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-mock>=3", "ruff>=0.6"]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=8",
+    "pytest-mock>=3",
+    "ruff>=0.6",
+]
 
 [build-system]
 requires = ["uv_build>=0.8,<1"]
@@ -20,3 +25,24 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "W",   # pycodestyle (avisos)
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "SIM", # simplify
+    "C4",  # comprehensions
+    "PTH", # pathlib
+    "PT",  # pytest
+    "RUF", # regras do ruff
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
