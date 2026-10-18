@@ -657,7 +657,7 @@ Voxel/
 ### 12.3 Distribuição
 
 - Código no GitHub, licença MIT. Sem instaladores oficiais, sem atualização automática.
-- **Compilar deve ser fácil:** um único comando (ex.: `just build` ou `make`) compila o frontend, o core e o stable-diffusion.cpp com Vulkan.
+- **Compilar deve ser fácil:** um único comando (`make build`) compila o frontend, o core e o stable-diffusion.cpp com Vulkan.
 - README com as dependências de sistema para as principais famílias de distribuição (Arch/CachyOS, Debian/Ubuntu, Fedora) e como verificar se o Vulkan está funcionando (`vulkaninfo`).
 - Modelos e ambiente Python são baixados sob demanda pelo app, nunca versionados no repositório.
 - **[Sugestão]** Futuramente, se houver interesse, publicar um `PKGBUILD` (AUR) ou AppImage gerado pelo CI nas releases do GitHub — sem compromisso.

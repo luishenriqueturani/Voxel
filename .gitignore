@@ -1,0 +1,43 @@
+# Rust
+/target/
+
+# Tauri
+apps/desktop/src-tauri/gen/schemas
+
+# Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+coverage/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# stable-diffusion.cpp
+workers/sdcpp/build/
+workers/sdcpp/stable-diffusion.cpp/
+
+# Modelos (nunca versionados)
+models/
+*.safetensors
+*.gguf
+*.ckpt
+*.onnx
+
+# Logs
+*.log
+
+# Editores e sistema
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.sw?
+.DS_Store

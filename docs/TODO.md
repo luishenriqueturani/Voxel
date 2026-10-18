@@ -16,12 +16,12 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Repositório e ferramentas
 
-- [ ] Criar estrutura do monorepo (`apps/desktop`, `crates/`, `workers/python`, `workers/sdcpp`, `protocol/`, `catalog/`) (§7.7)
-- [ ] Inicializar app Tauri 2 com React + TypeScript + Vite em `apps/desktop`
-- [ ] Configurar workspace Cargo com os crates `hardware`, `queue`, `models`, `imaging`, `logging`, `protocol`
-- [ ] Inicializar projeto Python em `workers/python` com `uv` (`pyproject.toml` + `uv.lock`, Python 3.12)
-- [ ] Criar comando único de build e tarefas comuns (`just` ou `make`): `build`, `dev`, `test`, `lint`, `fmt` (§12.3)
-- [ ] Atualizar `.gitignore` (target, node_modules, .venv, builds do sd.cpp, modelos)
+- [x] Criar estrutura do monorepo (`apps/desktop`, `crates/`, `workers/python`, `workers/sdcpp`, `protocol/`, `catalog/`) (§7.7)
+- [x] Inicializar app Tauri 2 com React + TypeScript + Vite em `apps/desktop` (gerenciador de pacotes: bun)
+- [x] Configurar workspace Cargo com os crates `hardware`, `queue`, `models`, `imaging`, `logging`, `protocol`
+- [x] Inicializar projeto Python em `workers/python` com `uv` (`pyproject.toml` + `uv.lock`, Python 3.12)
+- [x] Criar comando único de build e tarefas comuns (Makefile): `install`, `dev`, `build`, `test`, `lint`, `fmt`, `fmt-check`, `clean` (§12.3)
+- [x] Atualizar `.gitignore` (target, node_modules, .venv, builds do sd.cpp, modelos)
 
 ### Qualidade de código
 
