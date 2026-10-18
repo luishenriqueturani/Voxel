@@ -9,5 +9,9 @@ authors.workspace = true
 
 [dependencies]
 
+[dev-dependencies]
+insta.workspace = true
+mockall.workspace = true
+
 [lints]
 workspace = true

@@ -20,6 +20,14 @@ sudo pacman -S --needed base-devel webkit2gtk-4.1 libappindicator-gtk3 librsvg o
 
 Para outras distribuições, veja os [pré-requisitos do Tauri](https://tauri.app/start/prerequisites/#linux).
 
+Para desenvolver (testes, cobertura e testes ponta a ponta):
+
+```sh
+rustup component add llvm-tools-preview
+cargo install --locked cargo-nextest cargo-llvm-cov tauri-driver
+sudo pacman -S --needed webkitgtk-6.0   # fornece o WebKitWebDriver
+```
+
 ## Compilando e rodando
 
 ```sh
@@ -32,7 +40,9 @@ make build     # compila o app em target/release/voxel
 
 | Comando | O que faz |
 | --- | --- |
-| `make test` | Roda os testes de todas as camadas |
+| `make test` | Roda os testes unitários de todas as camadas |
+| `make coverage` | Roda os testes exigindo cobertura mínima de 80% em cada camada |
+| `make e2e` | Compila o app em modo debug e roda os testes ponta a ponta (WebdriverIO + `tauri-driver`) |
 | `make lint` | Clippy, TypeScript + Biome, ruff + mypy |
 | `make fmt` | Formata o código (rustfmt, Biome, ruff) |
 | `make fmt-check` | Verifica a formatação sem alterar arquivos |

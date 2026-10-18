@@ -33,12 +33,13 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Testes e CI
 
-- [ ] Configurar Vitest + Testing Library no frontend
-- [ ] Configurar `cargo test` / `cargo-nextest`, `mockall` e `insta` no Rust
-- [ ] Configurar pytest + `pytest-mock` no worker Python
-- [ ] Configurar relatório de cobertura nas três linguagens com mínimo por camada (ex.: 80%)
-- [ ] Configurar E2E com WebdriverIO + `tauri-driver`
-- [ ] Workflow do GitHub Actions (Linux): lint → testes unitários → contrato → E2E → build (§12.2)
+- [x] Configurar Vitest + Testing Library no frontend
+- [x] Configurar `cargo test` / `cargo-nextest`, `mockall` e `insta` no Rust
+- [x] Configurar pytest + `pytest-mock` no worker Python
+- [x] Configurar relatório de cobertura nas três linguagens com mínimo de 80% por camada (`make coverage`)
+- [x] Configurar E2E com WebdriverIO + `tauri-driver` (`make e2e`)
+- [x] Workflow do GitHub Actions (Linux): formatação → lint → testes unitários com cobertura → E2E → build (§12.2)
+- [ ] Adicionar a etapa de testes de contrato ao CI quando o protocolo existir
 
 ### Interface base
 
@@ -53,7 +54,7 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Core e persistência
 
-- [ ] Resolver diretórios XDG (`~/.config/voxel`, `~/.local/share/voxel`, `~/.local/state/voxel`, `~/.cache/voxel`) (§10)
+- [x] Resolver diretórios XDG (`~/.config/voxel`, `~/.local/share/voxel`, `~/.local/state/voxel`, `~/.cache/voxel`) (§10)
 - [ ] Banco SQLite com sistema de migrações
 - [ ] Leitura/gravação de configurações do usuário
 
