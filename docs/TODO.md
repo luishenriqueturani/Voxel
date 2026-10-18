@@ -43,14 +43,14 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Interface base
 
-- [ ] Configurar Tailwind CSS e biblioteca de componentes (shadcn/ui ou Radix)
-- [ ] Configurar i18next com pt-BR e en, e troca de idioma em tempo de execução
-- [ ] Layout principal: painel esquerdo, área principal e barra de status (§3.1)
-- [ ] Painel esquerdo estático: prompt, prompt negativo recolhível, seleção de modelo, botão ⚙, opção 2D/3D, botão Gerar, lista de recentes (§3.2)
-- [ ] Menu nativo do Tauri com todos os menus e itens (ainda sem ação onde não houver funcionalidade) (§3.4)
-- [ ] Atalho `Ctrl+Enter` para gerar
-- [ ] Tema claro/escuro
-- [ ] Tela de configurações com as seções vazias (Geral, Hardware, Modelos, Ambiente 3D, Execução, Logs) (§3.5)
+- [x] Configurar Tailwind CSS e componentes com Radix (popover)
+- [x] Configurar i18next com pt-BR e en, e troca de idioma em tempo de execução
+- [x] Layout principal: painel esquerdo, área principal e barra de status (§3.1)
+- [x] Painel esquerdo estático: prompt, prompt negativo recolhível, seleção de modelo, botão ⚙, opção 2D/3D, botão Gerar, lista de recentes (§3.2)
+- [x] Menu nativo do Tauri com todos os menus e itens (ainda sem ação onde não houver funcionalidade) (§3.4)
+- [x] Atalho `Ctrl+Enter` para gerar
+- [x] Tema claro/escuro
+- [x] Tela de configurações com as seções vazias (Geral, Hardware, Modelos, Ambiente 3D, Execução, Logs) (§3.5)
 
 ### Core e persistência
 

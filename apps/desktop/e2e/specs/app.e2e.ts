@@ -1,7 +1,9 @@
 import { $, expect } from "@wdio/globals";
 
 describe("Janela principal", () => {
-  it("abre exibindo o nome da aplicação", async () => {
-    await expect($("h1")).toHaveText("Voxel");
+  it("abre com o painel de prompt", async () => {
+    await expect(browser).toHaveTitle("Voxel");
+    await expect($("#prompt")).toBeDisplayed();
+    await expect($("footer")).toBeDisplayed();
   });
 });
