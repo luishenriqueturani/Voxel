@@ -55,8 +55,8 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 ### Core e persistência
 
 - [x] Resolver diretórios XDG (`~/.config/voxel`, `~/.local/share/voxel`, `~/.local/state/voxel`, `~/.cache/voxel`) (§10)
-- [ ] Banco SQLite com sistema de migrações
-- [ ] Leitura/gravação de configurações do usuário
+- [x] Banco SQLite com sistema de migrações
+- [x] Leitura/gravação de configurações do usuário
 
 ### Logs e erros (§8)
 

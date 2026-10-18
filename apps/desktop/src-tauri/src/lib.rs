@@ -1,11 +1,13 @@
+mod db;
 mod menu;
 pub mod paths;
 
 use std::collections::HashMap;
 
+use db::{Database, SettingsUpdate, UserSettings};
 use menu::{build_menu, default_labels};
 use paths::AppPaths;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 /// Inicia a aplicação Tauri.
 ///
@@ -18,6 +20,9 @@ pub fn run() {
         .setup(|app| {
             let paths = AppPaths::from_env()?;
             paths.create_all()?;
+            let database = Database::open(&paths.data.join("voxel.db"))?;
+            database.migrate()?;
+            app.manage(database);
             app.manage(paths);
 
             let menu = build_menu(app.handle(), &default_labels())?;
@@ -31,7 +36,11 @@ pub fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![set_menu_labels])
+        .invoke_handler(tauri::generate_handler![
+            set_menu_labels,
+            get_settings,
+            update_settings
+        ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");
 }
@@ -42,4 +51,21 @@ fn set_menu_labels(app: AppHandle, labels: HashMap<String, String>) -> Result<()
     let menu = build_menu(&app, &labels).map_err(|error| error.to_string())?;
     app.set_menu(menu).map_err(|error| error.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn get_settings(database: State<'_, Database>) -> Result<UserSettings, String> {
+    database.settings().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn update_settings(
+    database: State<'_, Database>,
+    update: SettingsUpdate,
+) -> Result<UserSettings, String> {
+    database
+        .update_settings(&update)
+        .map_err(|error| error.to_string())
 }

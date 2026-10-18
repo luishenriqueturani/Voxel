@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type OutputMode, PromptPanel } from "./components/layout/PromptPanel";
 import { type SettingSection, SettingsView } from "./components/layout/SettingsView";
@@ -7,6 +7,7 @@ import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { useNativeMenu } from "./hooks/useNativeMenu";
 import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
+import { loadStoredSettings, saveStoredSettings } from "./native/settings";
 
 type View = "workspace" | "settings";
 
@@ -24,9 +25,41 @@ export default function App() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [outputMode, setOutputMode] = useState<OutputMode>("2d");
+  const settingsReady = useRef(false);
+  const i18nRef = useRef(i18n);
+  i18nRef.current = i18n;
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadStoredSettings().then(async (stored) => {
+      if (cancelled) {
+        return;
+      }
+      if (stored === null) {
+        settingsReady.current = true;
+        return;
+      }
+      if (stored.language) {
+        localStorage.setItem(LANGUAGE_KEY, stored.language);
+        await i18nRef.current.changeLanguage(stored.language);
+      }
+      if (!cancelled && stored.theme) {
+        setTheme(stored.theme);
+      }
+      if (!cancelled) {
+        settingsReady.current = true;
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
+    if (settingsReady.current) {
+      void saveStoredSettings({ theme });
+    }
   }, [theme]);
 
   useEffect(() => {
@@ -55,6 +88,7 @@ export default function App() {
   async function onLanguageChange(language: "pt-BR" | "en") {
     localStorage.setItem(LANGUAGE_KEY, language);
     await i18n.changeLanguage(language);
+    await saveStoredSettings({ language });
   }
 
   return (
