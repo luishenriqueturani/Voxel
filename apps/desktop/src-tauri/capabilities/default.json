@@ -10,6 +10,18 @@
     "allow-set-menu-labels",
     "allow-get-settings",
     "allow-update-settings",
+    "allow-power-limit-notice",
+    "allow-setup-status",
+    "allow-run-setup",
+    "allow-confirm-setup",
+    "allow-reset-setup",
+    "allow-image-backend-choice",
+    "allow-set-image-backend",
+    "allow-restore-image-backend",
+    "allow-generate-image",
+    "allow-generation-defaults",
+    "allow-machine-status",
+    "allow-copy-generation",
     "allow-hf-token-status",
     "allow-set-hf-token",
     "allow-download-model",
@@ -17,6 +29,7 @@
     "allow-import-model",
     "allow-remove-model",
     "allow-models-directory",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "dialog:allow-save"
   ]
 }

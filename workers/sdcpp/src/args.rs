@@ -99,6 +99,8 @@ pub fn txt2img_args(
         request.height.to_string(),
         "--seed".to_owned(),
         request.seed.to_string(),
+        "--cfg-scale".to_owned(),
+        request.cfg_scale.unwrap_or(7.0).to_string(),
         "--sampling-method".to_owned(),
         "euler_a".to_owned(),
         "--backend".to_owned(),

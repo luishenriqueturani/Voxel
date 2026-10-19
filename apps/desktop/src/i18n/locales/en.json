@@ -50,13 +50,27 @@
     "output2d": "2D",
     "output3d": "3D",
     "generate": "Generate",
+    "generating": "Generating…",
     "recent": "Recent prompts",
     "recentEmpty": "No recent prompts",
     "resolution": "Resolution",
+    "aspect": "Aspect ratio",
+    "aspectHorizontal": "Horizontal",
+    "aspectVertical": "Vertical",
+    "size": "{{width}}×{{height}}",
     "steps": "Steps",
     "cfg": "CFG",
     "seed": "Seed",
-    "count": "Image count"
+    "count": "Image count",
+    "about": "About {{name}}",
+    "hint": {
+      "resolution": "The long side of the image. 512 is faster. 1024 uses more memory and time.",
+      "aspect": "The frame shape. Horizontal is wider. Vertical is taller.",
+      "steps": "How many times the model refines the image. More steps add detail and take longer.",
+      "cfg": "How closely the image follows the prompt. Low is looser. High sticks closer.",
+      "seed": "Number that repeats the same image. Empty picks a new one.",
+      "count": "How many images to generate in a row. Each one uses the next seed."
+    }
   },
   "main": {
     "label": "Main area",
@@ -65,10 +79,19 @@
   "status": {
     "label": "Status",
     "gpu": "GPU",
+    "vram": "VRAM",
+    "gpuUse": "GPU use",
+    "cpu": "CPU",
+    "ram": "RAM",
+    "cpuTemp": "CPU temp",
+    "gpuTemp": "GPU temp",
     "queue": "Queue",
     "environment": "3D environment",
     "unknown": "—",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "gib": "{{used}}/{{total}} GiB",
+    "percent": "{{value}}%",
+    "celsius": "{{value}} °C"
   },
   "settings": {
     "title": "Settings",
@@ -144,6 +167,18 @@
   "generation": {
     "preview": "Generation preview",
     "step": "Step {{step}} of {{total}}"
+  },
+  "viewer": {
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoom": "Zoom {{value}}%",
+    "gesture": "Ctrl + scroll zooms. The middle button pans the image.",
+    "previous": "Previous",
+    "next": "Next",
+    "position": "{{current}} / {{total}}",
+    "save": "Save",
+    "copy": "Copy image",
+    "regenerate": "Regenerate with the same seed"
   },
   "power": {
     "body": "The {{gpu}} uses the 12V-2x6 connector, which has melt reports. A 300 W power limit is recommended.",

@@ -17,6 +17,9 @@ use crate::traits::{BackgroundRemover, ImageBackend, MeshBackend, MeshPostProces
 const STARTUP_LIMIT: Duration = Duration::from_secs(2);
 const POLL_PAUSE: Duration = Duration::from_millis(20);
 const READY_PREFIX: &str = "VOXEL_READY ";
+/// Uma imagem grande, com muitos passos, passa dos três minutos. O pedido espera até aqui.
+const JOB_LIMIT: Duration = Duration::from_secs(60 * 60);
+const WATCH_SLICE: Duration = Duration::from_millis(200);
 
 /// Evento lido do WebSocket de progresso.
 #[derive(Debug, Clone, PartialEq)]
@@ -146,12 +149,39 @@ impl WorkerProcess {
         port: u16,
         token: &str,
         job_id: &str,
+        on_event: impl FnMut(WorkerEvent),
+    ) -> Result<(), WorkerError> {
+        Self::watch_until(
+            port,
+            token,
+            job_id,
+            &std::sync::atomic::AtomicBool::new(false),
+            on_event,
+        )
+    }
+
+    /// Como [`Self::watch`], mas volta assim que `stop` fica verdadeiro.
+    ///
+    /// # Errors
+    ///
+    /// Falha se o WebSocket não conectar ou se uma mensagem sair do contrato.
+    pub fn watch_until(
+        port: u16,
+        token: &str,
+        job_id: &str,
+        stop: &std::sync::atomic::AtomicBool,
         mut on_event: impl FnMut(WorkerEvent),
     ) -> Result<(), WorkerError> {
         let mut socket = open_events(port, job_id, token)?;
+        if let tungstenite::stream::MaybeTlsStream::Plain(tcp) = socket.get_ref() {
+            tcp.set_read_timeout(Some(WATCH_SLICE))?;
+        }
         loop {
-            match socket.read()? {
-                tungstenite::Message::Text(text) => {
+            if stop.load(std::sync::atomic::Ordering::Relaxed) {
+                break;
+            }
+            match socket.read() {
+                Ok(tungstenite::Message::Text(text)) => {
                     let event = parse_event(&text)?;
                     let finished =
                         matches!(event, WorkerEvent::Completed(_) | WorkerEvent::Failed(_));
@@ -160,10 +190,14 @@ impl WorkerProcess {
                         break;
                     }
                 }
-                tungstenite::Message::Ping(payload) => {
+                Ok(tungstenite::Message::Ping(payload)) => {
                     socket.send(tungstenite::Message::Pong(payload))?;
                 }
-                tungstenite::Message::Close(_) => break,
+                Ok(tungstenite::Message::Close(_)) => break,
+                Err(tungstenite::Error::Io(error))
+                    if error.kind() == std::io::ErrorKind::TimedOut
+                        || error.kind() == std::io::ErrorKind::WouldBlock => {}
+                Err(error) => return Err(error.into()),
                 _ => {}
             }
         }
@@ -184,13 +218,28 @@ impl WorkerProcess {
         path: &str,
         body: &B,
     ) -> Result<R, WorkerError> {
-        let response = self
-            .client
-            .post(self.url(path))
-            .bearer_auth(&self.token)
-            .json(body)
-            .send()?;
-        read_json(response)
+        self.send_json(path, body, None)
+    }
+
+    fn post_job<B: Serialize, R: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<R, WorkerError> {
+        self.send_json(path, body, Some(JOB_LIMIT))
+    }
+
+    fn send_json<B: Serialize, R: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: &B,
+        timeout: Option<Duration>,
+    ) -> Result<R, WorkerError> {
+        let mut request = self.client.post(self.url(path)).bearer_auth(&self.token);
+        if let Some(timeout) = timeout {
+            request = request.timeout(timeout);
+        }
+        read_json(request.json(body).send()?)
     }
 
     fn url(&self, path: &str) -> String {
@@ -204,19 +253,19 @@ impl ImageBackend for WorkerProcess {
     }
 
     fn txt2img(&self, request: &Txt2ImgRequest) -> Result<JobOutput, WorkerError> {
-        self.post_json(paths::IMAGES_TXT2IMG, request)
+        self.post_job(paths::IMAGES_TXT2IMG, request)
     }
 
     fn img2img(&self, request: &Img2ImgRequest) -> Result<JobOutput, WorkerError> {
-        self.post_json(paths::IMAGES_IMG2IMG, request)
+        self.post_job(paths::IMAGES_IMG2IMG, request)
     }
 
     fn inpaint(&self, request: &InpaintRequest) -> Result<JobOutput, WorkerError> {
-        self.post_json(paths::IMAGES_INPAINT, request)
+        self.post_job(paths::IMAGES_INPAINT, request)
     }
 
     fn decode_latents(&self, request: &DecodeLatentsRequest) -> Result<JobOutput, WorkerError> {
-        self.post_json(paths::IMAGES_DECODE_LATENTS, request)
+        self.post_job(paths::IMAGES_DECODE_LATENTS, request)
     }
 
     fn cancel(&self, request: &CancelRequest) -> Result<Ack, WorkerError> {
@@ -234,7 +283,7 @@ impl MeshBackend for WorkerProcess {
     }
 
     fn image_to_mesh(&self, request: &ImageToMeshRequest) -> Result<JobOutput, WorkerError> {
-        self.post_json(paths::MESHES_FROM_IMAGE, request)
+        self.post_job(paths::MESHES_FROM_IMAGE, request)
     }
 
     fn cancel(&self, request: &CancelRequest) -> Result<Ack, WorkerError> {
@@ -251,13 +300,13 @@ impl BackgroundRemover for WorkerProcess {
         &self,
         request: &RemoveBackgroundRequest,
     ) -> Result<JobOutput, WorkerError> {
-        self.post_json(paths::IMAGES_REMOVE_BACKGROUND, request)
+        self.post_job(paths::IMAGES_REMOVE_BACKGROUND, request)
     }
 }
 
 impl MeshPostProcess for WorkerProcess {
     fn post_process(&self, request: &MeshPostProcessRequest) -> Result<JobOutput, WorkerError> {
-        self.post_json(paths::MESHES_POST_PROCESS, request)
+        self.post_job(paths::MESHES_POST_PROCESS, request)
     }
 }
 

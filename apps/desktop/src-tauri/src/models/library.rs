@@ -21,6 +21,7 @@ pub struct ListedModel {
     pub compatibility: &'static str,
     pub reason: Option<ListedReason>,
     pub architecture: Option<String>,
+    pub kind: String,
 }
 
 /// Motivo traduzível do selo.
@@ -75,6 +76,7 @@ pub fn list_models(dir: &Path, facts: &MachineFacts) -> Result<Vec<ListedModel>,
             catalog: true,
             seal: compatibility(model, facts),
             architecture: None,
+            kind: kind_name(model.kind),
         }));
     }
     let mut extras = std::fs::read_dir(dir)
@@ -110,6 +112,7 @@ pub fn list_models(dir: &Path, facts: &MachineFacts) -> Result<Vec<ListedModel>,
             installed: true,
             catalog: false,
             seal: estimate_by_size(bytes, facts.vram_bytes),
+            kind: import_kind(architecture.as_deref()),
             architecture,
         }));
     }
@@ -150,6 +153,7 @@ pub fn import_model(
         installed: true,
         catalog: false,
         seal: estimate_by_size(info.bytes, facts.vram_bytes),
+        kind: import_kind(Some(info.architecture.as_str())),
         architecture: Some(info.architecture),
     }))
 }
@@ -193,6 +197,7 @@ struct Entry<'a> {
     catalog: bool,
     seal: Compatibility,
     architecture: Option<String>,
+    kind: &'static str,
 }
 
 fn describe(entry: Entry<'_>) -> ListedModel {
@@ -212,6 +217,24 @@ fn describe(entry: Entry<'_>) -> ListedModel {
         compatibility,
         reason,
         architecture: entry.architecture,
+        kind: entry.kind.to_owned(),
+    }
+}
+
+fn kind_name(kind: voxel_models::Kind) -> &'static str {
+    match kind {
+        voxel_models::Kind::Image => "image",
+        voxel_models::Kind::Mesh => "mesh",
+        voxel_models::Kind::Background => "background",
+    }
+}
+
+fn import_kind(architecture: Option<&str>) -> &'static str {
+    let name = architecture.unwrap_or("").to_ascii_lowercase();
+    if name.contains("diffusion") || name.contains("stable") || name.contains("flux") {
+        "image"
+    } else {
+        "unknown"
     }
 }
 

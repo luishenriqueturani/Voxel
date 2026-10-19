@@ -49,7 +49,8 @@ pub struct CancelRequest {
     pub job_id: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Txt2ImgRequest {
@@ -63,6 +64,8 @@ pub struct Txt2ImgRequest {
     pub width: i64,
     pub height: i64,
     pub seed: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cfg_scale: Option<f64>,
 }
 
 #[allow(clippy::derive_partial_eq_without_eq)]

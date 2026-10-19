@@ -15,6 +15,7 @@ const compatible: ListedModel = {
   compatibility: "compatible",
   reason: null,
   architecture: null,
+  kind: "image",
 };
 
 const incompatible: ListedModel = {
@@ -32,6 +33,7 @@ const incompatible: ListedModel = {
     availableBytes: 8_000_000_000,
   },
   architecture: null,
+  kind: "image",
 };
 
 const imported: ListedModel = {
@@ -45,6 +47,7 @@ const imported: ListedModel = {
   compatibility: "compatible",
   reason: null,
   architecture: "stable-diffusion-v1",
+  kind: "image",
 };
 
 function renderSection(onDownload = vi.fn(), onRemove = vi.fn()) {

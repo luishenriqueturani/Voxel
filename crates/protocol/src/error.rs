@@ -38,7 +38,7 @@ impl std::fmt::Display for WorkerError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Io(error) => write!(formatter, "io: {error}"),
-            Self::Http(error) => write!(formatter, "http: {error}"),
+            Self::Http(error) => write_chain(formatter, "http", error.as_ref()),
             Self::Socket(error) => write!(formatter, "websocket: {error}"),
             Self::Protocol(detail) => write!(formatter, "protocolo: {detail}"),
             Self::Unauthorized => write!(formatter, "token recusado"),
@@ -49,6 +49,20 @@ impl std::fmt::Display for WorkerError {
 }
 
 impl std::error::Error for WorkerError {}
+
+fn write_chain(
+    formatter: &mut std::fmt::Formatter<'_>,
+    kind: &str,
+    error: &dyn std::error::Error,
+) -> std::fmt::Result {
+    write!(formatter, "{kind}: {error}")?;
+    let mut source = error.source();
+    while let Some(next) = source {
+        write!(formatter, ": {next}")?;
+        source = next.source();
+    }
+    Ok(())
+}
 
 impl From<std::io::Error> for WorkerError {
     fn from(error: std::io::Error) -> Self {

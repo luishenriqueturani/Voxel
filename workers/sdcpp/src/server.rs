@@ -234,21 +234,10 @@ async fn events(
 }
 
 async fn replay(mut socket: WebSocket, state: AppState, job_id: String) {
-    let deadline = Instant::now() + Duration::from_secs(180);
     let mut sent = 0;
-    while Instant::now() < deadline {
-        let (events, done) = {
-            let jobs = state.jobs.lock().unwrap_or_else(PoisonError::into_inner);
-            jobs.get(&job_id).map_or((Vec::new(), false), |job| {
-                (
-                    job.events
-                        .lock()
-                        .unwrap_or_else(PoisonError::into_inner)
-                        .clone(),
-                    *job.done.lock().unwrap_or_else(PoisonError::into_inner),
-                )
-            })
-        };
+    let appear_deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let (events, done, exists) = job_snapshot(&state, &job_id);
         while sent < events.len() {
             let Ok(text) = serde_json::to_string(&events[sent]) else {
                 return;
@@ -258,12 +247,27 @@ async fn replay(mut socket: WebSocket, state: AppState, job_id: String) {
             }
             sent += 1;
         }
-        if done {
+        if done || (!exists && Instant::now() >= appear_deadline) {
             break;
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
     let _ = socket.send(Message::Close(None)).await;
+}
+
+fn job_snapshot(state: &AppState, job_id: &str) -> (Vec<serde_json::Value>, bool, bool) {
+    let jobs = state.jobs.lock().unwrap_or_else(PoisonError::into_inner);
+    let Some(job) = jobs.get(job_id) else {
+        return (Vec::new(), false, false);
+    };
+    (
+        job.events
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone(),
+        *job.done.lock().unwrap_or_else(PoisonError::into_inner),
+        true,
+    )
 }
 
 impl Job {

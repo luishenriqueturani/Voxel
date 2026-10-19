@@ -50,13 +50,27 @@
     "output2d": "2D",
     "output3d": "3D",
     "generate": "Gerar",
+    "generating": "Gerando…",
     "recent": "Prompts recentes",
     "recentEmpty": "Nenhum prompt recente",
     "resolution": "Resolução",
+    "aspect": "Proporção",
+    "aspectHorizontal": "Horizontal",
+    "aspectVertical": "Vertical",
+    "size": "{{width}}×{{height}}",
     "steps": "Passos",
     "cfg": "CFG",
     "seed": "Seed",
-    "count": "Quantidade de imagens"
+    "count": "Quantidade de imagens",
+    "about": "Sobre {{name}}",
+    "hint": {
+      "resolution": "Lado maior da imagem. 512 é mais rápido. 1024 usa mais memória e demora mais.",
+      "aspect": "Formato do quadro. Horizontal é mais largo. Vertical é mais alto.",
+      "steps": "Vezes que o modelo refina a imagem. Mais passos detalham mais e demoram mais.",
+      "cfg": "Quanto a imagem obedece ao prompt. Baixo fica mais solto. Alto fica mais fiel.",
+      "seed": "Número que repete a mesma imagem. Vazio sorteia outra.",
+      "count": "Quantas imagens gerar em sequência. Cada uma usa a seed seguinte."
+    }
   },
   "main": {
     "label": "Área principal",
@@ -65,10 +79,19 @@
   "status": {
     "label": "Estado",
     "gpu": "GPU",
+    "vram": "VRAM",
+    "gpuUse": "Uso GPU",
+    "cpu": "CPU",
+    "ram": "RAM",
+    "cpuTemp": "Temp. CPU",
+    "gpuTemp": "Temp. GPU",
     "queue": "Fila",
     "environment": "Ambiente 3D",
     "unknown": "—",
-    "preferences": "Preferências"
+    "preferences": "Preferências",
+    "gib": "{{used}}/{{total}} GiB",
+    "percent": "{{value}}%",
+    "celsius": "{{value}} °C"
   },
   "settings": {
     "title": "Configurações",
@@ -144,6 +167,18 @@
   "generation": {
     "preview": "Prévia da geração",
     "step": "Passo {{step}} de {{total}}"
+  },
+  "viewer": {
+    "zoomIn": "Aumentar",
+    "zoomOut": "Diminuir",
+    "zoom": "Zoom {{value}}%",
+    "gesture": "Ctrl + scroll aproxima. O botão do meio move a imagem.",
+    "previous": "Anterior",
+    "next": "Próxima",
+    "position": "{{current}} / {{total}}",
+    "save": "Salvar",
+    "copy": "Copiar imagem",
+    "regenerate": "Regerar com a mesma seed"
   },
   "power": {
     "body": "A {{gpu}} usa o conector 12V-2x6, com relatos de derretimento. Recomendamos limitar a potência da placa a 300 W.",

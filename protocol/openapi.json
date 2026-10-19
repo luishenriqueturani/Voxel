@@ -65,7 +65,8 @@
           "steps": { "type": "integer" },
           "width": { "type": "integer" },
           "height": { "type": "integer" },
-          "seed": { "type": "integer" }
+          "seed": { "type": "integer" },
+          "cfgScale": { "type": "number" }
         },
         "required": ["jobId", "prompt", "modelId", "outputPath", "steps", "width", "height", "seed"]
       },

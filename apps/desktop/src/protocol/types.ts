@@ -34,6 +34,7 @@ export type Txt2ImgRequest = {
   width: number;
   height: number;
   seed: number;
+  cfgScale?: number;
 };
 
 export type Img2ImgRequest = {

@@ -32,6 +32,7 @@ fn txt(path: &Path, job: &str) -> Txt2ImgRequest {
         width: 8,
         height: 8,
         seed: 1,
+        cfg_scale: None,
     }
 }
 

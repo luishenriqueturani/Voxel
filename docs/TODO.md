@@ -163,11 +163,11 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Geração 2D
 
-- [ ] Ligar o painel esquerdo ao worker: prompt, prompt negativo, modelo, parâmetros do ⚙
-- [ ] Parâmetros padrão vindos do perfil de hardware
-- [ ] Visualizador 2D: zoom, salvar, copiar, regerar com mesma seed
-- [ ] Salvar saídas na estrutura de pastas (§10) com `metadados.json` e metadados embutidos no PNG
-- [ ] Barra de status com GPU, backend e uso de VRAM
+- [x] Ligar o painel esquerdo ao worker: prompt, prompt negativo, modelo, parâmetros do ⚙
+- [x] Parâmetros padrão vindos do perfil de hardware
+- [x] Visualizador 2D: zoom, salvar, copiar, regerar com mesma seed
+- [x] Salvar saídas na estrutura de pastas (§10) com `metadados.json` e metadados embutidos no PNG
+- [x] Barra de status com GPU, backend, VRAM, CPU, RAM e temperaturas de CPU e GPU
 
 ### Remoção de fundo
 

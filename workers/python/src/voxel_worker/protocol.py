@@ -38,6 +38,7 @@ class Txt2ImgRequest(TypedDict):
     width: int
     height: int
     seed: int
+    cfgScale: NotRequired[float]
 
 
 class Img2ImgRequest(TypedDict):

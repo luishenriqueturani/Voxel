@@ -269,6 +269,7 @@ mod tests {
             width: 512,
             height: 512,
             seed: 1,
+            cfg_scale: None,
         }
     }
 

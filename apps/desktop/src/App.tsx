@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorModal } from "./components/layout/ErrorModal";
-import { type OutputMode, PromptPanel } from "./components/layout/PromptPanel";
+import { ImageViewer } from "./components/layout/ImageViewer";
+import {
+  type GenerationParams,
+  type OutputMode,
+  PromptPanel,
+} from "./components/layout/PromptPanel";
 import { type SettingSection, SettingsView } from "./components/layout/SettingsView";
 import { StatusBar } from "./components/layout/StatusBar";
 import { WelcomeView } from "./components/layout/WelcomeView";
@@ -10,31 +15,39 @@ import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { useNativeMenu } from "./hooks/useNativeMenu";
 import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
-import type { ErrorNotice } from "./native/errors";
 import { loadImageBackend, restoreImageBackend, saveImageBackend } from "./native/backend";
+import type { ErrorNotice } from "./native/errors";
+import { openLocalPath } from "./native/files";
 import {
-  type ListedModel,
+  copyPreview,
+  type GalleryImage,
+  generateImage,
+  imageSrc,
+  loadGenerationDefaults,
+  saveGeneratedImage,
+} from "./native/generation";
+import {
   downloadModel,
   importLocalModel,
+  type ListedModel,
   loadModels,
   modelsDirectory,
   removeModel,
 } from "./native/models";
-import { loadHfTokenStatus, saveHfToken } from "./native/token";
-import { generateImage } from "./native/generation";
-import { openLocalPath } from "./native/files";
 import { loadPowerNotice } from "./native/power";
 import { loadStoredSettings, saveStoredSettings } from "./native/settings";
 import {
-  type ProfileCatalog,
-  type SetupChoices,
-  type SetupStep,
   confirmSetup,
   listenToSetup,
   loadSetupStatus,
+  type ProfileCatalog,
   resetSetup,
   runSetup,
+  type SetupChoices,
+  type SetupStep,
 } from "./native/setup";
+import { loadMachineStatus, type MachineStatus } from "./native/status";
+import { loadHfTokenStatus, saveHfToken } from "./native/token";
 
 const SUMMARY_KEYS = [
   "error.summary.incompatibleKernel",
@@ -83,6 +96,22 @@ export default function App() {
     total: number;
     preview: string | null;
   } | null>(null);
+  const [params, setParams] = useState<GenerationParams>({
+    resolution: 512,
+    aspect: "1:1",
+    width: 512,
+    height: 512,
+    steps: 25,
+    cfg: 7,
+    seed: "",
+    count: 1,
+  });
+  const [generating, setGenerating] = useState(false);
+  const generatingRef = useRef(false);
+  const [modelId, setModelId] = useState("sd15");
+  const [slides, setSlides] = useState<GalleryImage[]>([]);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [machine, setMachine] = useState<MachineStatus | null>(null);
   const [imageBackend, setImageBackend] = useState("vulkan");
   const [recommendedBackend, setRecommendedBackend] = useState<string | null>(null);
   const [hfTokenConfigured, setHfTokenConfigured] = useState(false);
@@ -131,29 +160,80 @@ export default function App() {
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
 
-  // A geração de fato entra na fase 2. O botão, o atalho e o menu já convergem aqui.
-  const requestGeneration = useCallback(() => {
-    void generateImage(
-      { prompt, negativePrompt: negativePrompt === "" ? null : negativePrompt },
-      (progress) => setFrame(progress),
-    )
-      .then((image) => {
-        if (image?.preview) {
+  const reportFailure = useCallback((error: unknown) => {
+    setNotice({
+      summaryKey: "error.summary.unknown",
+      log: error instanceof Error ? error.message : String(error),
+      path: "",
+    });
+  }, []);
+
+  const requestGeneration = useCallback(
+    (seedOverride?: number) => {
+      if (generatingRef.current) {
+        return;
+      }
+      generatingRef.current = true;
+      setGenerating(true);
+      setSlides([]);
+      setSlideIndex(0);
+      setFrame(null);
+      const typed = params.seed.trim() === "" ? null : Number(params.seed);
+      const seed = seedOverride ?? (typed !== null && Number.isFinite(typed) ? typed : null);
+      void generateImage(
+        {
+          prompt,
+          negativePrompt: negativePrompt === "" ? null : negativePrompt,
+          modelId,
+          width: params.width,
+          height: params.height,
+          steps: params.steps,
+          cfg: params.cfg,
+          seed,
+          count: params.count,
+        },
+        (progress) => {
           setFrame((current) => ({
-            step: current?.step ?? 0,
-            total: current?.total ?? 0,
-            preview: image.preview,
+            step: progress.step,
+            total: progress.total,
+            preview: progress.preview ?? current?.preview ?? null,
           }));
-        }
-      })
-      .catch((error: unknown) => {
-        setNotice({
-          summaryKey: "error.summary.unknown",
-          log: error instanceof Error ? error.message : String(error),
-          path: "",
+          if (
+            progress.ready &&
+            progress.preview &&
+            progress.path &&
+            typeof progress.seed === "number"
+          ) {
+            const slide = {
+              src: imageSrc(progress.preview),
+              path: progress.path,
+              seed: progress.seed,
+            };
+            const index = progress.index ?? 0;
+            setSlides((current) => {
+              const next = current.slice();
+              next[index] = slide;
+              return next;
+            });
+            setSlideIndex(index);
+          }
+        },
+      )
+        .then((image) => {
+          if (image === null || image.images.length === 0) {
+            return;
+          }
+          setSlides(image.images);
+          setSlideIndex(image.images.length - 1);
+        })
+        .catch(reportFailure)
+        .finally(() => {
+          generatingRef.current = false;
+          setGenerating(false);
         });
-      });
-  }, [negativePrompt, prompt]);
+    },
+    [modelId, negativePrompt, params, prompt, reportFailure],
+  );
   useGenerateShortcut(requestGeneration);
 
   const onMenuAction = useCallback(
@@ -224,6 +304,48 @@ export default function App() {
     });
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadGenerationDefaults().then((defaults) => {
+      if (!cancelled && defaults) {
+        setParams((current) => ({
+          ...current,
+          resolution: defaults.width,
+          aspect: "1:1",
+          width: defaults.width,
+          height: defaults.height,
+          steps: defaults.steps,
+          cfg: defaults.cfg,
+        }));
+      }
+    });
+    void loadModels().then((models) => {
+      if (!cancelled) {
+        setLibrary(models);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const tick = () => {
+      void loadMachineStatus().then((status) => {
+        if (!cancelled && status) {
+          setMachine(status);
+        }
+      });
+    };
+    tick();
+    const timer = window.setInterval(tick, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -299,6 +421,12 @@ export default function App() {
     setView("settings");
   }
 
+  const imageModels = library
+    .filter((model) => model.installed && model.kind === "image")
+    .map((model) => ({ id: model.id, name: model.name }));
+  const selected = slides[slideIndex] ?? null;
+  const shown = generating && frame?.preview ? imageSrc(frame.preview) : (selected?.src ?? null);
+
   const summaryKey =
     SUMMARY_KEYS.find((key) => key === notice?.summaryKey) ?? "error.summary.unknown";
 
@@ -341,32 +469,49 @@ export default function App() {
               onPromptChange={setPrompt}
               negativePrompt={negativePrompt}
               onNegativePromptChange={setNegativePrompt}
+              models={imageModels}
+              modelId={modelId}
+              onModelChange={setModelId}
+              params={params}
+              onParamsChange={setParams}
               outputMode={outputMode}
               onOutputModeChange={setOutputMode}
-              onGenerate={requestGeneration}
+              generating={generating}
+              onGenerate={() => requestGeneration()}
             />
           </aside>
           <main
             aria-label={t("main.label")}
-            className="flex flex-1 items-center justify-center p-6"
+            className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-6"
           >
             <h1 className="sr-only">Voxel</h1>
-            <div className="flex flex-col items-center gap-3">
-              {frame?.preview ? (
-                <img
-                  alt={t("generation.preview")}
-                  className="max-h-full max-w-full"
-                  src={`data:image/png;base64,${frame.preview}`}
-                />
-              ) : (
-                <p className="text-sm text-zinc-500">{t("main.empty")}</p>
-              )}
-              {frame !== null && frame.total > 0 ? (
-                <p className="text-sm text-zinc-500">
-                  {t("generation.step", { step: frame.step, total: frame.total })}
-                </p>
-              ) : null}
-            </div>
+            <ImageViewer
+              src={shown}
+              step={generating ? (frame?.step ?? 0) : 0}
+              total={generating ? (frame?.total ?? 0) : 0}
+              canSave={selected !== null && !generating}
+              canRegenerate={selected !== null && !generating}
+              index={slideIndex}
+              count={generating ? 0 : slides.length}
+              onPrevious={() => setSlideIndex((current) => Math.max(0, current - 1))}
+              onNext={() => setSlideIndex((current) => Math.min(slides.length - 1, current + 1))}
+              onSave={() => {
+                if (selected) {
+                  void saveGeneratedImage(selected.path).catch(reportFailure);
+                }
+              }}
+              onCopy={() => {
+                if (shown) {
+                  void copyPreview(shown).catch(reportFailure);
+                }
+              }}
+              onRegenerate={() => {
+                if (selected) {
+                  setParams((current) => ({ ...current, seed: String(selected.seed) }));
+                  requestGeneration(selected.seed);
+                }
+              }}
+            />
           </main>
         </div>
       ) : (
@@ -413,7 +558,7 @@ export default function App() {
           onBack={() => setView("workspace")}
         />
       )}
-      <StatusBar onOpenSettings={() => setView("settings")} />
+      <StatusBar status={machine} onOpenSettings={() => setView("settings")} />
       {notice !== null ? (
         <ErrorModal
           summary={t(summaryKey)}

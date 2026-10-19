@@ -2,6 +2,7 @@
 
 use crate::report::Memory;
 
+#[must_use]
 pub fn parse_meminfo(text: &str) -> Option<Memory> {
     let total = kib(text, "MemTotal")?;
     let available = kib(text, "MemAvailable")?;

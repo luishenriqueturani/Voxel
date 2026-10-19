@@ -5,6 +5,7 @@
 
 mod compat;
 mod cpu;
+mod defaults;
 mod disk;
 mod fallback;
 mod gpu;
@@ -14,18 +15,25 @@ mod power;
 mod profile;
 mod report;
 mod rocm;
+mod sensors;
 mod setup;
 mod suggestions;
 
 pub use compat::{Combination, CompatibilityMemory, Failure};
+pub use defaults::{GenerationDefaults, defaults_for};
 pub use fallback::{
     BackendFacts, ImageBackend, PythonBackend, facts_from, image_fallback, python_fallback,
 };
+pub use memory::parse_meminfo;
 pub use power::{
     POWER_LIMIT_MILLIWATTS, PowerNotice, power_notice, read_power_caps, uses_listed_connector,
 };
 pub use profile::{Profile, profile_for};
 pub use report::{Cpu, DiskSpace, Driver, Gpu, MachineReport, Memory, OperatingSystem, Vendor};
+pub use sensors::{
+    CpuTimes, celsius_from_millidegree, cpu_percent, gpu_busy_percent, hwmon_celsius,
+    parse_byte_count, parse_cpu_times, vram_bytes,
+};
 pub use setup::{
     Attempt, AttemptState, ImageSetup, ProbeVerdict, SETUP_CONFIGURATION, SETUP_MODEL, device_for,
     generation_args, hardware_line, image_setup, parse_devices,

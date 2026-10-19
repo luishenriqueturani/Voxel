@@ -2,9 +2,11 @@ mod db;
 mod generate;
 mod menu;
 mod models;
+mod output;
 pub mod paths;
 mod probe;
 mod setup;
+mod status;
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -64,6 +66,9 @@ pub fn run() {
             set_image_backend,
             restore_image_backend,
             generate_image,
+            generation_defaults,
+            machine_status,
+            copy_generation,
             hf_token_status,
             set_hf_token,
             download_model,
@@ -173,15 +178,43 @@ fn restore_image_backend(
     generate::restore_backend(&database)
 }
 
+/// Fora da thread da janela, para a prévia pintar a cada passo.
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
-fn generate_image(
+async fn generate_image(
     app: AppHandle,
     database: State<'_, Database>,
     paths: State<'_, AppPaths>,
     request: generate::GenerateRequest,
 ) -> Result<generate::GeneratedImage, String> {
-    generate::generate(&app, &database, &paths, &request)
+    let database = database.inner().clone();
+    let paths = paths.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        generate::generate(&app, &database, &paths, &request)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn generation_defaults(database: State<'_, Database>) -> voxel_hardware::GenerationDefaults {
+    generate::generation_defaults(&database)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn machine_status(database: State<'_, Database>) -> Result<status::MachineStatus, String> {
+    status::read_status(&database)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn copy_generation(source: String, destination: String) -> Result<(), String> {
+    output::copy_generation(
+        std::path::Path::new(&source),
+        std::path::Path::new(&destination),
+    )
 }
 
 #[tauri::command]
@@ -211,7 +244,13 @@ fn download_model(
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
 fn list_models(paths: State<'_, AppPaths>) -> Result<Vec<models::ListedModel>, String> {
-    models::list_models(&paths.data.join("models"), &models::current_facts())
+    let mut listed = models::list_models(&paths.data.join("models"), &models::current_facts())?;
+    if discover().model.is_some()
+        && let Some(model) = listed.iter_mut().find(|model| model.id == "sd15")
+    {
+        model.installed = true;
+    }
+    Ok(listed)
 }
 
 #[tauri::command]

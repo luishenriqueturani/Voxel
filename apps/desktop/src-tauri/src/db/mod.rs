@@ -1,18 +1,21 @@
 mod error;
+mod generations;
 mod migrate;
 mod settings;
 mod setup_store;
 
 pub use error::DbError;
+pub use generations::GenerationRecord;
 pub use settings::{SettingsUpdate, UserSettings};
 
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use rusqlite::Connection;
 
+#[derive(Clone)]
 pub struct Database {
-    connection: Mutex<Connection>,
+    connection: Arc<Mutex<Connection>>,
 }
 
 impl std::fmt::Debug for Database {
@@ -51,11 +54,11 @@ impl Database {
         connection.pragma_update(None, "foreign_keys", "ON")?;
         connection.pragma_update(None, "journal_mode", "WAL")?;
         Ok(Self {
-            connection: Mutex::new(connection),
+            connection: Arc::new(Mutex::new(connection)),
         })
     }
 
-    fn lock(&self) -> Result<std::sync::MutexGuard<'_, Connection>, DbError> {
+    pub(crate) fn lock(&self) -> Result<std::sync::MutexGuard<'_, Connection>, DbError> {
         self.connection.lock().map_err(|_| DbError::LockPoisoned)
     }
 }

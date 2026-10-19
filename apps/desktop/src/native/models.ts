@@ -19,6 +19,7 @@ export type ListedModel = {
   compatibility: "compatible" | "caveat" | "incompatible";
   reason: ListedReason | null;
   architecture: string | null;
+  kind: string;
 };
 
 function isModel(value: unknown): value is ListedModel {
