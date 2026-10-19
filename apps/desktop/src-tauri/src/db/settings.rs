@@ -98,6 +98,30 @@ impl Database {
         self.settings()
     }
 
+    /// Backend de imagem escolhido nas configurações, se o usuário tiver trocado.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn image_backend_override(&self) -> Result<Option<String>, DbError> {
+        self.get("image_backend")
+    }
+
+    /// Grava ou apaga a escolha manual do backend de imagem.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a escrita falhar.
+    pub fn set_image_backend_override(&self, backend: Option<&str>) -> Result<(), DbError> {
+        if let Some(value) = backend {
+            self.set("image_backend", value)
+        } else {
+            let connection = self.lock()?;
+            connection.execute("DELETE FROM settings WHERE key = ?1", ["image_backend"])?;
+            Ok(())
+        }
+    }
+
     fn set(&self, key: &str, value: &str) -> Result<(), DbError> {
         let connection = self.lock()?;
         connection.execute(
@@ -242,6 +266,19 @@ mod tests {
         assert_eq!(Theme::parse("dark"), Some(Theme::Dark));
         assert_eq!(Theme::parse("azul"), None);
         assert_eq!(Theme::Light.as_str(), "light");
+    }
+
+    #[test]
+    fn a_escolha_manual_do_backend_sai_quando_e_apagada() {
+        let database = migrated();
+        assert_eq!(database.image_backend_override().unwrap(), None);
+        database.set_image_backend_override(Some("cpu")).unwrap();
+        assert_eq!(
+            database.image_backend_override().unwrap().as_deref(),
+            Some("cpu")
+        );
+        database.set_image_backend_override(None).unwrap();
+        assert_eq!(database.image_backend_override().unwrap(), None);
     }
 
     #[test]

@@ -1,0 +1,26 @@
+[package]
+name = "voxel-sdcpp"
+description = "Worker de imagem do Voxel em cima do stable-diffusion.cpp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "voxel-sdcpp"
+path = "src/main.rs"
+
+[dependencies]
+voxel-protocol.workspace = true
+axum = { version = "0.8", features = ["json", "ws"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "time", "sync"] }
+serde = { workspace = true }
+serde_json.workspace = true
+
+[dev-dependencies]
+voxel-protocol.workspace = true
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+
+[lints]
+workspace = true

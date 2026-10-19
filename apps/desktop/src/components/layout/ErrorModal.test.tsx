@@ -62,4 +62,12 @@ describe("ErrorModal", () => {
     await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it("oferece voltar ao backend recomendado", async () => {
+    const user = userEvent.setup();
+    const onRestoreRecommended = vi.fn();
+    render(<ErrorModal {...props} onRestoreRecommended={onRestoreRecommended} />);
+    await user.click(screen.getByRole("button", { name: "Voltar ao recomendado" }));
+    expect(onRestoreRecommended).toHaveBeenCalledOnce();
+  });
 });

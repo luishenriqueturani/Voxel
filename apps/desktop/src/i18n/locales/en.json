@@ -78,6 +78,8 @@
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
+    "backend": "Image backend",
+    "recommended": "Recommended by setup: {{backend}}",
     "sections": {
       "general": "General",
       "hardware": "Hardware",
@@ -95,6 +97,7 @@
     "openLog": "Open log file",
     "openDiagnosis": "Open diagnostics",
     "close": "Close",
+    "restore": "Return to recommended",
     "dismiss": "Dismiss the message",
     "summary": {
       "incompatibleKernel": "The generation process was stopped by the GPU driver while decoding the image.",
@@ -103,6 +106,10 @@
       "network": "The connection failed during a download. It can be tried again later.",
       "unknown": "The generation failed for a reason Voxel does not recognize yet."
     }
+  },
+  "generation": {
+    "preview": "Generation preview",
+    "step": "Step {{step}} of {{total}}"
   },
   "power": {
     "body": "The {{gpu}} uses the 12V-2x6 connector, which has melt reports. A 300 W power limit is recommended.",

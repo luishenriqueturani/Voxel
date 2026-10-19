@@ -1,4 +1,5 @@
 mod db;
+mod generate;
 mod menu;
 pub mod paths;
 mod probe;
@@ -56,7 +57,11 @@ pub fn run() {
             setup_status,
             run_setup,
             confirm_setup,
-            reset_setup
+            reset_setup,
+            image_backend_choice,
+            set_image_backend,
+            restore_image_backend,
+            generate_image
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");
@@ -132,4 +137,40 @@ fn confirm_setup(
 #[allow(clippy::needless_pass_by_value)]
 fn reset_setup(database: State<'_, Database>) -> Result<(), String> {
     database.reset_setup().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn image_backend_choice(
+    database: State<'_, Database>,
+) -> Result<generate::ImageBackendChoice, String> {
+    generate::backend_choice(&database)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn set_image_backend(
+    database: State<'_, Database>,
+    backend: String,
+) -> Result<generate::ImageBackendChoice, String> {
+    generate::set_backend(&database, &backend)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn restore_image_backend(
+    database: State<'_, Database>,
+) -> Result<generate::ImageBackendChoice, String> {
+    generate::restore_backend(&database)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn generate_image(
+    app: AppHandle,
+    database: State<'_, Database>,
+    paths: State<'_, AppPaths>,
+    request: generate::GenerateRequest,
+) -> Result<generate::GeneratedImage, String> {
+    generate::generate(&app, &database, &paths, &request)
 }

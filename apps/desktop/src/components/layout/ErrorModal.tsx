@@ -9,6 +9,7 @@ type ErrorModalProps = {
   onCopy: () => void;
   onOpenLog: () => void;
   onOpenDiagnosis: () => void;
+  onRestoreRecommended?: () => void;
   onClose: () => void;
 };
 
@@ -19,6 +20,7 @@ export function ErrorModal({
   onCopy,
   onOpenLog,
   onOpenDiagnosis,
+  onRestoreRecommended,
   onClose,
 }: ErrorModalProps) {
   const { t } = useTranslation();
@@ -76,6 +78,9 @@ export function ErrorModal({
           <Button variant="ghost" onClick={onOpenDiagnosis}>
             {t("error.openDiagnosis")}
           </Button>
+          {onRestoreRecommended ? (
+            <Button onClick={onRestoreRecommended}>{t("error.restore")}</Button>
+          ) : null}
           <Button variant="ghost" onClick={onClose}>
             {t("error.close")}
           </Button>

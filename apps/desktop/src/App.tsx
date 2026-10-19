@@ -11,6 +11,8 @@ import { useNativeMenu } from "./hooks/useNativeMenu";
 import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
 import type { ErrorNotice } from "./native/errors";
+import { loadImageBackend, restoreImageBackend, saveImageBackend } from "./native/backend";
+import { generateImage } from "./native/generation";
 import { openLocalPath } from "./native/files";
 import { loadPowerNotice } from "./native/power";
 import { loadStoredSettings, saveStoredSettings } from "./native/settings";
@@ -67,6 +69,13 @@ export default function App() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [outputMode, setOutputMode] = useState<OutputMode>("2d");
+  const [frame, setFrame] = useState<{
+    step: number;
+    total: number;
+    preview: string | null;
+  } | null>(null);
+  const [imageBackend, setImageBackend] = useState("vulkan");
+  const [recommendedBackend, setRecommendedBackend] = useState<string | null>(null);
   const [notice, setNotice] = useState<ErrorNotice | null>(null);
   const [powerGpu, setPowerGpu] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -112,7 +121,28 @@ export default function App() {
   }, [i18n.language]);
 
   // A geração de fato entra na fase 2. O botão, o atalho e o menu já convergem aqui.
-  const requestGeneration = useCallback(() => undefined, []);
+  const requestGeneration = useCallback(() => {
+    void generateImage(
+      { prompt, negativePrompt: negativePrompt === "" ? null : negativePrompt },
+      (progress) => setFrame(progress),
+    )
+      .then((image) => {
+        if (image?.preview) {
+          setFrame((current) => ({
+            step: current?.step ?? 0,
+            total: current?.total ?? 0,
+            preview: image.preview,
+          }));
+        }
+      })
+      .catch((error: unknown) => {
+        setNotice({
+          summaryKey: "error.summary.unknown",
+          log: error instanceof Error ? error.message : String(error),
+          path: "",
+        });
+      });
+  }, [negativePrompt, prompt]);
   useGenerateShortcut(requestGeneration);
 
   const onMenuAction = useCallback(
@@ -185,6 +215,22 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (view !== "settings") {
+      return;
+    }
+    let cancelled = false;
+    void loadImageBackend().then((choice) => {
+      if (!cancelled && choice !== null) {
+        setImageBackend(choice.current);
+        setRecommendedBackend(choice.recommended);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [view]);
 
   useNativeMenu(onMenuAction);
   useErrorNotice((next) => {
@@ -284,7 +330,22 @@ export default function App() {
             className="flex flex-1 items-center justify-center p-6"
           >
             <h1 className="sr-only">Voxel</h1>
-            <p className="text-sm text-zinc-500">{t("main.empty")}</p>
+            <div className="flex flex-col items-center gap-3">
+              {frame?.preview ? (
+                <img
+                  alt={t("generation.preview")}
+                  className="max-h-full max-w-full"
+                  src={`data:image/png;base64,${frame.preview}`}
+                />
+              ) : (
+                <p className="text-sm text-zinc-500">{t("main.empty")}</p>
+              )}
+              {frame !== null && frame.total > 0 ? (
+                <p className="text-sm text-zinc-500">
+                  {t("generation.step", { step: frame.step, total: frame.total })}
+                </p>
+              ) : null}
+            </div>
           </main>
         </div>
       ) : (
@@ -294,6 +355,12 @@ export default function App() {
           theme={theme}
           onThemeChange={setTheme}
           onLanguageChange={(language) => void onLanguageChange(language)}
+          imageBackend={imageBackend}
+          recommendedBackend={recommendedBackend}
+          onImageBackendChange={(backend) => {
+            setImageBackend(backend);
+            void saveImageBackend(backend);
+          }}
           onBack={() => setView("workspace")}
         />
       )}
@@ -310,6 +377,15 @@ export default function App() {
             void openLocalPath(notice.path);
           }}
           onOpenDiagnosis={openDiagnosis}
+          onRestoreRecommended={() => {
+            void restoreImageBackend().then((choice) => {
+              if (choice !== null) {
+                setImageBackend(choice.current);
+                setRecommendedBackend(choice.recommended);
+              }
+              setNotice(null);
+            });
+          }}
           onClose={() => setNotice(null)}
         />
       ) : null}

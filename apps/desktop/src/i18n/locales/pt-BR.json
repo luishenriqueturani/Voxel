@@ -78,6 +78,8 @@
     "theme": "Tema",
     "themeLight": "Claro",
     "themeDark": "Escuro",
+    "backend": "Backend de imagem",
+    "recommended": "Recomendado pelo setup: {{backend}}",
     "sections": {
       "general": "Geral",
       "hardware": "Hardware",
@@ -95,6 +97,7 @@
     "openLog": "Abrir arquivo de log",
     "openDiagnosis": "Abrir diagnóstico",
     "close": "Fechar",
+    "restore": "Voltar ao recomendado",
     "dismiss": "Fechar o aviso",
     "summary": {
       "incompatibleKernel": "O processo de geração foi encerrado pelo driver da GPU durante a decodificação da imagem.",
@@ -103,6 +106,10 @@
       "network": "A conexão falhou durante um download. Dá para tentar de novo depois.",
       "unknown": "A geração falhou por um motivo que o Voxel ainda não reconhece."
     }
+  },
+  "generation": {
+    "preview": "Prévia da geração",
+    "step": "Passo {{step}} de {{total}}"
   },
   "power": {
     "body": "A {{gpu}} usa o conector 12V-2x6, com relatos de derretimento. Recomendamos limitar a potência da placa a 300 W.",

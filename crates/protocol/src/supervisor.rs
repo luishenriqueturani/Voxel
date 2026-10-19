@@ -46,9 +46,23 @@ impl WorkerProcess {
     ///
     /// Falha se o processo não subir, não anunciar a porta ou não responder no `/health`.
     pub fn spawn(program: impl AsRef<Path>, scenario: &str) -> Result<Self, WorkerError> {
+        Self::spawn_with(program, scenario, &[], Duration::from_secs(3))
+    }
+
+    /// Inicia o worker com variáveis extras e um limite próprio para o pedido HTTP.
+    ///
+    /// # Errors
+    ///
+    /// Falha se o processo não subir, não anunciar a porta ou não responder no `/health`.
+    pub fn spawn_with(
+        program: impl AsRef<Path>,
+        scenario: &str,
+        env: &[(&str, &str)],
+        timeout: Duration,
+    ) -> Result<Self, WorkerError> {
         let program = program.as_ref().to_path_buf();
         let scenario = scenario.to_owned();
-        let (process, port, token, client) = launch(&program, &scenario)?;
+        let (process, port, token, client) = launch(&program, &scenario, env, timeout)?;
         Ok(Self {
             process,
             port,
@@ -67,7 +81,8 @@ impl WorkerProcess {
     pub fn restart(&mut self) -> Result<(), WorkerError> {
         let program = self.program.clone();
         let scenario = self.scenario.clone();
-        let (process, port, token, client) = launch(&program, &scenario)?;
+        let (process, port, token, client) =
+            launch(&program, &scenario, &[], Duration::from_secs(3))?;
         self.process = process;
         self.port = port;
         self.token = token;
@@ -117,15 +132,30 @@ impl WorkerProcess {
     ///
     /// Falha se o WebSocket não conectar ou se uma mensagem sair do contrato.
     pub fn events(&self, job_id: &str) -> Result<Vec<WorkerEvent>, WorkerError> {
-        let mut socket = open_events(self.port, job_id, &self.token)?;
         let mut events = Vec::new();
+        Self::watch(self.port, &self.token, job_id, |event| events.push(event))?;
+        Ok(events)
+    }
+
+    /// Lê o progresso e entrega cada evento assim que chega.
+    ///
+    /// # Errors
+    ///
+    /// Falha se o WebSocket não conectar ou se uma mensagem sair do contrato.
+    pub fn watch(
+        port: u16,
+        token: &str,
+        job_id: &str,
+        mut on_event: impl FnMut(WorkerEvent),
+    ) -> Result<(), WorkerError> {
+        let mut socket = open_events(port, job_id, token)?;
         loop {
             match socket.read()? {
                 tungstenite::Message::Text(text) => {
                     let event = parse_event(&text)?;
                     let finished =
                         matches!(event, WorkerEvent::Completed(_) | WorkerEvent::Failed(_));
-                    events.push(event);
+                    on_event(event);
                     if finished {
                         break;
                     }
@@ -137,7 +167,7 @@ impl WorkerProcess {
                 _ => {}
             }
         }
-        Ok(events)
+        Ok(())
     }
 
     fn get_json<R: DeserializeOwned>(&self, path: &str) -> Result<R, WorkerError> {
@@ -234,15 +264,20 @@ impl MeshPostProcess for WorkerProcess {
 fn launch(
     program: &Path,
     scenario: &str,
+    env: &[(&str, &str)],
+    timeout: Duration,
 ) -> Result<(RunningProcess, u16, String, reqwest::blocking::Client), WorkerError> {
     let token = fresh_token()?;
     let client = reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(3))
+        .timeout(timeout)
         .build()?;
     let mut command = Command::new(program);
     command
         .env("VOXEL_TOKEN", &token)
         .env("VOXEL_SCENARIO", scenario);
+    for (key, value) in env {
+        command.env(key, value);
+    }
     let mut process = RunningProcess::spawn(command, DEFAULT_LINE_LIMIT)?;
     let port = wait_ready(&mut process)?;
     wait_health(&client, port, &token)?;

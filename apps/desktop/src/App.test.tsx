@@ -104,7 +104,8 @@ describe("App", () => {
     expect(localStorage.getItem("voxel.language")).toBe("en");
 
     await user.click(screen.getByRole("button", { name: "Hardware" }));
-    expect(screen.getByText("Nothing to configure here yet.")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Image backend" })).toBeInTheDocument();
+    expect(screen.getByText("Recommended by setup: Vulkan")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("button", { name: "Generate" })).toBeInTheDocument();

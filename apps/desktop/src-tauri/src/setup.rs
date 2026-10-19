@@ -144,6 +144,9 @@ pub fn execute(
         database
             .set_setup_flag("backend", backend.id())
             .map_err(|error| error.to_string())?;
+        database
+            .set_setup_flag("recommended", backend.id())
+            .map_err(|error| error.to_string())?;
     }
     database
         .set_setup_flag("profile", outcome.profile.id())
@@ -306,7 +309,7 @@ fn finished(
     }
 }
 
-fn encode_base64(bytes: &[u8]) -> String {
+pub(crate) fn encode_base64(bytes: &[u8]) -> String {
     const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::new();
     let mut index = 0;

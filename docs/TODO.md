@@ -142,12 +142,12 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Worker stable-diffusion.cpp
 
-- [ ] Build do stable-diffusion.cpp com Vulkan integrado ao comando de build
-- [ ] Adaptador do worker implementando `ImageBackend` (txt2img)
-- [ ] Progresso em tempo real e prévia da imagem
-- [ ] Cancelamento de geração
+- [x] Build do stable-diffusion.cpp com Vulkan integrado ao comando de build
+- [x] Adaptador do worker implementando `ImageBackend` (txt2img)
+- [x] Progresso em tempo real e prévia da imagem
+- [x] Cancelamento de geração
 - [ ] Salvar latentes antes do decode e refazer só o decode com fallback em caso de crash (§6.3)
-- [ ] Opção nas configurações para trocar de backend, com "voltar ao recomendado" no modal de erro (§6.4)
+- [x] Opção nas configurações para trocar de backend, com "voltar ao recomendado" no modal de erro (§6.4)
 
 ### Gerenciador de modelos (§9.4)
 

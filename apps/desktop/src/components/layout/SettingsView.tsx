@@ -19,8 +19,13 @@ type SettingsViewProps = {
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
   onLanguageChange: (language: "pt-BR" | "en") => void;
+  imageBackend: string;
+  recommendedBackend: string | null;
+  onImageBackendChange: (backend: string) => void;
   onBack: () => void;
 };
+
+const IMAGE_BACKENDS = ["vulkan", "rocm", "cuda", "cpu"] as const;
 
 export function SettingsView({
   section,
@@ -28,6 +33,9 @@ export function SettingsView({
   theme,
   onThemeChange,
   onLanguageChange,
+  imageBackend,
+  recommendedBackend,
+  onImageBackendChange,
   onBack,
 }: SettingsViewProps) {
   const { t, i18n } = useTranslation();
@@ -92,6 +100,28 @@ export function SettingsView({
                 {t("settings.themeDark")}
               </label>
             </fieldset>
+          </div>
+        ) : section === "hardware" ? (
+          <div className="flex max-w-sm flex-col gap-3 text-sm">
+            <label className="flex flex-col gap-1">
+              {t("settings.backend")}
+              <select
+                value={imageBackend}
+                onChange={(event) => onImageBackendChange(event.target.value)}
+                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-950"
+              >
+                {IMAGE_BACKENDS.map((id) => (
+                  <option key={id} value={id}>
+                    {t(`setup.backends.${id}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-zinc-500">
+              {t("settings.recommended", {
+                backend: t(`setup.backends.${recommendedBackend ?? "vulkan"}`),
+              })}
+            </p>
           </div>
         ) : (
           <p className="text-sm text-zinc-500">{t("settings.empty")}</p>

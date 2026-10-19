@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["apps/desktop/src-tauri", "crates/*", "workers/mock"]
+members = ["apps/desktop/src-tauri", "crates/*", "workers/mock", "workers/sdcpp"]
 
 [workspace.package]
 version = "0.1.0"
