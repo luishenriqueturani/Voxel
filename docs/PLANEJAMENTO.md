@@ -434,6 +434,8 @@ Durante a instalação, a barra de status mostra o progresso ("Preparando ambien
 
 ### 7.4 Comunicação entre core e workers
 
+**Decisão (fase 0):** HTTP para comandos e WebSocket para progresso. JSON-RPC por stdin/stdout fica descartado: é mais simples, mas pior para prévias e para depurar o worker com as ferramentas HTTP comuns.
+
 - Cada worker é um servidor local escutando apenas em `127.0.0.1`, em **porta aleatória** e com **token** gerado pelo core a cada execução (impede que outros programas usem o worker).
 - **HTTP** para comandos (carregar modelo, gerar, cancelar, status) e **WebSocket** para progresso em tempo real (passo atual, prévia da imagem).
 - Imagens, latentes e malhas são gravados em disco pelo worker; pelo protocolo trafegam apenas caminhos e metadados.
@@ -486,6 +488,7 @@ voxel/
 │   └── protocol/                # tipos do protocolo com os workers
 ├── workers/
 │   ├── python/                  # worker Python (pyproject + uv.lock)
+│   ├── mock/                    # worker falso para testes de contrato
 │   └── sdcpp/                   # integração/build do stable-diffusion.cpp
 ├── protocol/                    # esquema OpenAPI/JSON Schema compartilhado
 ├── catalog/                     # catálogo de modelos (JSON versionado)
@@ -735,4 +738,4 @@ Voxel/
 
 ## 15. Questões em aberto
 
-1. **Protocolo com os workers:** HTTP/WebSocket local (proposto) ou stdio JSON-RPC? Decisão técnica a ser fechada na fase 0, sem impacto para o usuário.
+Nenhuma no momento. O protocolo com os workers foi fechado na seção 7.4.

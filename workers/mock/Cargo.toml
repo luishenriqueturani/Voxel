@@ -1,0 +1,26 @@
+[package]
+name = "voxel-mock"
+description = "Worker falso do Voxel para testes de contrato"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "voxel-mock"
+path = "src/main.rs"
+
+[dependencies]
+voxel-protocol.workspace = true
+axum = { version = "0.8", features = ["json", "ws"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+serde = { workspace = true }
+serde_json.workspace = true
+
+[dev-dependencies]
+voxel-protocol.workspace = true
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+
+[lints]
+workspace = true

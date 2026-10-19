@@ -39,7 +39,7 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 - [x] Configurar relatório de cobertura nas três linguagens com mínimo de 80% por camada (`make coverage`)
 - [x] Configurar E2E com WebdriverIO + `tauri-driver` (`make e2e`)
 - [x] Workflow do GitHub Actions (Linux): formatação → lint → testes unitários com cobertura → E2E → build (§12.2)
-- [ ] Adicionar a etapa de testes de contrato ao CI quando o protocolo existir
+- [x] Adicionar a etapa de testes de contrato ao CI quando o protocolo existir
 
 ### Interface base
 
@@ -69,13 +69,13 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Protocolo e workers
 
-- [ ] Decidir protocolo core ↔ worker (HTTP/WebSocket local vs. stdio JSON-RPC) e registrar no planejamento (§7.4)
-- [ ] Escrever esquema do protocolo (OpenAPI/JSON Schema) e gerar tipos em Rust, TypeScript e Python
-- [ ] Interfaces de backend: `ImageBackend`, `MeshBackend`, `BackgroundRemover`, `MeshPostProcess` (§7.5)
-- [ ] Supervisor de workers no core: iniciar, autenticar com token, monitorar, detectar saída/sinal, reiniciar
-- [ ] Worker falso (mock) que devolve imagens/malhas de exemplo e progresso simulado (§11.2)
-- [ ] Worker falso capaz de simular falhas: abortar com sinal 6, imprimir `HSA_STATUS_ERROR_INVALID_ISA`, falta de memória
-- [ ] Testes de contrato entre core e workers
+- [x] Decidir protocolo core ↔ worker (HTTP/WebSocket local vs. stdio JSON-RPC) e registrar no planejamento (§7.4)
+- [x] Escrever esquema do protocolo (OpenAPI/JSON Schema) e gerar tipos em Rust, TypeScript e Python
+- [x] Interfaces de backend: `ImageBackend`, `MeshBackend`, `BackgroundRemover`, `MeshPostProcess` (§7.5)
+- [x] Supervisor de workers no core: iniciar, autenticar com token, monitorar, detectar saída/sinal, reiniciar
+- [x] Worker falso (mock) que devolve imagens/malhas de exemplo e progresso simulado (§11.2)
+- [x] Worker falso capaz de simular falhas: abortar com sinal 6, imprimir `HSA_STATUS_ERROR_INVALID_ISA`, falta de memória
+- [x] Testes de contrato entre core e workers
 
 ---
 

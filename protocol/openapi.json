@@ -1,0 +1,180 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Voxel Worker",
+    "version": "0.1.0",
+    "description": "Comandos HTTP e eventos WebSocket entre o core e um worker. Escuta só em 127.0.0.1, com token Bearer por execução."
+  },
+  "paths": {
+    "/health": { "get": { "operationId": "health" } },
+    "/models/load": { "post": { "operationId": "loadModel" } },
+    "/models/unload": { "post": { "operationId": "unloadModel" } },
+    "/jobs/cancel": { "post": { "operationId": "cancelJob" } },
+    "/images/txt2img": { "post": { "operationId": "txt2img" } },
+    "/images/img2img": { "post": { "operationId": "img2img" } },
+    "/images/inpaint": { "post": { "operationId": "inpaint" } },
+    "/images/decode-latents": { "post": { "operationId": "decodeLatents" } },
+    "/images/remove-background": { "post": { "operationId": "removeBackground" } },
+    "/meshes/from-image": { "post": { "operationId": "imageToMesh" } },
+    "/meshes/post-process": { "post": { "operationId": "postProcessMesh" } },
+    "/events": { "get": { "operationId": "events" } }
+  },
+  "components": {
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "properties": { "status": { "type": "string" } },
+        "required": ["status"]
+      },
+      "Ack": {
+        "type": "object",
+        "properties": { "accepted": { "type": "boolean" } },
+        "required": ["accepted"]
+      },
+      "ErrorBody": {
+        "type": "object",
+        "properties": { "message": { "type": "string" } },
+        "required": ["message"]
+      },
+      "ModelKind": {
+        "type": "string",
+        "enum": ["image", "mesh", "background"]
+      },
+      "LoadModelRequest": {
+        "type": "object",
+        "properties": {
+          "modelId": { "type": "string" },
+          "modelPath": { "type": "string" },
+          "kind": { "$ref": "#/components/schemas/ModelKind" }
+        },
+        "required": ["modelId", "modelPath", "kind"]
+      },
+      "CancelRequest": {
+        "type": "object",
+        "properties": { "jobId": { "type": "string" } },
+        "required": ["jobId"]
+      },
+      "Txt2ImgRequest": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "prompt": { "type": "string" },
+          "negativePrompt": { "type": "string" },
+          "modelId": { "type": "string" },
+          "outputPath": { "type": "string" },
+          "steps": { "type": "integer" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "seed": { "type": "integer" }
+        },
+        "required": ["jobId", "prompt", "modelId", "outputPath", "steps", "width", "height", "seed"]
+      },
+      "Img2ImgRequest": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "prompt": { "type": "string" },
+          "modelId": { "type": "string" },
+          "imagePath": { "type": "string" },
+          "outputPath": { "type": "string" },
+          "steps": { "type": "integer" },
+          "strength": { "type": "number" }
+        },
+        "required": ["jobId", "prompt", "modelId", "imagePath", "outputPath", "steps", "strength"]
+      },
+      "InpaintRequest": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "prompt": { "type": "string" },
+          "modelId": { "type": "string" },
+          "imagePath": { "type": "string" },
+          "maskPath": { "type": "string" },
+          "outputPath": { "type": "string" }
+        },
+        "required": ["jobId", "prompt", "modelId", "imagePath", "maskPath", "outputPath"]
+      },
+      "DecodeLatentsRequest": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "modelId": { "type": "string" },
+          "latentsPath": { "type": "string" },
+          "outputPath": { "type": "string" }
+        },
+        "required": ["jobId", "modelId", "latentsPath", "outputPath"]
+      },
+      "RemoveBackgroundRequest": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "imagePath": { "type": "string" },
+          "outputPath": { "type": "string" }
+        },
+        "required": ["jobId", "imagePath", "outputPath"]
+      },
+      "ImageToMeshRequest": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "imagePath": { "type": "string" },
+          "modelId": { "type": "string" },
+          "outputPath": { "type": "string" }
+        },
+        "required": ["jobId", "imagePath", "modelId", "outputPath"]
+      },
+      "MeshPostProcessRequest": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "meshPath": { "type": "string" },
+          "outputPath": { "type": "string" },
+          "decimate": { "type": "boolean" },
+          "normalize": { "type": "boolean" },
+          "maxTextures": { "type": "integer" }
+        },
+        "required": ["jobId", "meshPath", "outputPath", "decimate", "normalize"]
+      },
+      "JobOutput": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "path": { "type": "string" }
+        },
+        "required": ["jobId", "path"]
+      },
+      "ProgressName": { "type": "string", "enum": ["progress"] },
+      "CompletedName": { "type": "string", "enum": ["completed"] },
+      "FailedName": { "type": "string", "enum": ["failed"] },
+      "ProgressEvent": {
+        "type": "object",
+        "properties": {
+          "event": { "$ref": "#/components/schemas/ProgressName" },
+          "jobId": { "type": "string" },
+          "step": { "type": "integer" },
+          "total": { "type": "integer" },
+          "previewPath": { "type": "string" }
+        },
+        "required": ["event", "jobId", "step", "total"]
+      },
+      "CompletedEvent": {
+        "type": "object",
+        "properties": {
+          "event": { "$ref": "#/components/schemas/CompletedName" },
+          "jobId": { "type": "string" },
+          "path": { "type": "string" }
+        },
+        "required": ["event", "jobId", "path"]
+      },
+      "FailedEvent": {
+        "type": "object",
+        "properties": {
+          "event": { "$ref": "#/components/schemas/FailedName" },
+          "jobId": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "required": ["event", "jobId", "message"]
+      }
+    }
+  }
+}

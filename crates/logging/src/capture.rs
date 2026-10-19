@@ -67,6 +67,7 @@ pub struct RunningProcess {
     stderr: Arc<Mutex<LineBuffer>>,
     stdout_thread: Option<JoinHandle<()>>,
     stderr_thread: Option<JoinHandle<()>>,
+    outcome: Option<ProcessOutcome>,
 }
 
 impl RunningProcess {
@@ -94,7 +95,35 @@ impl RunningProcess {
             stderr_thread: Some(spawn_reader(stderr, Arc::clone(&stderr_buffer))),
             stdout: stdout_buffer,
             stderr: stderr_buffer,
+            outcome: None,
         })
+    }
+
+    /// Devolve o resultado se o processo já terminou, sem bloquear.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a consulta ao processo falhar.
+    pub fn poll(&mut self) -> std::io::Result<Option<ProcessOutcome>> {
+        if let Some(outcome) = self.outcome {
+            return Ok(Some(outcome));
+        }
+        let Some(mut child) = self.child.take() else {
+            return Ok(None);
+        };
+        match child.try_wait()? {
+            None => {
+                self.child = Some(child);
+                Ok(None)
+            }
+            Some(status) => {
+                drop(child);
+                self.join_readers();
+                let outcome = outcome_from(status);
+                self.outcome = Some(outcome);
+                Ok(Some(outcome))
+            }
+        }
     }
 
     /// Linhas de `stdout` já lidas. Não espera o processo terminar.
@@ -115,13 +144,16 @@ impl RunningProcess {
     ///
     /// Falha se a espera pelo processo falhar.
     pub fn finish(mut self) -> std::io::Result<FinishedProcess> {
-        let Some(mut child) = self.child.take() else {
+        let outcome = if let Some(outcome) = self.outcome {
+            outcome
+        } else if let Some(mut child) = self.child.take() {
+            outcome_from(child.wait()?)
+        } else {
             return Err(std::io::Error::other("processo já encerrado"));
         };
-        let status = child.wait()?;
         self.join_readers();
         Ok(FinishedProcess {
-            outcome: outcome_from(status),
+            outcome,
             stdout: joined(&self.stdout),
             stderr: joined(&self.stderr),
         })
@@ -207,6 +239,23 @@ mod tests {
         assert_eq!(finished.stderr, "err-7\nerr-8\nerr-9");
         assert_eq!(finished.outcome.exit_code, Some(0));
         assert_eq!(finished.outcome.signal, None);
+    }
+
+    #[test]
+    fn poll_enxerga_o_termino_sem_bloquear() {
+        let mut running = RunningProcess::spawn(shell("echo hi; exit 3"), 10).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let outcome = loop {
+            if let Some(outcome) = running.poll().unwrap() {
+                break outcome;
+            }
+            assert!(Instant::now() < deadline, "o processo não terminou");
+            std::thread::sleep(Duration::from_millis(10));
+        };
+        assert_eq!(outcome.exit_code, Some(3));
+        assert_eq!(running.poll().unwrap(), Some(outcome));
+        let finished = running.finish().unwrap();
+        assert!(finished.stdout.contains("hi"));
     }
 
     #[test]
