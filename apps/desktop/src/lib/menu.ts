@@ -1,4 +1,4 @@
-export type MenuEffect = "settings" | "toggle-theme" | "generate";
+export type MenuEffect = "settings" | "toggle-theme" | "generate" | "redo-setup";
 
 export function actionForMenu(id: string): MenuEffect | null {
   switch (id) {
@@ -8,6 +8,8 @@ export function actionForMenu(id: string): MenuEffect | null {
       return "toggle-theme";
     case "generate.run":
       return "generate";
+    case "help.redoSetup":
+      return "redo-setup";
     default:
       return null;
   }

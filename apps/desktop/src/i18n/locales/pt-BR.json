@@ -107,5 +107,37 @@
   "power": {
     "body": "A {{gpu}} usa o conector 12V-2x6, com relatos de derretimento. Recomendamos limitar a potência da placa a 300 W.",
     "dismiss": "Entendi"
+  },
+  "setup": {
+    "title": "Bem-vindo ao Voxel",
+    "lead": "O Voxel lê o hardware e testa uma geração mínima em cada backend de imagem, com o VAE em fp16, num processo separado.",
+    "progress": "Progresso do setup",
+    "continue": "Continuar",
+    "hardware": "{{detail}}",
+    "profile": "Perfil {{profile}}",
+    "backend": "{{backend}}",
+    "backends": {
+      "vulkan": "Vulkan",
+      "rocm": "ROCm",
+      "cuda": "CUDA",
+      "cpu": "CPU"
+    },
+    "profiles": {
+      "minimo": "Mínimo",
+      "basico": "Básico",
+      "intermediario": "Intermediário",
+      "avancado": "Avançado",
+      "alto": "Alto"
+    },
+    "state": {
+      "pending": "na fila",
+      "running": "testando",
+      "passed": "passou",
+      "failed": "quebrou",
+      "skipped": "já tinha quebrado",
+      "unavailable": "ausente",
+      "not_needed": "não foi preciso",
+      "done": "pronto"
+    }
   }
 }

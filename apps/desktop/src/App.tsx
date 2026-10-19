@@ -4,6 +4,7 @@ import { ErrorModal } from "./components/layout/ErrorModal";
 import { type OutputMode, PromptPanel } from "./components/layout/PromptPanel";
 import { type SettingSection, SettingsView } from "./components/layout/SettingsView";
 import { StatusBar } from "./components/layout/StatusBar";
+import { WelcomeView } from "./components/layout/WelcomeView";
 import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { useNativeMenu } from "./hooks/useNativeMenu";
@@ -13,6 +14,13 @@ import type { ErrorNotice } from "./native/errors";
 import { openLocalPath } from "./native/files";
 import { loadPowerNotice } from "./native/power";
 import { loadStoredSettings, saveStoredSettings } from "./native/settings";
+import {
+  type SetupStep,
+  listenToSetup,
+  loadSetupStatus,
+  resetSetup,
+  runSetup,
+} from "./native/setup";
 
 const SUMMARY_KEYS = [
   "error.summary.incompatibleKernel",
@@ -22,7 +30,17 @@ const SUMMARY_KEYS = [
   "error.summary.unknown",
 ] as const;
 
-type View = "workspace" | "settings";
+type View = "workspace" | "settings" | "welcome";
+
+function mergeStep(steps: SetupStep[], step: SetupStep): SetupStep[] {
+  const index = steps.findIndex((current) => current.id === step.id);
+  if (index === -1) {
+    return [...steps, step];
+  }
+  const next = steps.slice();
+  next[index] = step;
+  return next;
+}
 
 function prefersDark(): boolean {
   return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
@@ -31,6 +49,8 @@ function prefersDark(): boolean {
 export default function App() {
   const { t, i18n } = useTranslation();
   const [view, setView] = useState<View>("workspace");
+  const [setupSteps, setSetupSteps] = useState<SetupStep[]>([]);
+  const [setupRun, setSetupRun] = useState(0);
   const [section, setSection] = useState<SettingSection>("general");
   const [theme, setTheme] = useState<Theme>(() =>
     resolveTheme(localStorage.getItem("voxel.theme"), prefersDark()),
@@ -95,10 +115,50 @@ export default function App() {
         setTheme((current) => (current === "dark" ? "light" : "dark"));
       } else if (action === "generate") {
         requestGeneration();
+      } else if (action === "redo-setup") {
+        void resetSetup().then(() => {
+          setSetupSteps([]);
+          setSetupRun((current) => current + 1);
+          setView("welcome");
+        });
       }
     },
     [requestGeneration],
   );
+  useEffect(() => {
+    let cancelled = false;
+    void loadSetupStatus().then((status) => {
+      if (!cancelled && status !== null && !status.completed) {
+        setView("welcome");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (view !== "welcome") {
+      return;
+    }
+    const generation = setupRun;
+    let cancelled = false;
+    const stopPromise = listenToSetup((step) => {
+      if (!cancelled) {
+        setSetupSteps((current) => mergeStep(current, step));
+      }
+    });
+    void runSetup().then((status) => {
+      if (!cancelled && generation === setupRun && status !== null && status.steps.length > 0) {
+        setSetupSteps(status.steps);
+      }
+    });
+    return () => {
+      cancelled = true;
+      void stopPromise.then((stop) => stop());
+    };
+  }, [view, setupRun]);
+
   useEffect(() => {
     let cancelled = false;
     void loadPowerNotice().then((gpu) => {
@@ -162,7 +222,9 @@ export default function App() {
           </button>
         </div>
       ) : null}
-      {view === "workspace" ? (
+      {view === "welcome" ? (
+        <WelcomeView steps={setupSteps} onContinue={() => setView("workspace")} />
+      ) : view === "workspace" ? (
         <div className="flex min-h-0 flex-1">
           <aside className="flex w-80 shrink-0 border-r border-zinc-200 dark:border-zinc-800">
             <PromptPanel

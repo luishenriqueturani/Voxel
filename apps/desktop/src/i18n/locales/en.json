@@ -107,5 +107,37 @@
   "power": {
     "body": "The {{gpu}} uses the 12V-2x6 connector, which has melt reports. A 300 W power limit is recommended.",
     "dismiss": "Got it"
+  },
+  "setup": {
+    "title": "Welcome to Voxel",
+    "lead": "Voxel reads the hardware and runs a minimal generation on each image backend, with the VAE in fp16, in a separate process.",
+    "progress": "Setup progress",
+    "continue": "Continue",
+    "hardware": "{{detail}}",
+    "profile": "Profile {{profile}}",
+    "backend": "{{backend}}",
+    "backends": {
+      "vulkan": "Vulkan",
+      "rocm": "ROCm",
+      "cuda": "CUDA",
+      "cpu": "CPU"
+    },
+    "profiles": {
+      "minimo": "Minimum",
+      "basico": "Basic",
+      "intermediario": "Intermediate",
+      "avancado": "Advanced",
+      "alto": "High"
+    },
+    "state": {
+      "pending": "queued",
+      "running": "testing",
+      "passed": "passed",
+      "failed": "failed",
+      "skipped": "already failed",
+      "unavailable": "missing",
+      "not_needed": "not needed",
+      "done": "done"
+    }
   }
 }

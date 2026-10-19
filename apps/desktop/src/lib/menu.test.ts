@@ -23,6 +23,7 @@ describe("actionForMenu", () => {
     expect(actionForMenu("edit.preferences")).toBe("settings");
     expect(actionForMenu("view.theme")).toBe("toggle-theme");
     expect(actionForMenu("generate.run")).toBe("generate");
+    expect(actionForMenu("help.redoSetup")).toBe("redo-setup");
   });
 
   it("ignora itens ainda sem função", () => {

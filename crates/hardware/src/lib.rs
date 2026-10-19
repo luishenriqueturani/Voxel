@@ -3,8 +3,10 @@
 //! A leitura do sistema fica nesta crate. O que dá para decidir a partir de um texto
 //! (os-release, cpuinfo, rocminfo, topologia do KFD) é função pura e tem teste próprio.
 
+mod compat;
 mod cpu;
 mod disk;
+mod fallback;
 mod gpu;
 mod memory;
 mod os;
@@ -12,12 +14,21 @@ mod power;
 mod profile;
 mod report;
 mod rocm;
+mod setup;
 
+pub use compat::{Combination, CompatibilityMemory, Failure};
+pub use fallback::{
+    BackendFacts, ImageBackend, PythonBackend, facts_from, image_fallback, python_fallback,
+};
 pub use power::{
     POWER_LIMIT_MILLIWATTS, PowerNotice, power_notice, read_power_caps, uses_listed_connector,
 };
 pub use profile::{Profile, profile_for};
 pub use report::{Cpu, DiskSpace, Driver, Gpu, MachineReport, Memory, OperatingSystem, Vendor};
+pub use setup::{
+    Attempt, AttemptState, ImageSetup, ProbeVerdict, SETUP_CONFIGURATION, SETUP_MODEL, device_for,
+    generation_args, hardware_line, image_setup, parse_devices,
+};
 
 /// Lê a máquina em que o processo está rodando.
 ///

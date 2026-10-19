@@ -1,14 +1,22 @@
 mod db;
 mod menu;
 pub mod paths;
+mod probe;
+mod setup;
 
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 use db::{Database, SettingsUpdate, UserSettings};
 use menu::{build_menu, default_labels};
 use paths::AppPaths;
+use probe::discover;
+use setup::SetupSnapshot;
 use tauri::{AppHandle, Emitter, Manager, State};
 use voxel_logging::{AppLog, DEFAULT_RETENTION_DAYS};
+
+#[derive(Default)]
+struct SetupGate(Mutex<()>);
 
 /// Inicia a aplicação Tauri.
 ///
@@ -27,6 +35,7 @@ pub fn run() {
             database.migrate()?;
             app.manage(database);
             app.manage(paths);
+            app.manage(SetupGate::default());
 
             let menu = build_menu(app.handle(), &default_labels())?;
             app.set_menu(menu)?;
@@ -43,7 +52,10 @@ pub fn run() {
             set_menu_labels,
             get_settings,
             update_settings,
-            power_limit_notice
+            power_limit_notice,
+            setup_status,
+            run_setup,
+            reset_setup
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");
@@ -80,4 +92,32 @@ fn power_limit_notice() -> Option<String> {
     let machine = voxel_hardware::detect();
     let caps = voxel_hardware::read_power_caps(&machine.gpus);
     voxel_hardware::power_notice(&machine.gpus, &caps).map(|notice| notice.gpu_name)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn setup_status(database: State<'_, Database>) -> Result<SetupSnapshot, String> {
+    setup::status(&database)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn run_setup(
+    app: AppHandle,
+    database: State<'_, Database>,
+    gate: State<'_, SetupGate>,
+) -> Result<SetupSnapshot, String> {
+    let _hold = gate.0.lock().map_err(|_| "setup ocupado".to_owned())?;
+    if setup::status(&database)?.completed {
+        return setup::status(&database);
+    }
+    setup::execute(&database, &discover(), |step| {
+        let _ = app.emit("setup://progress", step);
+    })
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn reset_setup(database: State<'_, Database>) -> Result<(), String> {
+    database.reset_setup().map_err(|error| error.to_string())
 }

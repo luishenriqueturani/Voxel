@@ -102,7 +102,7 @@ pub fn menu_groups() -> Vec<MenuGroup> {
             items: vec![
                 item("help.docs", false, None),
                 item("help.diagnostics", false, None),
-                item("help.redoSetup", false, None),
+                item("help.redoSetup", true, None),
                 item("help.openLogs", false, None),
                 item("help.about", false, None),
             ],

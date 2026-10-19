@@ -1,0 +1,21 @@
+---
+description: Arquivos do projeto ficam com no máximo 600 linhas
+alwaysApply: true
+---
+
+# Tamanho de arquivo
+
+Nenhum arquivo do projeto passa de 600 linhas.
+
+Antes de editar um arquivo, confira o tamanho. Se a mudança for deixá-lo com mais de 600 linhas, pare e separe o arquivo em partes coesas antes de seguir. Cada parte fica no próprio arquivo, com a mesma responsabilidade que já tinha no original.
+
+Ao separar:
+
+- Preserve o comportamento e a API usada pelo resto do código.
+- Agrupe por assunto (tipos, persistência, testes, interface), não por um corte arbitrário no meio de uma função.
+- Rode os testes da área depois da separação.
+
+```text
+db.rs com 694 linhas
+  -> db/mod.rs, error.rs, migrate.rs, settings.rs, setup_store.rs
+```
