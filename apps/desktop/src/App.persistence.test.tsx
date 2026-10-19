@@ -21,6 +21,10 @@ vi.mock("@tauri-apps/api/core", () => ({
   ),
 }));
 
+vi.mock("./native/errors", () => ({
+  listenToErrors: vi.fn(async () => () => undefined),
+}));
+
 vi.mock("./native/menu", () => ({
   syncNativeMenu: vi.fn(async () => undefined),
   listenToMenu: vi.fn(async (onAction: (id: string) => void) => {

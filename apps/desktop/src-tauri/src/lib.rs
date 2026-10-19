@@ -8,6 +8,7 @@ use db::{Database, SettingsUpdate, UserSettings};
 use menu::{build_menu, default_labels};
 use paths::AppPaths;
 use tauri::{AppHandle, Emitter, Manager, State};
+use voxel_logging::{AppLog, DEFAULT_RETENTION_DAYS};
 
 /// Inicia a aplicação Tauri.
 ///
@@ -20,6 +21,8 @@ pub fn run() {
         .setup(|app| {
             let paths = AppPaths::from_env()?;
             paths.create_all()?;
+            let app_log = AppLog::start(&paths.state.join("logs"), DEFAULT_RETENTION_DAYS)?;
+            app.manage(app_log);
             let database = Database::open(&paths.data.join("voxel.db"))?;
             database.migrate()?;
             app.manage(database);

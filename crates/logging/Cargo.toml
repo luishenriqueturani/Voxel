@@ -8,8 +8,14 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
+serde = { workspace = true, features = ["derive"] }
+time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 [dev-dependencies]
+serde_json.workspace = true
 insta.workspace = true
 mockall.workspace = true
 

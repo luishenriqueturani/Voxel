@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "opener:default",
+    "opener:allow-open-path",
     "allow-set-menu-labels",
     "allow-get-settings",
     "allow-update-settings"

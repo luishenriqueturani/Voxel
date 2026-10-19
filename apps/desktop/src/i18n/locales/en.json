@@ -86,5 +86,22 @@
       "execution": "Execution",
       "logs": "Logs"
     }
+  },
+  "error": {
+    "title": "Generation failed",
+    "log": "Log",
+    "copy": "Copy",
+    "copied": "Copied",
+    "openLog": "Open log file",
+    "openDiagnosis": "Open diagnostics",
+    "close": "Close",
+    "dismiss": "Dismiss the message",
+    "summary": {
+      "incompatibleKernel": "The generation process was stopped by the GPU driver while decoding the image.",
+      "outOfMemory": "The generation ran out of video memory. It can be tried again with a lighter configuration.",
+      "nativeCrash": "The generation process crashed unexpectedly.",
+      "network": "The connection failed during a download. It can be tried again later.",
+      "unknown": "The generation failed for a reason Voxel does not recognize yet."
+    }
   }
 }

@@ -86,5 +86,22 @@
       "execution": "Execução",
       "logs": "Logs"
     }
+  },
+  "error": {
+    "title": "A geração falhou",
+    "log": "Log",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "openLog": "Abrir arquivo de log",
+    "openDiagnosis": "Abrir diagnóstico",
+    "close": "Fechar",
+    "dismiss": "Fechar o aviso",
+    "summary": {
+      "incompatibleKernel": "O processo de geração foi encerrado pelo driver da GPU durante a decodificação da imagem.",
+      "outOfMemory": "A geração ficou sem memória de vídeo. Dá para tentar de novo com uma configuração mais leve.",
+      "nativeCrash": "O processo de geração quebrou de forma inesperada.",
+      "network": "A conexão falhou durante um download. Dá para tentar de novo depois.",
+      "unknown": "A geração falhou por um motivo que o Voxel ainda não reconhece."
+    }
   }
 }

@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ErrorModal } from "./components/layout/ErrorModal";
 import { type OutputMode, PromptPanel } from "./components/layout/PromptPanel";
 import { type SettingSection, SettingsView } from "./components/layout/SettingsView";
 import { StatusBar } from "./components/layout/StatusBar";
+import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { useNativeMenu } from "./hooks/useNativeMenu";
 import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
+import type { ErrorNotice } from "./native/errors";
+import { openLocalPath } from "./native/files";
 import { loadStoredSettings, saveStoredSettings } from "./native/settings";
+
+const SUMMARY_KEYS = [
+  "error.summary.incompatibleKernel",
+  "error.summary.outOfMemory",
+  "error.summary.nativeCrash",
+  "error.summary.network",
+  "error.summary.unknown",
+] as const;
 
 type View = "workspace" | "settings";
 
@@ -25,6 +37,8 @@ export default function App() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [outputMode, setOutputMode] = useState<OutputMode>("2d");
+  const [notice, setNotice] = useState<ErrorNotice | null>(null);
+  const [copied, setCopied] = useState(false);
   const settingsReady = useRef(false);
   const i18nRef = useRef(i18n);
   i18nRef.current = i18n;
@@ -84,12 +98,38 @@ export default function App() {
     [requestGeneration],
   );
   useNativeMenu(onMenuAction);
+  useErrorNotice((next) => {
+    setCopied(false);
+    setNotice(next);
+  });
 
   async function onLanguageChange(language: "pt-BR" | "en") {
     localStorage.setItem(LANGUAGE_KEY, language);
     await i18n.changeLanguage(language);
     await saveStoredSettings({ language });
   }
+
+  async function copyLog() {
+    if (notice === null) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(notice.log);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  function openDiagnosis() {
+    setNotice(null);
+    setCopied(false);
+    setSection("hardware");
+    setView("settings");
+  }
+
+  const summaryKey =
+    SUMMARY_KEYS.find((key) => key === notice?.summaryKey) ?? "error.summary.unknown";
 
   return (
     <div className="flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -125,6 +165,21 @@ export default function App() {
         />
       )}
       <StatusBar onOpenSettings={() => setView("settings")} />
+      {notice !== null ? (
+        <ErrorModal
+          summary={t(summaryKey)}
+          log={notice.log}
+          copied={copied}
+          onCopy={() => {
+            void copyLog();
+          }}
+          onOpenLog={() => {
+            void openLocalPath(notice.path);
+          }}
+          onOpenDiagnosis={openDiagnosis}
+          onClose={() => setNotice(null)}
+        />
+      ) : null}
     </div>
   );
 }

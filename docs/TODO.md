@@ -60,12 +60,12 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Logs e erros (§8)
 
-- [ ] Log geral do app com `tracing`, rotativo por dias
-- [ ] Arquivo de log por erro com mensagem, código de saída/sinal, últimas linhas de stdout/stderr, parâmetros do job, backend, modelo e resumo do hardware (§8.1)
-- [ ] Captura contínua de stdout/stderr dos processos filhos
-- [ ] Classificador de erros baseado em padrões, como tabela de dados (§8.3)
-  - [ ] Usar o log do InvokeAI (§6.2) como fixture de teste
-- [ ] Modal de erro: resumo em linguagem simples, log rolável, Copiar, Abrir arquivo de log, Abrir diagnóstico (§8.2)
+- [x] Log geral do app com `tracing`, rotativo por dias
+- [x] Arquivo de log por erro com mensagem, código de saída/sinal, últimas linhas de stdout/stderr, parâmetros do job, backend, modelo e resumo do hardware (§8.1)
+- [x] Captura contínua de stdout/stderr dos processos filhos
+- [x] Classificador de erros baseado em padrões, como tabela de dados (§8.3)
+  - [x] Usar o log do InvokeAI (§6.2) como fixture de teste
+- [x] Modal de erro: resumo em linguagem simples, log rolável, Copiar, Abrir arquivo de log, Abrir diagnóstico (§8.2)
 
 ### Protocolo e workers
 
