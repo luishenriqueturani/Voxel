@@ -87,16 +87,16 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 - [ ] Compilar stable-diffusion.cpp com Vulkan e testar na RX 7600 (SD 1.5, SDXL, Flux quantizado)
 - [ ] Compilar stable-diffusion.cpp com ROCm e comparar com Vulkan na RX 7600
-- [ ] Testar stable-diffusion.cpp em CPU
-- [ ] Verificar suporte a img2img, inpainting e padding circular (texturas tileáveis) no stable-diffusion.cpp
-- [ ] Verificar se é possível salvar latentes e decodificar separadamente
+- [x] Testar stable-diffusion.cpp em CPU
+- [x] Verificar suporte a img2img, inpainting e padding circular (texturas tileáveis) no stable-diffusion.cpp
+- [x] Verificar se é possível salvar latentes e decodificar separadamente
 
 ### Caso RX 7600 / ROCm (§6.2, §6.3)
 
-- [ ] Reproduzir o crash do VAE decode com PyTorch + ROCm puro e `HSA_OVERRIDE_GFX_VERSION=11.0.0`
-- [ ] Verificar se há build de PyTorch/ROCm com suporte nativo a `gfx1102` (sem override)
-- [ ] Validar mitigações: desligar kernels assembly da MIOpen, desligar MIOpen no PyTorch, VAE em tiles, VAE em fp32, VAE na CPU
-- [ ] Documentar a combinação de variáveis de ambiente que funciona e sua perda de desempenho
+- [x] Reproduzir o crash do VAE decode com PyTorch + ROCm puro e `HSA_OVERRIDE_GFX_VERSION=11.0.0`
+- [x] Verificar se há build de PyTorch/ROCm com suporte nativo a `gfx1102` (sem override)
+- [x] Validar mitigações: desligar kernels assembly da MIOpen, desligar MIOpen no PyTorch, VAE em tiles, VAE em fp32, VAE na CPU
+- [x] Documentar a combinação de variáveis de ambiente que funciona e sua perda de desempenho
 
 ### 3D
 
