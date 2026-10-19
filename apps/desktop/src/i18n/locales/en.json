@@ -113,6 +113,26 @@
     "lead": "Voxel reads the hardware and runs a minimal generation on each image backend, with the VAE in fp16, in a separate process.",
     "progress": "Setup progress",
     "continue": "Continue",
+    "models": "Suggested models",
+    "modelsLead": "These fit the profile. The size is the file size and the license is the model's. Nothing is downloaded now.",
+    "optional": "optional",
+    "advanced": "Advanced mode",
+    "profileLabel": "Profile",
+    "backendLabel": "Backend",
+    "generate": "Generate a test image",
+    "generating": "Generating the test image",
+    "preview": "Test image",
+    "model": {
+      "sd15": "Stable Diffusion 1.5",
+      "triposr": "TripoSR",
+      "u2net": "U²-Net",
+      "sf3d": "Stable Fast 3D"
+    },
+    "outcome": {
+      "missing": "The test image needs this backend's model and binary on this machine.",
+      "failed": "The test image did not come out. {{detail}}",
+      "no_backend": "No image backend was chosen."
+    },
     "hardware": "{{detail}}",
     "profile": "Profile {{profile}}",
     "backend": "{{backend}}",

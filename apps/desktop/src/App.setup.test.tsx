@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { resetSetup } from "./native/setup";
+import { confirmSetup, resetSetup } from "./native/setup";
 
 const menuActions = vi.hoisted(() => ({
   current: undefined as ((id: string) => void) | undefined,
@@ -17,7 +17,7 @@ vi.mock("./native/setup", () => ({
     steps: [],
   })),
   runSetup: vi.fn(async () => ({
-    completed: true,
+    completed: false,
     profile: "intermediario",
     backend: "vulkan",
     steps: [
@@ -25,6 +25,20 @@ vi.mock("./native/setup", () => ({
       { id: "vulkan", state: "passed", detail: "" },
       { id: "profile", state: "done", detail: "intermediario" },
     ],
+    catalog: [
+      {
+        profile: "intermediario",
+        models: [
+          { id: "sd15", bytes: 4_265_146_304, license: "CreativeML OpenRAIL-M", optional: false },
+        ],
+      },
+    ],
+  })),
+  confirmSetup: vi.fn(async () => ({
+    completed: true,
+    image: "iVBORw0KGgo",
+    outcome: "passed",
+    detail: "",
   })),
   resetSetup: vi.fn(async () => undefined),
   listenToSetup: vi.fn(async () => () => undefined),
@@ -53,6 +67,10 @@ describe("setup na abertura", () => {
 
     expect(await screen.findByRole("heading", { name: "Bem-vindo ao Voxel" })).toBeInTheDocument();
     expect(await screen.findByText("Vulkan")).toBeInTheDocument();
+    expect(await screen.findByText(/CreativeML OpenRAIL-M/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Gerar imagem de teste" }));
+    expect(confirmSetup).toHaveBeenCalled();
+    expect(await screen.findByRole("img", { name: "Imagem de teste" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByRole("textbox", { name: "Prompt" })).toBeInTheDocument();
   });

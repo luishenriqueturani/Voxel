@@ -19,6 +19,17 @@ impl ImageBackend {
             Self::Cpu => "cpu",
         }
     }
+
+    #[must_use]
+    pub fn from_id(id: &str) -> Option<Self> {
+        match id {
+            "vulkan" => Some(Self::Vulkan),
+            "rocm" => Some(Self::Rocm),
+            "cuda" => Some(Self::Cuda),
+            "cpu" => Some(Self::Cpu),
+            _ => None,
+        }
+    }
 }
 
 /// Backend Python da coluna 3D do §6.4. O setup inicial não o executa.
@@ -110,6 +121,12 @@ pub fn python_fallback(facts: &BackendFacts) -> Vec<PythonBackend> {
 mod tests {
     use super::*;
     use crate::report::{Cpu, DiskSpace, Gpu, Memory, OperatingSystem};
+
+    #[test]
+    fn o_id_do_backend_de_imagem_e_estavel() {
+        assert_eq!(ImageBackend::from_id("rocm"), Some(ImageBackend::Rocm));
+        assert_eq!(ImageBackend::from_id("metal"), None);
+    }
 
     fn facts(vendor: Option<Vendor>) -> BackendFacts {
         BackendFacts {

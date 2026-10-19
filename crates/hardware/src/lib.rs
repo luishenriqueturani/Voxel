@@ -15,6 +15,7 @@ mod profile;
 mod report;
 mod rocm;
 mod setup;
+mod suggestions;
 
 pub use compat::{Combination, CompatibilityMemory, Failure};
 pub use fallback::{
@@ -29,6 +30,7 @@ pub use setup::{
     Attempt, AttemptState, ImageSetup, ProbeVerdict, SETUP_CONFIGURATION, SETUP_MODEL, device_for,
     generation_args, hardware_line, image_setup, parse_devices,
 };
+pub use suggestions::{ModelSuggestion, suggestions_for};
 
 /// Lê a máquina em que o processo está rodando.
 ///

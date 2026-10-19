@@ -11,7 +11,7 @@ use db::{Database, SettingsUpdate, UserSettings};
 use menu::{build_menu, default_labels};
 use paths::AppPaths;
 use probe::discover;
-use setup::SetupSnapshot;
+use setup::{SetupChoices, SetupConfirmation, SetupSnapshot};
 use tauri::{AppHandle, Emitter, Manager, State};
 use voxel_logging::{AppLog, DEFAULT_RETENTION_DAYS};
 
@@ -55,6 +55,7 @@ pub fn run() {
             power_limit_notice,
             setup_status,
             run_setup,
+            confirm_setup,
             reset_setup
         ])
         .run(tauri::generate_context!())
@@ -114,6 +115,17 @@ fn run_setup(
     setup::execute(&database, &discover(), |step| {
         let _ = app.emit("setup://progress", step);
     })
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn confirm_setup(
+    database: State<'_, Database>,
+    gate: State<'_, SetupGate>,
+    choices: SetupChoices,
+) -> Result<SetupConfirmation, String> {
+    let _hold = gate.0.lock().map_err(|_| "setup ocupado".to_owned())?;
+    setup::confirm(&database, &discover(), &choices)
 }
 
 #[tauri::command]

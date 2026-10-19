@@ -15,7 +15,10 @@ import { openLocalPath } from "./native/files";
 import { loadPowerNotice } from "./native/power";
 import { loadStoredSettings, saveStoredSettings } from "./native/settings";
 import {
+  type ProfileCatalog,
+  type SetupChoices,
   type SetupStep,
+  confirmSetup,
   listenToSetup,
   loadSetupStatus,
   resetSetup,
@@ -50,6 +53,12 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const [view, setView] = useState<View>("workspace");
   const [setupSteps, setSetupSteps] = useState<SetupStep[]>([]);
+  const [catalog, setCatalog] = useState<ProfileCatalog[]>([]);
+  const [setupBackend, setSetupBackend] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmOutcome, setConfirmOutcome] = useState<string | null>(null);
+  const [confirmDetail, setConfirmDetail] = useState("");
   const [setupRun, setSetupRun] = useState(0);
   const [section, setSection] = useState<SettingSection>("general");
   const [theme, setTheme] = useState<Theme>(() =>
@@ -118,6 +127,10 @@ export default function App() {
       } else if (action === "redo-setup") {
         void resetSetup().then(() => {
           setSetupSteps([]);
+          setCatalog([]);
+          setPreview(null);
+          setConfirmOutcome(null);
+          setConfirmDetail("");
           setSetupRun((current) => current + 1);
           setView("welcome");
         });
@@ -151,6 +164,8 @@ export default function App() {
     void runSetup().then((status) => {
       if (!cancelled && generation === setupRun && status !== null && status.steps.length > 0) {
         setSetupSteps(status.steps);
+        setCatalog(status.catalog);
+        setSetupBackend(status.backend);
       }
     });
     return () => {
@@ -176,6 +191,21 @@ export default function App() {
     setCopied(false);
     setNotice(next);
   });
+
+  async function onConfirm(choices: SetupChoices) {
+    setConfirming(true);
+    setConfirmOutcome(null);
+    const result = await confirmSetup(choices);
+    setConfirming(false);
+    if (result === null) {
+      return;
+    }
+    setConfirmOutcome(result.outcome);
+    setConfirmDetail(result.detail);
+    if (result.image !== null) {
+      setPreview(result.image);
+    }
+  }
 
   async function onLanguageChange(language: "pt-BR" | "en") {
     localStorage.setItem(LANGUAGE_KEY, language);
@@ -223,7 +253,19 @@ export default function App() {
         </div>
       ) : null}
       {view === "welcome" ? (
-        <WelcomeView steps={setupSteps} onContinue={() => setView("workspace")} />
+        <WelcomeView
+          steps={setupSteps}
+          catalog={catalog}
+          backend={setupBackend}
+          confirming={confirming}
+          image={preview}
+          outcome={confirmOutcome}
+          detail={confirmDetail}
+          onConfirm={(choices) => {
+            void onConfirm(choices);
+          }}
+          onContinue={() => setView("workspace")}
+        />
       ) : view === "workspace" ? (
         <div className="flex min-h-0 flex-1">
           <aside className="flex w-80 shrink-0 border-r border-zinc-200 dark:border-zinc-800">

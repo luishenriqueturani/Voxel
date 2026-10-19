@@ -28,6 +28,18 @@ impl Profile {
             Self::Alto => "alto",
         }
     }
+
+    #[must_use]
+    pub fn from_id(id: &str) -> Option<Self> {
+        match id {
+            "minimo" => Some(Self::Minimo),
+            "basico" => Some(Self::Basico),
+            "intermediario" => Some(Self::Intermediario),
+            "avancado" => Some(Self::Avancado),
+            "alto" => Some(Self::Alto),
+            _ => None,
+        }
+    }
 }
 
 /// Escolhe o perfil pela GPU de maior VRAM.
@@ -122,5 +134,10 @@ mod tests {
         assert_eq!(Profile::Intermediario.id(), "intermediario");
         assert_eq!(Profile::Avancado.id(), "avancado");
         assert_eq!(Profile::Alto.id(), "alto");
+        assert_eq!(
+            Profile::from_id("intermediario"),
+            Some(Profile::Intermediario)
+        );
+        assert_eq!(Profile::from_id("outro"), None);
     }
 }

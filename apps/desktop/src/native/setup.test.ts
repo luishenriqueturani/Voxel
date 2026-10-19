@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { listenToSetup, loadSetupStatus, resetSetup, runSetup } from "./setup";
+import { confirmSetup, listenToSetup, loadSetupStatus, resetSetup, runSetup } from "./setup";
 
 const tauri = vi.hoisted(() => ({ inside: true }));
 
@@ -54,6 +54,7 @@ describe("setup no Tauri", () => {
     tauri.inside = false;
     await expect(loadSetupStatus()).resolves.toBeNull();
     await expect(runSetup()).resolves.toBeNull();
+    await expect(confirmSetup({ models: [], profile: null, backend: null })).resolves.toBeNull();
     await resetSetup();
     await expect(listenToSetup(() => undefined)).resolves.toBeTypeOf("function");
     expect(invoke).not.toHaveBeenCalled();

@@ -136,9 +136,9 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 - [x] Teste real de cada backend candidato: geração mínima completa, com VAE decode em fp16, em processo isolado (§6.3)
 - [x] Ordem de fallback entre backends (§6.4)
 - [x] Memória de compatibilidade local: registrar e evitar combinações que quebraram (§6.3)
-- [ ] Sugestão de modelos iniciais com tamanho e licença
-- [ ] Geração de teste ponta a ponta ao final do setup
-- [ ] Modo avançado para sobrescrever escolhas
+- [x] Sugestão de modelos iniciais com tamanho e licença
+- [x] Geração de teste ponta a ponta ao final do setup
+- [x] Modo avançado para sobrescrever escolhas
 
 ### Worker stable-diffusion.cpp
 
