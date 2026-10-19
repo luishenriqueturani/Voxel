@@ -100,9 +100,9 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### 3D
 
-- [ ] Testar TripoSR na RX 7600 (ROCm e CPU)
-- [ ] Testar Stable Fast 3D na RX 7600 (ROCm e CPU)
-- [ ] Avaliar Hunyuan3D 2.x mini, TRELLIS e InstantMesh quanto à dependência de CUDA
+- [x] Testar TripoSR na RX 7600 (ROCm e CPU)
+- [x] Testar Stable Fast 3D na RX 7600 (ROCm e CPU)
+- [x] Avaliar Hunyuan3D 2.x mini, TRELLIS e InstantMesh quanto à dependência de CUDA
 - [ ] Testar em NVIDIA, se houver acesso
 
 ### Auxiliares
