@@ -367,6 +367,8 @@ A única máquina medida é a RX 7600 (8 GB) com 32 GB de RAM. As linhas Mínimo
 | **Avançado** | GPU 12–16 GB | Sem medição. SDXL e Flux quantizado continuam pendentes | Hunyuan3D, TRELLIS e InstantMesh não rodaram: a textura ou a geração dependem de CUDA |
 | **Alto** | GPU 24 GB+ | Sem medição | Sem medição |
 
+A função que escolhe o perfil usa a maior VRAM, em GiB binários: sem GPU é Mínimo; até 6 GiB é Básico; até 10 GiB é Intermediário; até 18 GiB é Avançado; acima disso é Alto. A GTX 1060 de 6 GB fica em Básico, a RX 7600 medida (8.176 MiB) em Intermediário, a RTX 4070 de 12 GB e a Intel Arc de 16 GB em Avançado, e a RX 7900 de 20 GB ou mais em Alto.
+
 **Decisão do MVP.** O backend 2D é o stable-diffusion.cpp, com Vulkan como caminho padrão, ROCm quando a placa AMD tem a ISA nativa e o override está desligado, e CPU por último. O modelo 2D é o SD 1.5. O backend 3D é PyTorch, e o modelo é o TripoSR. O Stable Fast 3D fica como opção texturizada do perfil intermediário. A remoção de fundo é o U²-Net em CPU, pela crate `ort`. A decimação é o `meshoptimizer`.
 
 ### 6.7 Refazer setup [Ideia original]
@@ -378,6 +380,12 @@ A aplicação também verifica rapidamente o hardware a cada inicialização e *
 ### 6.8 Diagnóstico
 
 Tela "Diagnóstico de hardware" que gera um relatório copiável (hardware, ISA, driver, backend, versões, combinações que falharam, últimos erros). Facilita abrir uma issue no GitHub quando algo não funcionar na máquina de alguém.
+
+### 6.9 Aviso de conector de energia
+
+Há registros públicos e repetidos de derretimento do conector 12VHPWR / 12V-2x6 nestas placas: GeForce RTX 3090 Ti, 4080, 4090, 5070 Ti, 5080 e 5090, RTX PRO 6000, e Radeon RX 9070 XT nas versões que usam esse conector. A RX 7600 fica de fora: o teto de firmware dela é 145 W.
+
+Na abertura, se a GPU detectada estiver nessa lista e o teto de potência vigente passar de 300 W, o app mostra uma notificação recomendando um power limit de 300 W. Não aplica o limite sozinho. Se o teto já estiver em 300 W ou menos, a notificação não aparece.
 
 ---
 

@@ -103,5 +103,9 @@
       "network": "The connection failed during a download. It can be tried again later.",
       "unknown": "The generation failed for a reason Voxel does not recognize yet."
     }
+  },
+  "power": {
+    "body": "The {{gpu}} uses the 12V-2x6 connector, which has melt reports. A 300 W power limit is recommended.",
+    "dismiss": "Got it"
   }
 }

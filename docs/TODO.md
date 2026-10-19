@@ -123,11 +123,12 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Detecção de hardware (§6.5)
 
-- [ ] Coletar distribuição, kernel e versão do driver (Mesa/AMDGPU, NVIDIA)
-- [ ] Coletar CPU (núcleos, AVX2/AVX-512), RAM total/disponível e espaço em disco
-- [ ] Enumerar GPUs via Vulkan: fabricante, modelo, VRAM
-- [ ] Detectar ISA real da GPU AMD (`rocminfo`) e presença de ROCm/CUDA (NVML)
-- [ ] Função pura "hardware → perfil" (§6.6), testada com vários cenários (RX 7600, RX 7900, GTX 1060, RTX 4070, Intel Arc, só CPU)
+- [x] Coletar distribuição, kernel e versão do driver (Mesa/AMDGPU, NVIDIA)
+- [x] Coletar CPU (núcleos, AVX2/AVX-512), RAM total/disponível e espaço em disco
+- [x] Enumerar GPUs via Vulkan: fabricante, modelo, VRAM
+- [x] Detectar ISA real da GPU AMD (`rocminfo`) e presença de ROCm/CUDA (NVML)
+- [x] Função pura "hardware → perfil" (§6.6), testada com vários cenários (RX 7600, RX 7900, GTX 1060, RTX 4070, Intel Arc, só CPU)
+- [x] Na abertura, avisar power limit de 300 W se a GPU estiver na lista do conector 12V-2x6 (§6.9): RTX 3090 Ti, 4080, 4090, 5070 Ti, 5080, 5090, RTX PRO 6000 e RX 9070 XT. Não avisar quando o teto vigente já for de 300 W ou menos
 
 ### Setup inicial
 

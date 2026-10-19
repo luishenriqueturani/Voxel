@@ -8,6 +8,10 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
+ash = "0.38.0"
+nvml-wrapper = "0.13.0"
+serde.workspace = true
+sysinfo = { version = "0.38.4", default-features = false, features = ["disk"] }
 
 [dev-dependencies]
 insta.workspace = true

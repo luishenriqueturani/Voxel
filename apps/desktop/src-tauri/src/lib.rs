@@ -42,7 +42,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             set_menu_labels,
             get_settings,
-            update_settings
+            update_settings,
+            power_limit_notice
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");
@@ -71,4 +72,12 @@ fn update_settings(
     database
         .update_settings(&update)
         .map_err(|error| error.to_string())
+}
+
+/// Nome da GPU que deve receber o aviso de power limit de 300 W, se houver.
+#[tauri::command]
+fn power_limit_notice() -> Option<String> {
+    let machine = voxel_hardware::detect();
+    let caps = voxel_hardware::read_power_caps(&machine.gpus);
+    voxel_hardware::power_notice(&machine.gpus, &caps).map(|notice| notice.gpu_name)
 }

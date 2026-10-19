@@ -103,5 +103,9 @@
       "network": "A conexão falhou durante um download. Dá para tentar de novo depois.",
       "unknown": "A geração falhou por um motivo que o Voxel ainda não reconhece."
     }
+  },
+  "power": {
+    "body": "A {{gpu}} usa o conector 12V-2x6, com relatos de derretimento. Recomendamos limitar a potência da placa a 300 W.",
+    "dismiss": "Entendi"
   }
 }

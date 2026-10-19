@@ -11,6 +11,7 @@ import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
 import type { ErrorNotice } from "./native/errors";
 import { openLocalPath } from "./native/files";
+import { loadPowerNotice } from "./native/power";
 import { loadStoredSettings, saveStoredSettings } from "./native/settings";
 
 const SUMMARY_KEYS = [
@@ -38,6 +39,7 @@ export default function App() {
   const [negativePrompt, setNegativePrompt] = useState("");
   const [outputMode, setOutputMode] = useState<OutputMode>("2d");
   const [notice, setNotice] = useState<ErrorNotice | null>(null);
+  const [powerGpu, setPowerGpu] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const settingsReady = useRef(false);
   const i18nRef = useRef(i18n);
@@ -97,6 +99,18 @@ export default function App() {
     },
     [requestGeneration],
   );
+  useEffect(() => {
+    let cancelled = false;
+    void loadPowerNotice().then((gpu) => {
+      if (!cancelled) {
+        setPowerGpu(gpu);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useNativeMenu(onMenuAction);
   useErrorNotice((next) => {
     setCopied(false);
@@ -133,6 +147,21 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      {powerGpu !== null ? (
+        <div
+          role="status"
+          className="flex items-start gap-4 border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+        >
+          <p className="flex-1">{t("power.body", { gpu: powerGpu })}</p>
+          <button
+            type="button"
+            className="shrink-0 rounded-md border border-amber-400 px-3 py-1 dark:border-amber-700"
+            onClick={() => setPowerGpu(null)}
+          >
+            {t("power.dismiss")}
+          </button>
+        </div>
+      ) : null}
       {view === "workspace" ? (
         <div className="flex min-h-0 flex-1">
           <aside className="flex w-80 shrink-0 border-r border-zinc-200 dark:border-zinc-800">
