@@ -355,17 +355,19 @@ Executado na primeira abertura, com uma tela de boas-vindas mostrando o progress
 
 O ambiente Python **não** é instalado aqui; ele é configurado quando o usuário demonstra intenção de usar 3D (ver 7.3). O usuário pode sobrescrever qualquer escolha manualmente (modo avançado).
 
-### 6.6 Perfis de hardware (rascunho)
+### 6.6 Perfis de hardware
 
-| Perfil | Exemplo de hardware | 2D sugerido | 3D sugerido |
+A única máquina medida é a RX 7600 (8 GB) com 32 GB de RAM. As linhas Mínimo e Intermediário saem dessa medição. Básico, Avançado e Alto continuam sem teste próprio: SDXL, Flux e as placas NVIDIA seguem em aberto. O detalhe está em `docs/pesquisa/consolidacao.md`.
+
+| Perfil | Exemplo de hardware | 2D | 3D |
 | --- | --- | --- | --- |
-| **Mínimo** | Só CPU, 16 GB RAM | SD 1.5 quantizado, 512px | Modelo 3D leve em CPU (lento) |
-| **Básico** | GPU 4–6 GB (GTX 1660, RX 6500) | SD 1.5 / SDXL quantizado | Modelo 3D leve |
-| **Intermediário** | GPU 8 GB (RX 7600, RTX 3060 Ti/4060) | SDXL Q8, Flux quantizado | Modelo 3D leve/médio |
-| **Avançado** | GPU 12–16 GB | SDXL, Flux Q8 | Modelos 3D médios/pesados |
-| **Alto** | GPU 24 GB+ | Flux completo | Modelos 3D pesados com textura |
+| **Mínimo** | Só CPU, 16 GB RAM | SD 1.5, 512 px, pelo stable-diffusion.cpp em CPU. Aqui a geração levou 32 s com o grafo em cache e 65 s na passagem anterior. O processo chegou a 4,5 GB de RAM | TripoSR em CPU. O processo ficou em 4,4 GB. O Stable Fast 3D em CPU chegou a 14 GB e não entra neste perfil |
+| **Básico** | GPU 4–6 GB (GTX 1660, RX 6500) | SD 1.5. Não houve placa dessa faixa. Os pesos ocupam 2,8 GB; com pouca VRAM livre o Vulkan já tira o VAE da placa | TripoSR. Nesta placa o pico foi 3,8 GB, então 4 GB fica apertado e não foi comprovado |
+| **Intermediário** | GPU 8 GB (RX 7600 medida; RTX 3060 Ti/4060 por semelhança) | SD 1.5. Vulkan em 6,2 s, com pico de 5,0 GB. ROCm em 3,4 s, com os pesos inteiros na placa | TripoSR no ROCm (pico 3,8 GB). Stable Fast 3D cabe se a atenção experimental estiver ligada: 6,2 GB alocados e a placa chegou a 8,1 GB. Sem essa flag a geração estoura |
+| **Avançado** | GPU 12–16 GB | Sem medição. SDXL e Flux quantizado continuam pendentes | Hunyuan3D, TRELLIS e InstantMesh não rodaram: a textura ou a geração dependem de CUDA |
+| **Alto** | GPU 24 GB+ | Sem medição | Sem medição |
 
-Os limites exatos serão definidos com testes reais na fase de pesquisa.
+**Decisão do MVP.** O backend 2D é o stable-diffusion.cpp, com Vulkan como caminho padrão, ROCm quando a placa AMD tem a ISA nativa e o override está desligado, e CPU por último. O modelo 2D é o SD 1.5. O backend 3D é PyTorch, e o modelo é o TripoSR. O Stable Fast 3D fica como opção texturizada do perfil intermediário. A remoção de fundo é o U²-Net em CPU, pela crate `ort`. A decimação é o `meshoptimizer`.
 
 ### 6.7 Refazer setup [Ideia original]
 

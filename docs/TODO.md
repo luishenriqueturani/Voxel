@@ -107,15 +107,15 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Auxiliares
 
-- [ ] Testar remoção de fundo via ONNX Runtime (crate `ort`) em CPU com BiRefNet e U²-Net/IS-Net
-- [ ] Avaliar bibliotecas de decimação de malha (`meshoptimizer`, `trimesh`, `pymeshlab`)
+- [x] Testar remoção de fundo via ONNX Runtime (crate `ort`) em CPU com BiRefNet e U²-Net/IS-Net
+- [x] Avaliar bibliotecas de decimação de malha (`meshoptimizer`, `trimesh`, `pymeshlab`)
 
 ### Consolidação
 
-- [ ] Medir VRAM, RAM e tempo de cada combinação modelo + backend
-- [ ] Preencher a tabela de perfis de hardware (§6.6)
-- [ ] Verificar licenças dos modelos candidatos
-- [ ] Definir os modelos e backends do MVP
+- [x] Medir VRAM, RAM e tempo de cada combinação modelo + backend
+- [x] Preencher a tabela de perfis de hardware (§6.6)
+- [x] Verificar licenças dos modelos candidatos
+- [x] Definir os modelos e backends do MVP
 
 ---
 
