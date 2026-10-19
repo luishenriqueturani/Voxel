@@ -151,15 +151,15 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Gerenciador de modelos (§9.4)
 
-- [ ] Formato do catálogo de modelos (JSON versionado) e primeiros modelos cadastrados
-- [ ] Download retomável com progresso e verificação de hash
-- [ ] Token do Hugging Face para modelos com acesso restrito
-- [ ] Cálculo do selo de compatibilidade (Compatível / Com ressalvas / Incompatível) com motivo
-- [ ] Ocultar incompatíveis por padrão, com opção "mostrar modelos incompatíveis"
-- [ ] Aviso e confirmação explícita ao baixar modelo incompatível
-- [ ] Exibir licença antes do download
-- [ ] Importar modelo local (`.safetensors`/`.gguf`) com identificação da arquitetura pelos metadados e estimativa de compatibilidade
-- [ ] Remover modelos e abrir pasta de modelos
+- [x] Formato do catálogo de modelos (JSON versionado) e primeiros modelos cadastrados
+- [x] Download retomável com progresso e verificação de hash
+- [x] Token do Hugging Face para modelos com acesso restrito
+- [x] Cálculo do selo de compatibilidade (Compatível / Com ressalvas / Incompatível) com motivo
+- [x] Ocultar incompatíveis por padrão, com opção "mostrar modelos incompatíveis"
+- [x] Aviso e confirmação explícita ao baixar modelo incompatível
+- [x] Exibir licença antes do download
+- [x] Importar modelo local (`.safetensors`/`.gguf`) com identificação da arquitetura pelos metadados e estimativa de compatibilidade
+- [x] Remover modelos e abrir pasta de modelos
 
 ### Geração 2D
 
@@ -219,6 +219,18 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 - [ ] Viewer com `react-three-fiber`: orbitar, zoom, wireframe, textura
 - [ ] Exibir contagem de polígonos
+
+### Busca no Hugging Face
+
+Os modelos medidos do catálogo ficam no topo, como recomendados. O restante é para experimentar: o selo é "não medido".
+
+- [ ] Seção "Recomendados" no gerenciador com os modelos do catálogo medido
+- [ ] Busca na API do Hugging Face por nome, mostrando nome, tamanho e licença de cada arquivo
+- [ ] Selo "não medido" nesses resultados, fora do filtro de incompatíveis
+- [ ] Escolher o arquivo `.safetensors` ou `.gguf` quando o repositório tiver mais de um
+- [ ] Download do resultado com retomada, hash quando o Hub informar, e o token já gravado se o repositório for restrito
+- [ ] Licença e aviso de que o modelo não foi medido neste computador antes de confirmar o download
+- [ ] Depois de baixado, ler a arquitetura do cabeçalho e estimar a compatibilidade pelo tamanho, como na importação local
 
 ### Pós-processamento 3D opcional (§4.3)
 

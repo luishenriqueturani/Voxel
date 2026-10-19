@@ -27,8 +27,8 @@ htmlcov/
 workers/sdcpp/build/
 workers/sdcpp/stable-diffusion.cpp/
 
-# Modelos (nunca versionados)
-models/
+# Pesos baixados na raiz do repositório. Não vale para crates/models nem src/models.
+/models/
 *.safetensors
 *.gguf
 *.ckpt

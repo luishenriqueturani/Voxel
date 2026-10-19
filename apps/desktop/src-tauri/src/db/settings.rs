@@ -122,6 +122,41 @@ impl Database {
         }
     }
 
+    /// Informa se há um token do Hugging Face gravado, sem devolver o valor.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn hf_token_configured(&self) -> Result<bool, DbError> {
+        Ok(self
+            .hf_token()?
+            .is_some_and(|value| !value.trim().is_empty()))
+    }
+
+    /// Lê o token só para o processo que vai baixar um modelo restrito.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub(crate) fn hf_token(&self) -> Result<Option<String>, DbError> {
+        self.get("hf_token")
+    }
+
+    /// Grava ou apaga o token do Hugging Face.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a escrita falhar.
+    pub fn set_hf_token(&self, token: Option<&str>) -> Result<(), DbError> {
+        if let Some(value) = token.map(str::trim).filter(|value| !value.is_empty()) {
+            self.set("hf_token", value)
+        } else {
+            let connection = self.lock()?;
+            connection.execute("DELETE FROM settings WHERE key = ?1", ["hf_token"])?;
+            Ok(())
+        }
+    }
+
     fn set(&self, key: &str, value: &str) -> Result<(), DbError> {
         let connection = self.lock()?;
         connection.execute(
@@ -279,6 +314,18 @@ mod tests {
         );
         database.set_image_backend_override(None).unwrap();
         assert_eq!(database.image_backend_override().unwrap(), None);
+    }
+
+    #[test]
+    fn o_token_fica_no_banco_e_fora_das_configuracoes_exportadas() {
+        let database = migrated();
+        assert!(!database.hf_token_configured().unwrap());
+        database.set_hf_token(Some("hf_teste")).unwrap();
+        assert!(database.hf_token_configured().unwrap());
+        let exported = serde_json::to_string(&database.settings().unwrap()).unwrap();
+        assert!(!exported.contains("hf_teste"));
+        database.set_hf_token(Some("  ")).unwrap();
+        assert!(!database.hf_token_configured().unwrap());
     }
 
     #[test]

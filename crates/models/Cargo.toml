@@ -1,0 +1,17 @@
+[package]
+name = "voxel-models"
+description = "Catálogo, downloads e compatibilidade de modelos do Voxel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+sha2 = "0.10"
+
+[lints]
+workspace = true

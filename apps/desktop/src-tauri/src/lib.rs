@@ -1,6 +1,7 @@
 mod db;
 mod generate;
 mod menu;
+mod models;
 pub mod paths;
 mod probe;
 mod setup;
@@ -27,6 +28,7 @@ struct SetupGate(Mutex<()>);
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let paths = AppPaths::from_env()?;
             paths.create_all()?;
@@ -61,7 +63,14 @@ pub fn run() {
             image_backend_choice,
             set_image_backend,
             restore_image_backend,
-            generate_image
+            generate_image,
+            hf_token_status,
+            set_hf_token,
+            download_model,
+            list_models,
+            import_model,
+            remove_model,
+            models_directory
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");
@@ -173,4 +182,57 @@ fn generate_image(
     request: generate::GenerateRequest,
 ) -> Result<generate::GeneratedImage, String> {
     generate::generate(&app, &database, &paths, &request)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn hf_token_status(database: State<'_, Database>) -> Result<bool, String> {
+    models::token_configured(&database)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn set_hf_token(database: State<'_, Database>, token: String) -> Result<bool, String> {
+    models::store_token(&database, &token)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn download_model(
+    app: AppHandle,
+    database: State<'_, Database>,
+    paths: State<'_, AppPaths>,
+    model_id: String,
+    confirmed: bool,
+) -> Result<String, String> {
+    models::download(&app, &database, &paths, &model_id, confirmed)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn list_models(paths: State<'_, AppPaths>) -> Result<Vec<models::ListedModel>, String> {
+    models::list_models(&paths.data.join("models"), &models::current_facts())
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn import_model(paths: State<'_, AppPaths>, path: String) -> Result<models::ListedModel, String> {
+    let facts = models::current_facts();
+    models::import_model(
+        &paths.data.join("models"),
+        std::path::Path::new(&path),
+        &facts,
+    )
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn remove_model(paths: State<'_, AppPaths>, filename: String) -> Result<(), String> {
+    models::remove_model(&paths.data.join("models"), &filename)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn models_directory(paths: State<'_, AppPaths>) -> Result<String, String> {
+    models::ensure_models_dir(&paths.data.join("models")).map(|path| path.display().to_string())
 }

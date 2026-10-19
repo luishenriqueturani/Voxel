@@ -80,6 +80,11 @@
     "themeDark": "Dark",
     "backend": "Image backend",
     "recommended": "Recommended by setup: {{backend}}",
+    "token": "Hugging Face token",
+    "tokenHint": "Used only for models with restricted access.",
+    "tokenSave": "Save token",
+    "tokenClear": "Delete token",
+    "tokenSaved": "Token saved on this computer.",
     "sections": {
       "general": "General",
       "hardware": "Hardware",
@@ -87,6 +92,35 @@
       "environment": "3D environment",
       "execution": "Execution",
       "logs": "Logs"
+    }
+  },
+  "models": {
+    "showIncompatible": "Show incompatible models",
+    "download": "Download",
+    "remove": "Remove",
+    "openFolder": "Open models folder",
+    "import": "Import model",
+    "licenseTitle": "License for {{name}}",
+    "licenseUnknown": "The file did not include a license.",
+    "confirmDownload": "Confirm download",
+    "confirmAnyway": "Download anyway",
+    "incompatibleWarning": "This model is incompatible with this computer. The download uses disk space and cannot generate here.",
+    "understand": "I understand this model does not run on this computer.",
+    "cancel": "Cancel",
+    "architecture": "Architecture: {{name}}",
+    "seals": {
+      "compatible": "Compatible",
+      "caveat": "With caveats",
+      "incompatible": "Incompatible"
+    },
+    "reasons": {
+      "requires_cuda": "Requires CUDA — this GPU is not NVIDIA.",
+      "needs_vram": "Requires {{required}} of VRAM — {{available}} available.",
+      "needs_ram": "Requires {{required}} of RAM — {{available}} available.",
+      "offload_ram": "The VAE stays in RAM.",
+      "cpu_slow": "Slow, it will use the CPU.",
+      "experimental_attention": "On ROCm, experimental attention is required.",
+      "unproven_vram": "Not measured below {{proven}}. {{available}} available."
     }
   },
   "error": {

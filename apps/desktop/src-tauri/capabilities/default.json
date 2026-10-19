@@ -9,6 +9,14 @@
     "opener:allow-open-path",
     "allow-set-menu-labels",
     "allow-get-settings",
-    "allow-update-settings"
+    "allow-update-settings",
+    "allow-hf-token-status",
+    "allow-set-hf-token",
+    "allow-download-model",
+    "allow-list-models",
+    "allow-import-model",
+    "allow-remove-model",
+    "allow-models-directory",
+    "dialog:allow-open"
   ]
 }

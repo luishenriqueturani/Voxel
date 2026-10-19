@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import type { Theme } from "../../lib/preferences";
+import type { ListedModel } from "../../native/models";
 import { Button } from "../ui/button";
+import { ModelsSection } from "./ModelsSection";
 
 export const SETTING_SECTIONS = [
   "general",
@@ -22,6 +24,14 @@ type SettingsViewProps = {
   imageBackend: string;
   recommendedBackend: string | null;
   onImageBackendChange: (backend: string) => void;
+  hfTokenConfigured: boolean;
+  onHfTokenSave: (token: string) => void;
+  onHfTokenClear: () => void;
+  models: ListedModel[];
+  onDownload: (id: string) => void;
+  onRemove: (filename: string) => void;
+  onOpenFolder: () => void;
+  onImport: () => void;
   onBack: () => void;
 };
 
@@ -36,6 +46,14 @@ export function SettingsView({
   imageBackend,
   recommendedBackend,
   onImageBackendChange,
+  hfTokenConfigured,
+  onHfTokenSave,
+  onHfTokenClear,
+  models,
+  onDownload,
+  onRemove,
+  onOpenFolder,
+  onImport,
   onBack,
 }: SettingsViewProps) {
   const { t, i18n } = useTranslation();
@@ -123,6 +141,17 @@ export function SettingsView({
               })}
             </p>
           </div>
+        ) : section === "models" ? (
+          <ModelsSection
+            hfTokenConfigured={hfTokenConfigured}
+            onHfTokenSave={onHfTokenSave}
+            onHfTokenClear={onHfTokenClear}
+            models={models}
+            onDownload={onDownload}
+            onRemove={onRemove}
+            onOpenFolder={onOpenFolder}
+            onImport={onImport}
+          />
         ) : (
           <p className="text-sm text-zinc-500">{t("settings.empty")}</p>
         )}

@@ -12,6 +12,15 @@ import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
 import type { ErrorNotice } from "./native/errors";
 import { loadImageBackend, restoreImageBackend, saveImageBackend } from "./native/backend";
+import {
+  type ListedModel,
+  downloadModel,
+  importLocalModel,
+  loadModels,
+  modelsDirectory,
+  removeModel,
+} from "./native/models";
+import { loadHfTokenStatus, saveHfToken } from "./native/token";
 import { generateImage } from "./native/generation";
 import { openLocalPath } from "./native/files";
 import { loadPowerNotice } from "./native/power";
@@ -76,6 +85,8 @@ export default function App() {
   } | null>(null);
   const [imageBackend, setImageBackend] = useState("vulkan");
   const [recommendedBackend, setRecommendedBackend] = useState<string | null>(null);
+  const [hfTokenConfigured, setHfTokenConfigured] = useState(false);
+  const [library, setLibrary] = useState<ListedModel[]>([]);
   const [notice, setNotice] = useState<ErrorNotice | null>(null);
   const [powerGpu, setPowerGpu] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -227,6 +238,16 @@ export default function App() {
         setRecommendedBackend(choice.recommended);
       }
     });
+    void loadHfTokenStatus().then((configured) => {
+      if (!cancelled) {
+        setHfTokenConfigured(configured);
+      }
+    });
+    void loadModels().then((models) => {
+      if (!cancelled) {
+        setLibrary(models);
+      }
+    });
     return () => {
       cancelled = true;
     };
@@ -360,6 +381,34 @@ export default function App() {
           onImageBackendChange={(backend) => {
             setImageBackend(backend);
             void saveImageBackend(backend);
+          }}
+          hfTokenConfigured={hfTokenConfigured}
+          onHfTokenSave={(token) => {
+            void saveHfToken(token).then(setHfTokenConfigured);
+          }}
+          onHfTokenClear={() => {
+            void saveHfToken("").then(setHfTokenConfigured);
+          }}
+          models={library}
+          onDownload={(id) => {
+            void downloadModel(id, true).then(() => loadModels().then(setLibrary));
+          }}
+          onRemove={(filename) => {
+            void removeModel(filename).then(() => loadModels().then(setLibrary));
+          }}
+          onOpenFolder={() => {
+            void modelsDirectory().then((path) => {
+              if (path !== null) {
+                void openLocalPath(path);
+              }
+            });
+          }}
+          onImport={() => {
+            void importLocalModel().then((imported) => {
+              if (imported) {
+                void loadModels().then(setLibrary);
+              }
+            });
           }}
           onBack={() => setView("workspace")}
         />

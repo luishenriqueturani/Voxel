@@ -4,6 +4,13 @@ fn main() {
             "set_menu_labels",
             "get_settings",
             "update_settings",
+            "hf_token_status",
+            "set_hf_token",
+            "download_model",
+            "list_models",
+            "import_model",
+            "remove_model",
+            "models_directory",
         ]),
     ))
     .expect("falha no build do Tauri");
