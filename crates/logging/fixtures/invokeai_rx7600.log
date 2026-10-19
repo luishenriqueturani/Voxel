@@ -1,0 +1,6 @@
+Denoising (Anima) (#0): 100%|████████| 30/30 [01:40<00:00,  3.34s/it]
+[MODEL CACHE] Loaded model '...:vae' (AutoencoderKLWan) onto cuda device #0
+Kernel Name: miopenSp3AsmConvFury_v2_4_1_gfx11_1536vgprs_fp16_fp16acc_f2x3_c16_stride1
+Callback: Queue 0x7f910b200000 aborting with error : HSA_STATUS_ERROR_INVALID_ISA:
+The instruction set architecture is invalid. code: 0x100f
+Invoke process was terminated with signal 6, exit code 0
