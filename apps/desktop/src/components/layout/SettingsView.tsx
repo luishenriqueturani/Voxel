@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Theme } from "../../lib/preferences";
-import type { ListedModel } from "../../native/models";
+import type { DownloadProgress, ListedModel } from "../../native/models";
 import { Button } from "../ui/button";
 import { ModelsSection } from "./ModelsSection";
 
@@ -28,6 +28,7 @@ type SettingsViewProps = {
   onHfTokenSave: (token: string) => void;
   onHfTokenClear: () => void;
   models: ListedModel[];
+  modelProgress?: DownloadProgress | null;
   onDownload: (id: string) => void;
   onRemove: (filename: string) => void;
   onOpenFolder: () => void;
@@ -50,6 +51,7 @@ export function SettingsView({
   onHfTokenSave,
   onHfTokenClear,
   models,
+  modelProgress = null,
   onDownload,
   onRemove,
   onOpenFolder,
@@ -147,6 +149,7 @@ export function SettingsView({
             onHfTokenSave={onHfTokenSave}
             onHfTokenClear={onHfTokenClear}
             models={models}
+            progress={modelProgress}
             onDownload={onDownload}
             onRemove={onRemove}
             onOpenFolder={onOpenFolder}

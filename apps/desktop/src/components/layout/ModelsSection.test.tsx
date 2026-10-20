@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { ListedModel } from "../../native/models";
+import type { DownloadProgress, ListedModel } from "../../native/models";
 import { ModelsSection } from "./ModelsSection";
 
 const compatible: ListedModel = {
@@ -50,7 +50,11 @@ const imported: ListedModel = {
   kind: "image",
 };
 
-function renderSection(onDownload = vi.fn(), onRemove = vi.fn()) {
+function renderSection(
+  onDownload = vi.fn(),
+  onRemove = vi.fn(),
+  progress: DownloadProgress | null = null,
+) {
   const onOpenFolder = vi.fn();
   const onImport = vi.fn();
   render(
@@ -59,6 +63,7 @@ function renderSection(onDownload = vi.fn(), onRemove = vi.fn()) {
       onHfTokenSave={vi.fn()}
       onHfTokenClear={vi.fn()}
       models={[compatible, incompatible, imported]}
+      progress={progress}
       onDownload={onDownload}
       onRemove={onRemove}
       onOpenFolder={onOpenFolder}
@@ -118,5 +123,18 @@ describe("gerenciador de modelos", () => {
     expect(onOpenFolder).toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Importar modelo" }));
     expect(onImport).toHaveBeenCalled();
+  });
+
+  it("mostra o quanto já foi baixado e trava os outros downloads", () => {
+    renderSection(vi.fn(), vi.fn(), { modelId: "sd15", received: 40, total: 100 });
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "40");
+    expect(screen.getByText("40 B de 100 B")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Baixar Stable Diffusion 1.5" })).toBeNull();
+  });
+
+  it("avisa que está conferindo o arquivo quando a transferência acaba", () => {
+    renderSection(vi.fn(), vi.fn(), { modelId: "sd15", received: 100, total: 100 });
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+    expect(screen.getByText("Verificando o arquivo…")).toBeInTheDocument();
   });
 });

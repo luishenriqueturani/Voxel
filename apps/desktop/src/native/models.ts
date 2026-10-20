@@ -1,5 +1,14 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+
+export const MODEL_PROGRESS_EVENT = "model://progress";
+
+export type DownloadProgress = {
+  modelId: string;
+  received: number;
+  total: number;
+};
 
 export type ListedReason = {
   code: string;
@@ -41,6 +50,39 @@ export async function loadModels(): Promise<ListedModel[]> {
   }
   const value = await invoke("list_models");
   return Array.isArray(value) ? value.filter(isModel) : [];
+}
+
+export function progressFrom(value: unknown): DownloadProgress | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const progress = value as DownloadProgress;
+  if (
+    typeof progress.modelId !== "string" ||
+    typeof progress.received !== "number" ||
+    typeof progress.total !== "number"
+  ) {
+    return null;
+  }
+  return {
+    modelId: progress.modelId,
+    received: progress.received,
+    total: progress.total,
+  };
+}
+
+export function listenToDownloadProgress(
+  onProgress: (progress: DownloadProgress) => void,
+): Promise<() => void> {
+  if (!isTauri()) {
+    return Promise.resolve(() => undefined);
+  }
+  return listen(MODEL_PROGRESS_EVENT, (event) => {
+    const progress = progressFrom(event.payload);
+    if (progress) {
+      onProgress(progress);
+    }
+  });
 }
 
 export async function downloadModel(modelId: string, confirmed: boolean): Promise<void> {

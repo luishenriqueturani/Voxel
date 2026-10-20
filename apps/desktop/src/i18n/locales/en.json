@@ -120,6 +120,9 @@
   "models": {
     "showIncompatible": "Show incompatible models",
     "download": "Download",
+    "downloading": "Downloading…",
+    "progress": "{{received}} of {{total}}",
+    "verifying": "Checking the file…",
     "remove": "Remove",
     "openFolder": "Open models folder",
     "import": "Import model",

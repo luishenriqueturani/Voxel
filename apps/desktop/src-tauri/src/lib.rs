@@ -233,16 +233,23 @@ fn set_hf_token(database: State<'_, Database>, token: String) -> Result<bool, St
     models::store_token(&database, &token)
 }
 
+/// Fora da thread da janela, para o progresso pintar enquanto o arquivo chega.
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
-fn download_model(
+async fn download_model(
     app: AppHandle,
     database: State<'_, Database>,
     paths: State<'_, AppPaths>,
     model_id: String,
     confirmed: bool,
 ) -> Result<String, String> {
-    models::download(&app, &database, &paths, &model_id, confirmed)
+    let database = database.inner().clone();
+    let paths = paths.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        models::download(&app, &database, &paths, &model_id, confirmed)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

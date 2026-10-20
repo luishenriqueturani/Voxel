@@ -1,5 +1,7 @@
 mod library;
 
+use std::time::{Duration, Instant};
+
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use voxel_models::{Catalog, Compatibility, MachineFacts, compatibility, fetch, prepare_download};
@@ -92,7 +94,14 @@ pub fn download(
     let job = job_for(database, model_id)?;
     let destination = paths.data.join("models").join(file_name(model_id)?);
     let id = model_id.to_owned();
+    let mut emitted: Option<Instant> = None;
     fetch(&job, &destination, |received, total| {
+        let finished = total > 0 && received >= total;
+        let recent = emitted.is_some_and(|instant| instant.elapsed() < Duration::from_millis(200));
+        if !finished && recent {
+            return;
+        }
+        emitted = Some(Instant::now());
         let _ = app.emit(
             "model://progress",
             DownloadProgress {

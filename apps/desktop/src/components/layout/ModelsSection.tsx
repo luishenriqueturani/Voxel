@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ListedModel, ListedReason } from "../../native/models";
+import type { DownloadProgress, ListedModel, ListedReason } from "../../native/models";
 import { Button } from "../ui/button";
 
 type ModelsSectionProps = {
@@ -8,6 +8,7 @@ type ModelsSectionProps = {
   onHfTokenSave: (token: string) => void;
   onHfTokenClear: () => void;
   models: ListedModel[];
+  progress?: DownloadProgress | null;
   onDownload: (id: string) => void;
   onRemove: (filename: string) => void;
   onOpenFolder: () => void;
@@ -19,6 +20,7 @@ export function ModelsSection({
   onHfTokenSave,
   onHfTokenClear,
   models,
+  progress = null,
   onDownload,
   onRemove,
   onOpenFolder,
@@ -96,9 +98,10 @@ export function ModelsSection({
                 ) : null}
               </div>
               <div className="flex gap-2">
-                {model.catalog && !model.installed ? (
+                {model.catalog && !model.installed && progress?.modelId !== model.id ? (
                   <Button
                     aria-label={`${t("models.download")} ${model.name}`}
+                    disabled={progress !== null}
                     onClick={() => setPending(model)}
                   >
                     {t("models.download")}
@@ -115,6 +118,7 @@ export function ModelsSection({
                 ) : null}
               </div>
             </div>
+            {progress?.modelId === model.id ? <DownloadBar progress={progress} /> : null}
           </li>
         ))}
       </ul>
@@ -130,6 +134,42 @@ export function ModelsSection({
       ) : null}
     </div>
   );
+}
+
+function DownloadBar({ progress }: { progress: DownloadProgress }) {
+  const { t } = useTranslation();
+  const percent = percentOf(progress);
+  const verifying = progress.total > 0 && progress.received >= progress.total;
+  const label = verifying
+    ? t("models.verifying")
+    : progress.total <= 0
+      ? t("models.downloading")
+      : t("models.progress", {
+          received: formatBytes(progress.received),
+          total: formatBytes(progress.total),
+        });
+  return (
+    <div className="mt-2">
+      <div
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        aria-label={t("models.downloading")}
+        className="h-1.5 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800"
+      >
+        <div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="mt-1 text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
+function percentOf(progress: DownloadProgress): number {
+  if (progress.total <= 0) {
+    return 0;
+  }
+  return Math.min(100, Math.round((progress.received / progress.total) * 100));
 }
 
 function DownloadDialog({

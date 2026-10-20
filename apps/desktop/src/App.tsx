@@ -9,6 +9,7 @@ import { WorkspaceView } from "./components/layout/WorkspaceView";
 import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { useImageEdit } from "./hooks/useImageEdit";
+import { useModelDownload } from "./hooks/useModelDownload";
 import { useNativeMenu } from "./hooks/useNativeMenu";
 import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
@@ -24,7 +25,6 @@ import {
   saveGeneratedImage,
 } from "./native/generation";
 import {
-  downloadModel,
   importLocalModel,
   type ListedModel,
   loadModels,
@@ -164,6 +164,8 @@ export default function App() {
       path: "",
     });
   }, []);
+
+  const { modelProgress, downloadCatalogModel } = useModelDownload(setLibrary, reportFailure);
 
   const { removing, openImage, removeBackground } = useImageEdit({
     slides,
@@ -542,9 +544,8 @@ export default function App() {
             void saveHfToken("").then(setHfTokenConfigured);
           }}
           models={library}
-          onDownload={(id) => {
-            void downloadModel(id, true).then(() => loadModels().then(setLibrary));
-          }}
+          modelProgress={modelProgress}
+          onDownload={downloadCatalogModel}
           onRemove={(filename) => {
             void removeModel(filename).then(() => loadModels().then(setLibrary));
           }}
