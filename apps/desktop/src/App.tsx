@@ -7,16 +7,15 @@ import { type SettingSection, SettingsView } from "./components/layout/SettingsV
 import { StatusBar } from "./components/layout/StatusBar";
 import { WelcomeView } from "./components/layout/WelcomeView";
 import { WorkspaceView } from "./components/layout/WorkspaceView";
+import { useAppMenu } from "./hooks/useAppMenu";
 import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { useGenerationRequest } from "./hooks/useGenerationRequest";
 import { useImageEdit } from "./hooks/useImageEdit";
 import { useMeshDrop } from "./hooks/useMeshDrop";
 import { useModelDownload } from "./hooks/useModelDownload";
-import { useNativeMenu } from "./hooks/useNativeMenu";
 import { usePythonEnvironment } from "./hooks/usePythonEnvironment";
 import { blankEdit } from "./lib/edit";
-import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
 import { mergeStep, prefersDark, SUMMARY_KEYS } from "./lib/shell";
 import { loadImageBackend, restoreImageBackend, saveImageBackend } from "./native/backend";
@@ -44,7 +43,6 @@ import {
   listenToSetup,
   loadSetupStatus,
   type ProfileCatalog,
-  resetSetup,
   runSetup,
   type SetupChoices,
   type SetupStep,
@@ -210,43 +208,6 @@ export default function App() {
   useGenerateShortcut(requestGeneration);
   useMeshDrop(sendImage);
 
-  const onMenuAction = useCallback(
-    (id: string) => {
-      const action = actionForMenu(id);
-      if (action === "settings") {
-        setView("settings");
-      } else if (action === "toggle-theme") {
-        setTheme((current) => (current === "dark" ? "light" : "dark"));
-      } else if (action === "generate") {
-        requestGeneration();
-      } else if (action === "cancel-generation") {
-        void cancelGeneration();
-      } else if (action === "redo-setup") {
-        void resetSetup().then(() => {
-          setSetupSteps([]);
-          setCatalog([]);
-          setPreview(null);
-          setConfirmOutcome(null);
-          setConfirmDetail("");
-          setSetupRun((current) => current + 1);
-          setView("welcome");
-        });
-      } else if (action === "open-image") {
-        openImage();
-      } else if (action === "remove-background") {
-        removeBackground();
-      } else if (action === "undo-edit") {
-        undoEdit();
-      } else if (action === "gallery") {
-        setView("workspace");
-        setGallerySignal((current) => current + 1);
-      } else if (action === "viewer") {
-        setView("workspace");
-        setViewerSignal((current) => current + 1);
-      }
-    },
-    [openImage, removeBackground, requestGeneration, undoEdit],
-  );
   useEffect(() => {
     let cancelled = false;
     void loadSetupStatus().then((status) => {
@@ -363,7 +324,6 @@ export default function App() {
     };
   }, [view]);
 
-  useNativeMenu(onMenuAction);
   useErrorNotice((next) => {
     setCopied(false);
     setNotice(next);
@@ -414,6 +374,29 @@ export default function App() {
     .map((model) => ({ id: model.id, name: model.name }));
   const selected = slides[slideIndex] ?? null;
   const shown = generating && frame?.preview ? imageSrc(frame.preview) : (selected?.src ?? null);
+  useAppMenu({
+    setView,
+    setSection,
+    setTheme,
+    requestGeneration,
+    openImage,
+    removeBackground,
+    undoEdit,
+    setGallerySignal,
+    setViewerSignal,
+    setLibrary,
+    reportFailure,
+    setParams,
+    setSetupSteps,
+    setCatalog,
+    setPreview,
+    setConfirmOutcome,
+    setConfirmDetail,
+    setSetupRun,
+    selectedPath: selected?.path ?? null,
+    selectedSeed: selected?.seed ?? null,
+    previewSrc: shown,
+  });
 
   const summaryKey =
     SUMMARY_KEYS.find((key) => key === notice?.summaryKey) ?? "error.summary.unknown";

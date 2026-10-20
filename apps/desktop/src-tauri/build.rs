@@ -26,6 +26,8 @@ fn main() {
             "hf_token_status",
             "set_hf_token",
             "download_model",
+            "search_hub_models",
+            "download_hub_model",
             "list_models",
             "import_model",
             "remove_model",

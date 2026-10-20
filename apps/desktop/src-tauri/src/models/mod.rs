@@ -1,3 +1,4 @@
+pub(crate) mod hub_cmd;
 mod library;
 
 use std::time::{Duration, Instant};
@@ -7,7 +8,8 @@ use tauri::{AppHandle, Emitter};
 use voxel_models::{Catalog, Compatibility, MachineFacts, compatibility, fetch, prepare_download};
 
 pub use library::{
-    ListedModel, current_facts, ensure_models_dir, import_model, list_models, remove_model,
+    ListedModel, current_facts, describe_downloaded, ensure_models_dir, import_model, list_models,
+    remove_model,
 };
 
 use crate::db::Database;

@@ -64,7 +64,7 @@ pub fn fetch(
     destination: &Path,
     mut on_progress: impl FnMut(u64, u64),
 ) -> Result<(), ModelError> {
-    if destination.is_file() && sha256_file(destination)? == job.sha256 {
+    if satisfied(destination, job)? {
         on_progress(job.bytes, job.bytes);
         return Ok(());
     }
@@ -76,7 +76,7 @@ pub fn fetch(
     if offset > job.bytes {
         offset = 0;
     }
-    if offset == job.bytes && sha256_file(&partial)? == job.sha256 {
+    if offset == job.bytes && satisfied(&partial, job)? {
         finish(destination, &partial)?;
         on_progress(job.bytes, job.bytes);
         return Ok(());
@@ -139,12 +139,22 @@ pub fn fetch(
             expected: job.bytes,
         });
     }
-    if sha256_file(&partial)? != job.sha256 {
+    if !job.sha256.is_empty() && sha256_file(&partial)? != job.sha256 {
         let _ = std::fs::remove_file(&partial);
         return Err(ModelError::HashMismatch);
     }
     finish(destination, &partial)?;
     Ok(())
+}
+
+fn satisfied(path: &Path, job: &DownloadJob) -> Result<bool, ModelError> {
+    if !path.is_file() {
+        return Ok(false);
+    }
+    if job.sha256.is_empty() {
+        return Ok(std::fs::metadata(path)?.len() == job.bytes);
+    }
+    Ok(sha256_file(path)? == job.sha256)
 }
 
 fn finish(destination: &Path, partial: &Path) -> Result<(), ModelError> {
@@ -341,6 +351,30 @@ mod tests {
         assert!(matches!(error, ModelError::HashMismatch));
         assert!(!destination.exists());
         assert!(!partial_for(&destination).exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn sem_hash_o_arquivo_completo_fica() {
+        let body = b"sem-hash-ok".to_vec();
+        let port = serve(Script {
+            status: 200,
+            body: body.clone(),
+            honor_range: false,
+            seen: Arc::new(Mutex::new(Vec::new())),
+        });
+        let dir = std::env::temp_dir().join(format!("voxel-download-open-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let destination = dir.join("peso.bin");
+        let job = super::DownloadJob {
+            url: format!("http://127.0.0.1:{port}/peso.bin"),
+            bytes: body.len() as u64,
+            sha256: String::new(),
+            authorization: None,
+        };
+        fetch(&job, &destination, |_, _| {}).unwrap();
+        assert_eq!(std::fs::read(&destination).unwrap(), body);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

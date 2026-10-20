@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  claimDownload,
   type DownloadProgress,
   downloadModel,
   type ListedModel,
   listenToDownloadProgress,
   loadModels,
+  releaseDownload,
+  subscribeActiveDownload,
 } from "../native/models";
 
 export function useModelDownload(
@@ -18,6 +21,27 @@ export function useModelDownload(
   const activeRef = useRef<string | null>(null);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+
+  useEffect(() => {
+    const reload = () => {
+      void loadModels()
+        .then((models) => {
+          setLibrary(models);
+        })
+        .catch((error: unknown) => {
+          onErrorRef.current(error);
+        });
+    };
+    window.addEventListener("voxel-models", reload);
+    return () => window.removeEventListener("voxel-models", reload);
+  }, [setLibrary]);
+
+  useEffect(() => {
+    return subscribeActiveDownload((id) => {
+      activeRef.current = id;
+      setModelProgress(id ? { modelId: id, received: 0, total: 0 } : null);
+    });
+  }, []);
 
   useEffect(() => {
     let stop: (() => void) | undefined;
@@ -41,8 +65,9 @@ export function useModelDownload(
 
   const downloadCatalogModel = useCallback(
     (id: string) => {
-      activeRef.current = id;
-      setModelProgress({ modelId: id, received: 0, total: 0 });
+      if (!claimDownload(id)) {
+        return;
+      }
       void downloadModel(id, true)
         .then(() => loadModels())
         .then((models) => {
@@ -52,10 +77,7 @@ export function useModelDownload(
           onErrorRef.current(error);
         })
         .finally(() => {
-          if (activeRef.current === id) {
-            activeRef.current = null;
-            setModelProgress(null);
-          }
+          releaseDownload(id);
         });
     },
     [setLibrary],

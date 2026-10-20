@@ -119,6 +119,36 @@ pub fn list_models(dir: &Path, facts: &MachineFacts) -> Result<Vec<ListedModel>,
     Ok(listed)
 }
 
+/// Lê a arquitetura do arquivo já gravado e estima o selo pelo tamanho.
+///
+/// # Errors
+///
+/// Falha se o nome sair da pasta ou se o cabeçalho não for reconhecido.
+pub fn describe_downloaded(
+    dir: &Path,
+    filename: &str,
+    license: &str,
+    facts: &MachineFacts,
+) -> Result<ListedModel, String> {
+    let path = file_in_dir(dir, filename)?;
+    if !path.is_file() {
+        return Err("arquivo ausente".to_owned());
+    }
+    let info = inspect_file(&path).map_err(|error| error.to_string())?;
+    Ok(describe(Entry {
+        id: filename,
+        name: filename,
+        license,
+        bytes: info.bytes,
+        filename,
+        installed: true,
+        catalog: false,
+        seal: estimate_by_size(info.bytes, facts.vram_bytes),
+        kind: import_kind(Some(info.architecture.as_str())),
+        architecture: Some(info.architecture),
+    }))
+}
+
 /// Copia um `.safetensors` ou `.gguf` para a pasta de modelos.
 ///
 /// # Errors
@@ -231,7 +261,11 @@ fn kind_name(kind: voxel_models::Kind) -> &'static str {
 
 fn import_kind(architecture: Option<&str>) -> &'static str {
     let name = architecture.unwrap_or("").to_ascii_lowercase();
-    if name.contains("diffusion") || name.contains("stable") || name.contains("flux") {
+    if name.contains("diffusion")
+        || name.contains("stable")
+        || name.contains("flux")
+        || name.contains("image")
+    {
         "image"
     } else {
         "unknown"
@@ -311,7 +345,7 @@ fn partial_path(destination: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::{import_model, list_models, remove_model};
+    use super::{describe_downloaded, import_kind, import_model, list_models, remove_model};
     use voxel_models::MachineFacts;
 
     fn facts(vram: u64) -> MachineFacts {
@@ -349,6 +383,14 @@ mod tests {
             Some("stable-diffusion-v1")
         );
         assert_eq!(imported.compatibility, "compatible");
+        let described =
+            describe_downloaded(&models, "local.safetensors", "mit", &facts(10_000_000)).unwrap();
+        assert_eq!(described.license, "mit");
+        assert!(!described.catalog);
+        assert_eq!(
+            described.architecture.as_deref(),
+            Some("stable-diffusion-v1")
+        );
         assert!(import_model(&models, &source, &facts(10_000_000)).is_err());
         let small = list_models(&models, &facts(1)).unwrap();
         let local = small
@@ -361,5 +403,13 @@ mod tests {
         let after = list_models(&models, &facts(10_000_000)).unwrap();
         assert!(after.iter().all(|model| model.id != "local.safetensors"));
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn qwen_image_gera_imagem_e_um_modelo_de_texto_nao() {
+        assert_eq!(import_kind(Some("qwen_image21")), "image");
+        assert_eq!(import_kind(Some("stable-diffusion-xl")), "image");
+        assert_eq!(import_kind(Some("qwen2")), "unknown");
+        assert_eq!(import_kind(None), "unknown");
     }
 }

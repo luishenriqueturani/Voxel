@@ -79,6 +79,15 @@ describe("App", () => {
 
     await act(() => onAction("generate.run"));
     await act(() => onAction("help.about"));
+
+    await act(() => onAction("models.manage"));
+    expect(screen.getByRole("heading", { name: "Recomendados" })).toBeInTheDocument();
+
+    await act(() => onAction("help.diagnostics"));
+    expect(screen.getByRole("combobox", { name: "Backend de imagem" })).toBeInTheDocument();
+
+    await act(() => onAction("edit.preferences"));
+    expect(screen.getByRole("combobox", { name: "Idioma" })).toBeInTheDocument();
   });
 
   it("abre as configurações, troca o idioma e o tema, e volta", async () => {

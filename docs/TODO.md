@@ -224,13 +224,13 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 Os modelos medidos do catálogo ficam no topo, como recomendados. O restante é para experimentar: o selo é "não medido".
 
-- [ ] Seção "Recomendados" no gerenciador com os modelos do catálogo medido
-- [ ] Busca na API do Hugging Face por nome, mostrando nome, tamanho e licença de cada arquivo
-- [ ] Selo "não medido" nesses resultados, fora do filtro de incompatíveis
-- [ ] Escolher o arquivo `.safetensors` ou `.gguf` quando o repositório tiver mais de um
-- [ ] Download do resultado com retomada, hash quando o Hub informar, e o token já gravado se o repositório for restrito
-- [ ] Licença e aviso de que o modelo não foi medido neste computador antes de confirmar o download
-- [ ] Depois de baixado, ler a arquitetura do cabeçalho e estimar a compatibilidade pelo tamanho, como na importação local
+- [x] Seção "Recomendados" no gerenciador com os modelos do catálogo medido
+- [x] Busca na API do Hugging Face por nome, mostrando nome, tamanho e licença de cada arquivo
+- [x] Selo "não medido" nesses resultados, fora do filtro de incompatíveis
+- [x] Escolher o arquivo `.safetensors` ou `.gguf` quando o repositório tiver mais de um
+- [x] Download do resultado com retomada, hash quando o Hub informar, e o token já gravado se o repositório for restrito
+- [x] Licença e aviso de que o modelo não foi medido neste computador antes de confirmar o download
+- [x] Depois de baixado, ler a arquitetura do cabeçalho e estimar a compatibilidade pelo tamanho, como na importação local
 
 ### Pós-processamento 3D opcional (§4.3)
 
@@ -312,5 +312,6 @@ Os modelos medidos do catálogo ficam no topo, como recomendados. O restante é 
 - [ ] Wildcards no prompt (§5.7)
 - [ ] Presets de estilo no painel (§4.5)
 - [ ] LoRAs (§4.5)
+- [ ] Selo que distingue formato e quantização (safetensors, GGUF, MLX, NVFP4, Q4_K_M e afins), além do tamanho do arquivo (`docs/pesquisa/formatos-de-modelo.md`)
 - [ ] Upscale de imagens (§4.5)
 - [ ] `PKGBUILD` (AUR) ou AppImage nas releases (§12.3)

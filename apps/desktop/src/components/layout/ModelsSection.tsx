@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { DownloadProgress, ListedModel, ListedReason } from "../../native/models";
+import type { DownloadProgress, HubFile, ListedModel, ListedReason } from "../../native/models";
 import { Button } from "../ui/button";
+import { HubSearch } from "./HubSearch";
 
 type ModelsSectionProps = {
   hfTokenConfigured: boolean;
@@ -13,6 +14,8 @@ type ModelsSectionProps = {
   onRemove: (filename: string) => void;
   onOpenFolder: () => void;
   onImport: () => void;
+  onSearchHub?: (query: string) => Promise<HubFile[]>;
+  onDownloadHub?: (file: HubFile) => Promise<void> | void;
 };
 
 export function ModelsSection({
@@ -25,114 +28,165 @@ export function ModelsSection({
   onRemove,
   onOpenFolder,
   onImport,
+  onSearchHub,
+  onDownloadHub,
 }: ModelsSectionProps) {
   const { t } = useTranslation();
   const [tokenDraft, setTokenDraft] = useState("");
   const [showIncompatible, setShowIncompatible] = useState(false);
   const [pending, setPending] = useState<ListedModel | null>(null);
-  const visible = models.filter(
-    (model) => showIncompatible || model.compatibility !== "incompatible",
+  const recommended = models.filter(
+    (model) => model.catalog && (showIncompatible || model.compatibility !== "incompatible"),
   );
+  const downloaded = models.filter((model) => !model.catalog);
 
   return (
-    <div className="flex max-w-xl flex-col gap-4 text-sm">
-      <label className="flex max-w-sm flex-col gap-1">
-        {t("settings.token")}
-        <input
-          type="password"
-          autoComplete="off"
-          value={tokenDraft}
-          onChange={(event) => setTokenDraft(event.target.value)}
-          className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-950"
-        />
-      </label>
-      <p className="text-zinc-500">{t("settings.tokenHint")}</p>
-      {hfTokenConfigured ? <p>{t("settings.tokenSaved")}</p> : null}
-      <div className="flex gap-2">
-        <Button
-          onClick={() => {
-            onHfTokenSave(tokenDraft);
-            setTokenDraft("");
-          }}
-          disabled={tokenDraft.trim() === ""}
-        >
-          {t("settings.tokenSave")}
-        </Button>
-        {hfTokenConfigured ? (
-          <Button variant="ghost" onClick={onHfTokenClear}>
-            {t("settings.tokenClear")}
+    <div className="grid grid-cols-[minmax(0,36rem)_minmax(0,1fr)] items-start gap-8 text-sm">
+      <div className="flex min-w-0 flex-col gap-4">
+        <label className="flex max-w-sm flex-col gap-1">
+          {t("settings.token")}
+          <input
+            type="password"
+            autoComplete="off"
+            value={tokenDraft}
+            onChange={(event) => setTokenDraft(event.target.value)}
+            className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-950"
+          />
+        </label>
+        <p className="text-zinc-500">{t("settings.tokenHint")}</p>
+        {hfTokenConfigured ? <p>{t("settings.tokenSaved")}</p> : null}
+        <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              onHfTokenSave(tokenDraft);
+              setTokenDraft("");
+            }}
+            disabled={tokenDraft.trim() === ""}
+          >
+            {t("settings.tokenSave")}
           </Button>
+          {hfTokenConfigured ? (
+            <Button variant="ghost" onClick={onHfTokenClear}>
+              {t("settings.tokenClear")}
+            </Button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" onClick={onImport}>
+            {t("models.import")}
+          </Button>
+          <Button variant="ghost" onClick={onOpenFolder}>
+            {t("models.openFolder")}
+          </Button>
+        </div>
+        <section className="flex flex-col gap-3">
+          <h3 className="font-medium">{t("models.downloaded")}</h3>
+          {downloaded.length === 0 ? (
+            <p className="text-zinc-500">{t("models.downloadedEmpty")}</p>
+          ) : (
+            <ModelList
+              models={downloaded}
+              progress={progress}
+              onDownload={setPending}
+              onRemove={onRemove}
+            />
+          )}
+        </section>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showIncompatible}
+            onChange={(event) => setShowIncompatible(event.target.checked)}
+          />
+          {t("models.showIncompatible")}
+        </label>
+        <section className="flex flex-col gap-3">
+          <h3 className="font-medium">{t("models.recommended")}</h3>
+          <ModelList
+            models={recommended}
+            progress={progress}
+            onDownload={setPending}
+            onRemove={onRemove}
+          />
+        </section>
+        {pending ? (
+          <DownloadDialog
+            model={pending}
+            onCancel={() => setPending(null)}
+            onConfirm={() => {
+              onDownload(pending.id);
+              setPending(null);
+            }}
+          />
         ) : null}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="ghost" onClick={onImport}>
-          {t("models.import")}
-        </Button>
-        <Button variant="ghost" onClick={onOpenFolder}>
-          {t("models.openFolder")}
-        </Button>
+      <div className="min-w-0 border-l border-zinc-200 pl-8 dark:border-zinc-800">
+        <HubSearch
+          hfTokenConfigured={hfTokenConfigured}
+          progress={progress}
+          onSearch={onSearchHub}
+          onDownload={onDownloadHub}
+        />
       </div>
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={showIncompatible}
-          onChange={(event) => setShowIncompatible(event.target.checked)}
-        />
-        {t("models.showIncompatible")}
-      </label>
-      <ul className="flex flex-col gap-3">
-        {visible.map((model) => (
-          <li key={model.id} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-medium">{model.name}</p>
-                <p className="text-zinc-500">
-                  {t(`models.seals.${model.compatibility}`)}
-                  {model.reason ? ` — ${reasonText(t, model.reason)}` : ""}
-                </p>
-                <p className="text-zinc-500">{formatBytes(model.bytes)}</p>
-                {model.architecture ? (
-                  <p className="text-zinc-500">
-                    {t("models.architecture", { name: model.architecture })}
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex gap-2">
-                {model.catalog && !model.installed && progress?.modelId !== model.id ? (
-                  <Button
-                    aria-label={`${t("models.download")} ${model.name}`}
-                    disabled={progress !== null}
-                    onClick={() => setPending(model)}
-                  >
-                    {t("models.download")}
-                  </Button>
-                ) : null}
-                {model.installed ? (
-                  <Button
-                    variant="ghost"
-                    aria-label={`${t("models.remove")} ${model.name}`}
-                    onClick={() => onRemove(model.filename)}
-                  >
-                    {t("models.remove")}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-            {progress?.modelId === model.id ? <DownloadBar progress={progress} /> : null}
-          </li>
-        ))}
-      </ul>
-      {pending ? (
-        <DownloadDialog
-          model={pending}
-          onCancel={() => setPending(null)}
-          onConfirm={() => {
-            onDownload(pending.id);
-            setPending(null);
-          }}
-        />
-      ) : null}
     </div>
+  );
+}
+
+function ModelList({
+  models,
+  progress,
+  onDownload,
+  onRemove,
+}: {
+  models: ListedModel[];
+  progress: DownloadProgress | null;
+  onDownload: (model: ListedModel) => void;
+  onRemove: (filename: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <ul className="flex flex-col gap-3">
+      {models.map((model) => (
+        <li key={model.id} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">{model.name}</p>
+              <p className="text-zinc-500">
+                {t(`models.seals.${model.compatibility}`)}
+                {model.reason ? ` — ${reasonText(t, model.reason)}` : ""}
+              </p>
+              <p className="text-zinc-500">{formatBytes(model.bytes)}</p>
+              {model.architecture ? (
+                <p className="text-zinc-500">
+                  {t("models.architecture", { name: model.architecture })}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex gap-2">
+              {model.catalog && !model.installed && progress?.modelId !== model.id ? (
+                <Button
+                  aria-label={`${t("models.download")} ${model.name}`}
+                  disabled={progress !== null}
+                  onClick={() => onDownload(model)}
+                >
+                  {t("models.download")}
+                </Button>
+              ) : null}
+              {model.installed ? (
+                <Button
+                  variant="ghost"
+                  aria-label={`${t("models.remove")} ${model.name}`}
+                  onClick={() => onRemove(model.filename)}
+                >
+                  {t("models.remove")}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          {progress?.modelId === model.id ? <DownloadBar progress={progress} /> : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 

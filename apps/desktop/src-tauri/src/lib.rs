@@ -90,6 +90,8 @@ pub fn run() {
             hf_token_status,
             set_hf_token,
             download_model,
+            models::hub_cmd::search_hub_models,
+            models::hub_cmd::download_hub_model,
             list_models,
             import_model,
             remove_model,

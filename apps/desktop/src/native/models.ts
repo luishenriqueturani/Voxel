@@ -85,6 +85,81 @@ export function listenToDownloadProgress(
   });
 }
 
+export type HubFile = {
+  repo: string;
+  filename: string;
+  bytes: number;
+  sha256: string;
+  license: string;
+  gated: boolean;
+};
+
+function isHubFile(value: unknown): value is HubFile {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const file = value as HubFile;
+  return (
+    typeof file.repo === "string" &&
+    typeof file.filename === "string" &&
+    typeof file.bytes === "number" &&
+    typeof file.license === "string" &&
+    typeof file.gated === "boolean"
+  );
+}
+
+export async function searchHubModels(query: string): Promise<HubFile[]> {
+  if (!isTauri()) {
+    return [];
+  }
+  const value = await invoke("search_hub_models", { query });
+  return Array.isArray(value) ? value.filter(isHubFile) : [];
+}
+
+export async function downloadHubModel(file: HubFile): Promise<void> {
+  if (!isTauri()) {
+    return;
+  }
+  await invoke("download_hub_model", {
+    choice: { repo: file.repo, filename: file.filename },
+  });
+}
+
+type ActiveListener = (id: string | null) => void;
+
+let activeDownloadId: string | null = null;
+const activeListeners = new Set<ActiveListener>();
+
+function notifyActive(id: string | null): void {
+  for (const listener of activeListeners) {
+    listener(id);
+  }
+}
+
+export function claimDownload(id: string): boolean {
+  if (activeDownloadId !== null) {
+    return false;
+  }
+  activeDownloadId = id;
+  notifyActive(id);
+  return true;
+}
+
+export function releaseDownload(id: string): void {
+  if (activeDownloadId !== id) {
+    return;
+  }
+  activeDownloadId = null;
+  notifyActive(null);
+}
+
+export function subscribeActiveDownload(listener: ActiveListener): () => void {
+  activeListeners.add(listener);
+  return () => {
+    activeListeners.delete(listener);
+  };
+}
+
 export async function downloadModel(modelId: string, confirmed: boolean): Promise<void> {
   if (!isTauri()) {
     return;

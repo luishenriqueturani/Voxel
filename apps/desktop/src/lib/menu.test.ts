@@ -30,6 +30,13 @@ describe("actionForMenu", () => {
     expect(actionForMenu("edit.undo")).toBe("undo-edit");
     expect(actionForMenu("view.gallery")).toBe("gallery");
     expect(actionForMenu("view.viewer")).toBe("viewer");
+    expect(actionForMenu("models.manage")).toBe("models");
+    expect(actionForMenu("models.import")).toBe("import-model");
+    expect(actionForMenu("models.openFolder")).toBe("open-models-folder");
+    expect(actionForMenu("help.diagnostics")).toBe("diagnostics");
+    expect(actionForMenu("file.export")).toBe("export-image");
+    expect(actionForMenu("edit.copy")).toBe("copy-image");
+    expect(actionForMenu("generate.regenerate")).toBe("regenerate");
   });
 
   it("ignora itens ainda sem função", () => {

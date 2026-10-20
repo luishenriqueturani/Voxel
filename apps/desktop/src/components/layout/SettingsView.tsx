@@ -69,7 +69,7 @@ export function SettingsView({
   const { t, i18n } = useTranslation();
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 overflow-hidden">
       <nav
         aria-label={t("settings.title")}
         className="flex w-56 shrink-0 flex-col gap-1 border-r border-zinc-200 p-3 dark:border-zinc-800"
@@ -86,7 +86,7 @@ export function SettingsView({
           </button>
         ))}
       </nav>
-      <section className="flex min-w-0 flex-1 flex-col gap-4 p-6">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">{t("settings.title")}</h1>
           <Button variant="ghost" onClick={onBack}>

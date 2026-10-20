@@ -98,6 +98,9 @@ fn architecture_from_json(value: &Value) -> String {
     if names.iter().any(|name| name.contains("diffusion_model")) {
         return "stable-diffusion".to_owned();
     }
+    if names.iter().any(|name| name.contains("img_mlp")) {
+        return "qwen_image".to_owned();
+    }
     "unknown".to_owned()
 }
 
@@ -221,6 +224,17 @@ mod tests {
             safetensors_architecture(&named_bytes).unwrap(),
             "stable-diffusion"
         );
+
+        let qwen = br#"{"transformer_blocks.0.img_mlp.proj.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}}"#;
+        let mut qwen_bytes = (qwen.len() as u64).to_le_bytes().to_vec();
+        qwen_bytes.extend_from_slice(qwen);
+        assert_eq!(safetensors_architecture(&qwen_bytes).unwrap(), "qwen_image");
+
+        let mesh =
+            br#"{"image_tokenizer.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}}"#;
+        let mut mesh_bytes = (mesh.len() as u64).to_le_bytes().to_vec();
+        mesh_bytes.extend_from_slice(mesh);
+        assert_eq!(safetensors_architecture(&mesh_bytes).unwrap(), "unknown");
 
         let mut gguf = b"GGUF".to_vec();
         gguf.extend_from_slice(&3_u32.to_le_bytes());

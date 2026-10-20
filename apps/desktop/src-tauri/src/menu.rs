@@ -45,7 +45,7 @@ pub fn menu_groups() -> Vec<MenuGroup> {
                 item("file.saveFlow", false, None),
                 MenuNode::Separator,
                 item("file.openImage", true, None),
-                item("file.export", false, None),
+                item("file.export", true, None),
                 item("file.openOutput", false, None),
                 MenuNode::Separator,
                 item("file.quit", true, Some("CmdOrCtrl+Q")),
@@ -56,7 +56,7 @@ pub fn menu_groups() -> Vec<MenuGroup> {
             items: vec![
                 item("edit.undo", true, None),
                 item("edit.redo", false, None),
-                item("edit.copy", false, None),
+                item("edit.copy", true, None),
                 item("edit.paste", false, None),
                 item("edit.removeBackground", true, None),
                 MenuNode::Separator,
@@ -68,7 +68,7 @@ pub fn menu_groups() -> Vec<MenuGroup> {
             items: vec![
                 item("generate.run", true, Some("CmdOrCtrl+Return")),
                 item("generate.cancel", true, None),
-                item("generate.regenerate", false, None),
+                item("generate.regenerate", true, None),
             ],
         },
         MenuGroup {
@@ -83,9 +83,9 @@ pub fn menu_groups() -> Vec<MenuGroup> {
         MenuGroup {
             id: "models",
             items: vec![
-                item("models.manage", false, None),
-                item("models.import", false, None),
-                item("models.openFolder", false, None),
+                item("models.manage", true, None),
+                item("models.import", true, None),
+                item("models.openFolder", true, None),
             ],
         },
         MenuGroup {
@@ -101,7 +101,7 @@ pub fn menu_groups() -> Vec<MenuGroup> {
             id: "help",
             items: vec![
                 item("help.docs", false, None),
-                item("help.diagnostics", false, None),
+                item("help.diagnostics", true, None),
                 item("help.redoSetup", true, None),
                 item("help.openLogs", false, None),
                 item("help.about", false, None),

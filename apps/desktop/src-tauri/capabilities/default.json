@@ -32,6 +32,8 @@
     "allow-hf-token-status",
     "allow-set-hf-token",
     "allow-download-model",
+    "allow-search-hub-models",
+    "allow-download-hub-model",
     "allow-list-models",
     "allow-import-model",
     "allow-remove-model",
