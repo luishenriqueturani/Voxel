@@ -18,7 +18,7 @@ const STARTUP_LIMIT: Duration = Duration::from_secs(2);
 const POLL_PAUSE: Duration = Duration::from_millis(20);
 const READY_PREFIX: &str = "VOXEL_READY ";
 /// Uma imagem grande, com muitos passos, passa dos três minutos. O pedido espera até aqui.
-const JOB_LIMIT: Duration = Duration::from_secs(60 * 60);
+const JOB_LIMIT: Duration = Duration::from_hours(1);
 const WATCH_SLICE: Duration = Duration::from_millis(200);
 
 /// Evento lido do WebSocket de progresso.

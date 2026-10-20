@@ -165,7 +165,7 @@ pub fn generate(
             ("VOXEL_IMAGE_BACKEND", choice.current.as_str()),
         ],
         // Saúde e carga do modelo. A imagem em si espera bem mais, senão 1024 px cai no meio.
-        Duration::from_secs(180),
+        Duration::from_mins(3),
     )
     .map_err(|error| error.to_string())?;
     worker

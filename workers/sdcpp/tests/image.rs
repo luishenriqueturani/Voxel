@@ -107,7 +107,7 @@ fn vulkan_entrega_png_e_progresso() {
             ("VOXEL_SD_CLI", binary.to_str().unwrap()),
             ("VOXEL_IMAGE_BACKEND", "vulkan"),
         ],
-        Duration::from_secs(180),
+        Duration::from_mins(3),
     )
     .expect("worker");
     worker

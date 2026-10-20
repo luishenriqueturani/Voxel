@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use voxel_hardware::{ImageBackend, ProbeVerdict, device_for, generation_args, parse_devices};
 
 const LIST_LIMIT: Duration = Duration::from_secs(30);
-const GENERATE_LIMIT: Duration = Duration::from_secs(180);
+const GENERATE_LIMIT: Duration = Duration::from_mins(3);
 
 /// Binários do stable-diffusion.cpp e o modelo da geração mínima.
 #[derive(Debug, Clone, Default)]
