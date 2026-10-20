@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorModal } from "./components/layout/ErrorModal";
+import { PowerNotice } from "./components/layout/PowerNotice";
 import type { GenerationParams, OutputMode } from "./components/layout/PromptPanel";
 import { type SettingSection, SettingsView } from "./components/layout/SettingsView";
 import { StatusBar } from "./components/layout/StatusBar";
@@ -116,6 +117,9 @@ export default function App() {
   const [notice, setNotice] = useState<ErrorNotice | null>(null);
   const [powerGpu, setPowerGpu] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const [gallerySignal, setGallerySignal] = useState(0);
+  const [viewerSignal, setViewerSignal] = useState(0);
   const settingsReady = useRef(false);
   const i18nRef = useRef(i18n);
   i18nRef.current = i18n;
@@ -167,7 +171,7 @@ export default function App() {
 
   const { modelProgress, downloadCatalogModel } = useModelDownload(setLibrary, reportFailure);
 
-  const { removing, openImage, removeBackground } = useImageEdit({
+  const { removing, openImage, removeBackground, openGeneration, openHistory } = useImageEdit({
     slides,
     setSlides,
     slideIndex,
@@ -235,6 +239,7 @@ export default function App() {
           }
           setSlides(image.images);
           setSlideIndex(image.images.length - 1);
+          setHistoryRevision((current) => current + 1);
         })
         .catch(reportFailure)
         .finally(() => {
@@ -269,6 +274,12 @@ export default function App() {
         openImage();
       } else if (action === "remove-background") {
         removeBackground();
+      } else if (action === "gallery") {
+        setView("workspace");
+        setGallerySignal((current) => current + 1);
+      } else if (action === "viewer") {
+        setView("workspace");
+        setViewerSignal((current) => current + 1);
       }
     },
     [openImage, removeBackground, requestGeneration],
@@ -447,19 +458,7 @@ export default function App() {
   return (
     <div className="flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       {powerGpu !== null ? (
-        <div
-          role="status"
-          className="flex items-start gap-4 border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
-        >
-          <p className="flex-1">{t("power.body", { gpu: powerGpu })}</p>
-          <button
-            type="button"
-            className="shrink-0 rounded-md border border-amber-400 px-3 py-1 dark:border-amber-700"
-            onClick={() => setPowerGpu(null)}
-          >
-            {t("power.dismiss")}
-          </button>
-        </div>
+        <PowerNotice gpu={powerGpu} onDismiss={() => setPowerGpu(null)} />
       ) : null}
       {view === "welcome" ? (
         <WelcomeView
@@ -470,9 +469,7 @@ export default function App() {
           image={preview}
           outcome={confirmOutcome}
           detail={confirmDetail}
-          onConfirm={(choices) => {
-            void onConfirm(choices);
-          }}
+          onConfirm={(choices) => void onConfirm(choices)}
           onContinue={() => setView("workspace")}
         />
       ) : view === "workspace" ? (
@@ -491,6 +488,12 @@ export default function App() {
           generating={generating}
           locked={removing}
           onGenerate={() => requestGeneration()}
+          historyRevision={historyRevision}
+          gallerySignal={gallerySignal}
+          viewerSignal={viewerSignal}
+          onHistoryError={reportFailure}
+          onRestoreHistory={openHistory}
+          onOpenGeneration={openGeneration}
           shown={shown}
           step={generating ? (frame?.step ?? 0) : 0}
           total={generating ? (frame?.total ?? 0) : 0}

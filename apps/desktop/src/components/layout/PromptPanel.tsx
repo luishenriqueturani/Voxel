@@ -2,7 +2,9 @@ import * as Popover from "@radix-ui/react-popover";
 import { Info, Loader2, Settings } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
+import { RecentPrompts } from "./RecentPrompts";
 
 export type OutputMode = "2d" | "3d";
 
@@ -74,11 +76,22 @@ type PromptPanelProps = {
   onOutputModeChange: (mode: OutputMode) => void;
   generating: boolean;
   locked?: boolean;
+  historyRevision?: number;
+  onHistoryError?: (error: unknown) => void;
+  onRestore?: (entry: PromptEntry) => void;
   onGenerate: () => void;
 };
 
 const fieldClass =
   "w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100";
+
+function ignoreHistoryError(_error: unknown) {
+  return undefined;
+}
+
+function ignoreRestore(_entry: PromptEntry) {
+  return undefined;
+}
 
 export function PromptPanel({
   prompt,
@@ -94,6 +107,9 @@ export function PromptPanel({
   onOutputModeChange,
   generating,
   locked = false,
+  historyRevision = 0,
+  onHistoryError = ignoreHistoryError,
+  onRestore = ignoreRestore,
   onGenerate,
 }: PromptPanelProps) {
   const { t } = useTranslation();
@@ -200,10 +216,16 @@ export function PromptPanel({
         {generating ? t("panel.generating") : t("panel.generate")}
       </Button>
 
-      <section className="flex min-h-0 flex-1 flex-col gap-1 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-        <h2 className="text-sm font-medium">{t("panel.recent")}</h2>
-        <p className="text-sm text-zinc-500">{t("panel.recentEmpty")}</p>
-      </section>
+      <RecentPrompts
+        key={historyRevision}
+        count={params.count}
+        onPromptChange={onPromptChange}
+        onNegativePromptChange={onNegativePromptChange}
+        onModelChange={onModelChange}
+        onParamsChange={onParamsChange}
+        onError={onHistoryError}
+        onRestore={onRestore}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { type Dispatch, type SetStateAction, useCallback, useRef, useState } from "react";
-import { openImageForEdit, removeImageBackground } from "../native/background";
+import { loadImageFile, openImageForEdit, removeImageBackground } from "../native/background";
 import type { GalleryImage } from "../native/generation";
+import { loadPromptImages, type PromptEntry } from "../native/history";
 
 type UseImageEditOptions = {
   slides: GalleryImage[];
@@ -26,9 +27,12 @@ export function useImageEdit({
   removing: boolean;
   openImage: () => void;
   removeBackground: () => void;
+  openGeneration: (entry: { path: string; seed: number }) => void;
+  openHistory: (entry: PromptEntry) => void;
 } {
   const [removing, setRemoving] = useState(false);
   const removingRef = useRef(false);
+  const historyTicket = useRef(0);
 
   const openImage = useCallback(() => {
     if (busy || removingRef.current) {
@@ -76,5 +80,68 @@ export function useImageEdit({
       });
   }, [busy, reportFailure, setSlides, slideIndex, slides]);
 
-  return { removing, openImage, removeBackground };
+  const openGeneration = useCallback(
+    (entry: { path: string; seed: number }) => {
+      if (busy || removingRef.current) {
+        return;
+      }
+      void loadImageFile(entry.path)
+        .then((image) => {
+          if (image === null) {
+            return;
+          }
+          setSlides([
+            {
+              src: image.src,
+              path: image.path,
+              seed: entry.seed,
+              transparent: image.transparent,
+            },
+          ]);
+          setSlideIndex(0);
+          setView("workspace");
+        })
+        .catch(reportFailure);
+    },
+    [busy, reportFailure, setSlideIndex, setSlides, setView],
+  );
+
+  const openHistory = useCallback(
+    (entry: PromptEntry) => {
+      if (busy || removingRef.current) {
+        return;
+      }
+      const ticket = historyTicket.current + 1;
+      historyTicket.current = ticket;
+      void loadPromptImages(entry)
+        .then(async (files) => {
+          const next: GalleryImage[] = [];
+          for (const file of files) {
+            if (historyTicket.current !== ticket) {
+              return;
+            }
+            const image = await loadImageFile(file.path).catch(() => null);
+            if (image === null) {
+              continue;
+            }
+            next.push({
+              src: image.src,
+              path: image.path,
+              seed: file.seed,
+              transparent: image.transparent,
+            });
+          }
+          if (historyTicket.current !== ticket) {
+            return;
+          }
+          setSlides(next);
+          setSlideIndex(next.length === 0 ? 0 : next.length - 1);
+          setView("workspace");
+        })
+        .catch(reportFailure);
+    },
+    [busy, reportFailure, setSlideIndex, setSlides, setView],
+  );
+
+  return { removing, openImage, removeBackground, openGeneration, openHistory };
 }

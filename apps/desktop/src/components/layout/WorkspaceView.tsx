@@ -1,4 +1,8 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { GalleryItem, PromptEntry } from "../../native/history";
+import { Button } from "../ui/button";
+import { GalleryView } from "./GalleryView";
 import { ImageViewer } from "./ImageViewer";
 import { type GenerationParams, type OutputMode, PromptPanel } from "./PromptPanel";
 
@@ -19,6 +23,12 @@ type WorkspaceViewProps = {
   generating: boolean;
   locked: boolean;
   onGenerate: () => void;
+  historyRevision: number;
+  gallerySignal: number;
+  viewerSignal: number;
+  onHistoryError: (error: unknown) => void;
+  onRestoreHistory: (entry: PromptEntry) => void;
+  onOpenGeneration: (item: GalleryItem) => void;
   shown: string | null;
   step: number;
   total: number;
@@ -52,6 +62,12 @@ export function WorkspaceView({
   generating,
   locked,
   onGenerate,
+  historyRevision,
+  gallerySignal,
+  viewerSignal,
+  onHistoryError,
+  onRestoreHistory,
+  onOpenGeneration,
   shown,
   step,
   total,
@@ -70,6 +86,22 @@ export function WorkspaceView({
   onRemoveBackground,
 }: WorkspaceViewProps) {
   const { t } = useTranslation();
+  const [showGallery, setShowGallery] = useState(false);
+  useEffect(() => {
+    if (gallerySignal > 0) {
+      setShowGallery(true);
+    }
+  }, [gallerySignal]);
+  useEffect(() => {
+    if (viewerSignal > 0) {
+      setShowGallery(false);
+    }
+  }, [viewerSignal]);
+  useEffect(() => {
+    if (historyRevision > 0) {
+      setShowGallery(false);
+    }
+  }, [historyRevision]);
   return (
     <div className="flex min-h-0 flex-1">
       <aside className="flex w-80 shrink-0 border-r border-zinc-200 dark:border-zinc-800">
@@ -87,32 +119,55 @@ export function WorkspaceView({
           onOutputModeChange={onOutputModeChange}
           generating={generating}
           locked={locked}
+          historyRevision={historyRevision}
+          onHistoryError={onHistoryError}
+          onRestore={(entry) => {
+            setShowGallery(false);
+            onRestoreHistory(entry);
+          }}
           onGenerate={onGenerate}
         />
       </aside>
-      <main
-        aria-label={t("main.label")}
-        className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-6"
-      >
-        <h1 className="sr-only">Voxel</h1>
-        <ImageViewer
-          src={shown}
-          step={step}
-          total={total}
-          canSave={canSave}
-          canRegenerate={canRegenerate}
-          canRemove={canRemove}
-          removing={removing}
-          transparent={transparent}
-          index={index}
-          count={count}
-          onPrevious={onPrevious}
-          onNext={onNext}
-          onSave={onSave}
-          onCopy={onCopy}
-          onRegenerate={onRegenerate}
-          onRemoveBackground={onRemoveBackground}
-        />
+      <main aria-label={t("main.label")} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex justify-end px-4 pt-3">
+          <Button variant="ghost" onClick={() => setShowGallery((open) => !open)}>
+            {showGallery ? t("gallery.viewer") : t("gallery.title")}
+          </Button>
+        </div>
+        <div
+          className={`flex min-h-0 flex-1 overflow-auto p-6 ${showGallery ? "items-start" : "items-center justify-center"}`}
+        >
+          <h1 className="sr-only">Voxel</h1>
+          {showGallery ? (
+            <GalleryView
+              key={historyRevision}
+              onError={onHistoryError}
+              onOpen={(item) => {
+                setShowGallery(false);
+                onOpenGeneration(item);
+              }}
+            />
+          ) : (
+            <ImageViewer
+              src={shown}
+              step={step}
+              total={total}
+              canSave={canSave}
+              canRegenerate={canRegenerate}
+              canRemove={canRemove}
+              removing={removing}
+              transparent={transparent}
+              index={index}
+              count={count}
+              onPrevious={onPrevious}
+              onNext={onNext}
+              onSave={onSave}
+              onCopy={onCopy}
+              onRegenerate={onRegenerate}
+              onRemoveBackground={onRemoveBackground}
+            />
+          )}
+        </div>
       </main>
     </div>
   );

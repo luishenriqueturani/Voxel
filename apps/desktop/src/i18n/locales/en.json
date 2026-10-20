@@ -53,6 +53,10 @@
     "generating": "Generating…",
     "recent": "Recent prompts",
     "recentEmpty": "No recent prompts",
+    "recentSearch": "Search prompts",
+    "recentNone": "No prompts found",
+    "pin": "Pin",
+    "unpin": "Unpin",
     "resolution": "Resolution",
     "aspect": "Aspect ratio",
     "aspectHorizontal": "Horizontal",
@@ -184,6 +188,11 @@
     "regenerate": "Regenerate with the same seed",
     "removeBackground": "Remove background",
     "removing": "Removing background…"
+  },
+  "gallery": {
+    "title": "Gallery",
+    "viewer": "Viewer",
+    "empty": "No generations yet"
   },
   "power": {
     "body": "The {{gpu}} uses the 12V-2x6 connector, which has melt reports. A 300 W power limit is recommended.",

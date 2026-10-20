@@ -1,6 +1,7 @@
 mod background;
 mod db;
 mod generate;
+mod history;
 mod menu;
 mod models;
 mod output;
@@ -14,6 +15,7 @@ use std::sync::Mutex;
 
 use background::{open_edit_image, remove_background};
 use db::{Database, SettingsUpdate, UserSettings};
+use history::{list_gallery, list_prompt_images, list_recent_prompts, set_prompt_favorite};
 use menu::{build_menu, default_labels};
 use paths::AppPaths;
 use probe::discover;
@@ -71,6 +73,10 @@ pub fn run() {
             generation_defaults,
             open_edit_image,
             remove_background,
+            list_recent_prompts,
+            list_prompt_images,
+            set_prompt_favorite,
+            list_gallery,
             machine_status,
             copy_generation,
             hf_token_status,

@@ -178,9 +178,9 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Histórico e galeria
 
-- [ ] Lista de prompts recentes no painel, com clique para recarregar prompt e parâmetros
-- [ ] Busca e fixação (★) de favoritos nos recentes
-- [ ] Galeria simples com as gerações
+- [x] Lista de prompts recentes no painel, com clique para recarregar prompt e parâmetros
+- [x] Busca e fixação (★) de favoritos nos recentes
+- [x] Galeria simples com as gerações
 
 ---
 

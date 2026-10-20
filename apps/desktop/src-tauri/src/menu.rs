@@ -91,8 +91,8 @@ pub fn menu_groups() -> Vec<MenuGroup> {
         MenuGroup {
             id: "view",
             items: vec![
-                item("view.gallery", false, None),
-                item("view.viewer", false, None),
+                item("view.gallery", true, None),
+                item("view.viewer", true, None),
                 item("view.theme", true, None),
                 item("view.logs", false, None),
             ],

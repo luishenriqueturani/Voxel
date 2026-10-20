@@ -26,6 +26,8 @@ describe("actionForMenu", () => {
     expect(actionForMenu("help.redoSetup")).toBe("redo-setup");
     expect(actionForMenu("file.openImage")).toBe("open-image");
     expect(actionForMenu("edit.removeBackground")).toBe("remove-background");
+    expect(actionForMenu("view.gallery")).toBe("gallery");
+    expect(actionForMenu("view.viewer")).toBe("viewer");
   });
 
   it("ignora itens ainda sem função", () => {

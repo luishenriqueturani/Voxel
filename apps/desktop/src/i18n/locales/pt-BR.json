@@ -53,6 +53,10 @@
     "generating": "Gerando…",
     "recent": "Prompts recentes",
     "recentEmpty": "Nenhum prompt recente",
+    "recentSearch": "Buscar prompts",
+    "recentNone": "Nenhum prompt encontrado",
+    "pin": "Fixar",
+    "unpin": "Desafixar",
     "resolution": "Resolução",
     "aspect": "Proporção",
     "aspectHorizontal": "Horizontal",
@@ -184,6 +188,11 @@
     "regenerate": "Regerar com a mesma seed",
     "removeBackground": "Remover fundo",
     "removing": "Removendo fundo…"
+  },
+  "gallery": {
+    "title": "Galeria",
+    "viewer": "Visualizador",
+    "empty": "Nenhuma geração ainda"
   },
   "power": {
     "body": "A {{gpu}} usa o conector 12V-2x6, com relatos de derretimento. Recomendamos limitar a potência da placa a 300 W.",

@@ -4,7 +4,9 @@ export type MenuEffect =
   | "generate"
   | "redo-setup"
   | "open-image"
-  | "remove-background";
+  | "remove-background"
+  | "gallery"
+  | "viewer";
 
 export function actionForMenu(id: string): MenuEffect | null {
   switch (id) {
@@ -20,6 +22,10 @@ export function actionForMenu(id: string): MenuEffect | null {
       return "open-image";
     case "edit.removeBackground":
       return "remove-background";
+    case "view.gallery":
+      return "gallery";
+    case "view.viewer":
+      return "viewer";
     default:
       return null;
   }

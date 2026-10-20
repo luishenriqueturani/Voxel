@@ -71,3 +71,7 @@ export function openImageForEdit(title: string): Promise<EditedImage | null> {
 export function removeImageBackground(source: string): Promise<EditedImage | null> {
   return editedImage("remove_background", { source });
 }
+
+export function loadImageFile(path: string): Promise<EditedImage | null> {
+  return editedImage("open_edit_image", { path });
+}

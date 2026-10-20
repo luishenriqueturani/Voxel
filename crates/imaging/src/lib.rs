@@ -6,12 +6,14 @@
 mod error;
 mod session;
 mod tensor;
+mod thumb;
 
 use std::path::{Path, PathBuf};
 
 use voxel_protocol::{BackgroundRemover, JobOutput, RemoveBackgroundRequest, WorkerError};
 
 pub use error::ImagingError;
+pub use thumb::thumbnail_jpeg;
 
 /// PNG com o alfa já resolvido, pronto para a prévia.
 pub struct PngImage {

@@ -1,11 +1,13 @@
 mod error;
 mod generations;
+mod history;
 mod migrate;
 mod settings;
 mod setup_store;
 
 pub use error::DbError;
 pub use generations::GenerationRecord;
+pub use history::{GalleryRow, PromptEntry, PromptImage};
 pub use settings::{SettingsUpdate, UserSettings};
 
 use std::path::Path;
