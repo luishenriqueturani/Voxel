@@ -65,7 +65,35 @@ impl WorkerProcess {
     ) -> Result<Self, WorkerError> {
         let program = program.as_ref().to_path_buf();
         let scenario = scenario.to_owned();
-        let (process, port, token, client) = launch(&program, &scenario, env, timeout)?;
+        let (process, port, token, client) =
+            launch(&program, &scenario, env, &[], timeout, STARTUP_LIMIT)?;
+        Ok(Self {
+            process,
+            port,
+            token,
+            client,
+            program,
+            scenario,
+        })
+    }
+
+    /// Sobe o worker sem as variáveis herdadas e com mais tempo para o interpretador.
+    ///
+    /// # Errors
+    ///
+    /// Falha se o processo não subir, não anunciar a porta ou não responder no `/health`.
+    pub fn spawn_isolated(
+        program: impl AsRef<Path>,
+        scenario: &str,
+        env: &[(&str, &str)],
+        remove: &[&str],
+        timeout: Duration,
+        startup: Duration,
+    ) -> Result<Self, WorkerError> {
+        let program = program.as_ref().to_path_buf();
+        let scenario = scenario.to_owned();
+        let (process, port, token, client) =
+            launch(&program, &scenario, env, remove, timeout, startup)?;
         Ok(Self {
             process,
             port,
@@ -84,8 +112,14 @@ impl WorkerProcess {
     pub fn restart(&mut self) -> Result<(), WorkerError> {
         let program = self.program.clone();
         let scenario = self.scenario.clone();
-        let (process, port, token, client) =
-            launch(&program, &scenario, &[], Duration::from_secs(3))?;
+        let (process, port, token, client) = launch(
+            &program,
+            &scenario,
+            &[],
+            &[],
+            Duration::from_secs(3),
+            STARTUP_LIMIT,
+        )?;
         self.process = process;
         self.port = port;
         self.token = token;
@@ -333,7 +367,9 @@ fn launch(
     program: &Path,
     scenario: &str,
     env: &[(&str, &str)],
+    remove: &[&str],
     timeout: Duration,
+    startup: Duration,
 ) -> Result<(RunningProcess, u16, String, reqwest::blocking::Client), WorkerError> {
     let token = fresh_token()?;
     let client = reqwest::blocking::Client::builder()
@@ -343,12 +379,15 @@ fn launch(
     command
         .env("VOXEL_TOKEN", &token)
         .env("VOXEL_SCENARIO", scenario);
+    for key in remove {
+        command.env_remove(key);
+    }
     for (key, value) in env {
         command.env(key, value);
     }
     let mut process = RunningProcess::spawn(command, DEFAULT_LINE_LIMIT)?;
-    let port = wait_ready(&mut process)?;
-    wait_health(&client, port, &token)?;
+    let port = wait_ready(&mut process, startup)?;
+    wait_health(&client, port, &token, startup)?;
     Ok((process, port, token, client))
 }
 
@@ -372,8 +411,8 @@ fn hex(nibble: u8) -> char {
     })
 }
 
-fn wait_ready(process: &mut RunningProcess) -> Result<u16, WorkerError> {
-    let deadline = Instant::now() + STARTUP_LIMIT;
+fn wait_ready(process: &mut RunningProcess, startup: Duration) -> Result<u16, WorkerError> {
+    let deadline = Instant::now() + startup;
     loop {
         if let Some(outcome) = process.poll()? {
             return Err(WorkerError::Startup(format!(
@@ -410,8 +449,9 @@ fn wait_health(
     client: &reqwest::blocking::Client,
     port: u16,
     token: &str,
+    startup: Duration,
 ) -> Result<(), WorkerError> {
-    let deadline = Instant::now() + STARTUP_LIMIT;
+    let deadline = Instant::now() + startup;
     let url = format!("http://127.0.0.1:{port}{}", paths::HEALTH);
     let mut last = WorkerError::Timeout;
     while Instant::now() < deadline {

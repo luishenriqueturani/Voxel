@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use gate::Gate;
 pub use plan::Intent;
-use plan::Layout;
+pub(crate) use plan::{Layout, process_env};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 

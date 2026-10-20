@@ -11,6 +11,7 @@ import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { useGenerationRequest } from "./hooks/useGenerationRequest";
 import { useImageEdit } from "./hooks/useImageEdit";
+import { useMeshDrop } from "./hooks/useMeshDrop";
 import { useModelDownload } from "./hooks/useModelDownload";
 import { useNativeMenu } from "./hooks/useNativeMenu";
 import { usePythonEnvironment } from "./hooks/usePythonEnvironment";
@@ -179,7 +180,11 @@ export default function App() {
   });
 
   const python = usePythonEnvironment();
-  const requestGeneration = useGenerationRequest({
+  const {
+    request: requestGeneration,
+    sendImage,
+    meshFiles,
+  } = useGenerationRequest({
     generatingRef,
     removing,
     editRef,
@@ -199,9 +204,11 @@ export default function App() {
     reportFailure,
     outputMode,
     prepareEnvironment: python.wait,
+    noteIntent: python.note,
     setWaitingEnvironment,
   });
   useGenerateShortcut(requestGeneration);
+  useMeshDrop(sendImage);
 
   const onMenuAction = useCallback(
     (id: string) => {
@@ -449,6 +456,8 @@ export default function App() {
           generating={generating}
           locked={removing || waitingEnvironment}
           onGenerate={() => requestGeneration()}
+          onImageDrop={sendImage}
+          meshFiles={meshFiles}
           onCancel={() => {
             void cancelGeneration();
           }}
@@ -494,7 +503,9 @@ export default function App() {
           onUndoEdit={undoEdit}
           onRemoveBackground={removeBackground}
           onSendTo3d={() => {
-            void python.note("send-to-3d");
+            if (selected?.path) {
+              sendImage(selected.path);
+            }
           }}
         />
       ) : (

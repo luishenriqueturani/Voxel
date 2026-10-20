@@ -59,12 +59,16 @@ fn open_image(app: &AppHandle, path: &str) -> Result<EditedImage, String> {
 }
 
 fn cut_image(app: &AppHandle, paths: &AppPaths, source: &str) -> Result<EditedImage, String> {
-    let input = Path::new(source);
-    let output = voxel_imaging::sibling_cutout(input);
-    voxel_imaging::remove_background(&u2net_path(paths)?, input, &output)
-        .map_err(|error| error.to_string())?;
+    let output = cut_file(paths, Path::new(source))?;
     let bytes = std::fs::read(&output).map_err(|error| error.to_string())?;
     emit_preview(app, &output, encode_base64(&bytes), true)
+}
+
+pub(crate) fn cut_file(paths: &AppPaths, source: &Path) -> Result<PathBuf, String> {
+    let output = voxel_imaging::sibling_cutout(source);
+    voxel_imaging::remove_background(&u2net_path(paths)?, source, &output)
+        .map_err(|error| error.to_string())?;
+    Ok(output)
 }
 
 fn emit_preview(

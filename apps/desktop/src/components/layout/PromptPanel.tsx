@@ -1,8 +1,9 @@
 import * as Popover from "@radix-ui/react-popover";
 import { Info, Settings } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type DragEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { EditMode } from "../../lib/edit";
+import { firstImagePath } from "../../lib/mesh";
 import type { PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
 import { EditControls, editReady } from "./EditControls";
@@ -91,6 +92,7 @@ type PromptPanelProps = {
   hasMask?: boolean;
   onGenerate: () => void;
   onCancel?: () => void;
+  onImageDrop?: (path: string) => void;
 };
 
 const fieldClass =
@@ -147,6 +149,7 @@ export function PromptPanel({
   hasMask = false,
   onGenerate,
   onCancel = ignoreCancel,
+  onImageDrop,
 }: PromptPanelProps) {
   const { t } = useTranslation();
   const promptRef = useRef<HTMLTextAreaElement>(null);
@@ -155,8 +158,29 @@ export function PromptPanel({
     promptRef.current?.focus();
   }, []);
 
+  function dropImage(event: DragEvent<HTMLDivElement>) {
+    if (!onImageDrop) {
+      return;
+    }
+    event.preventDefault();
+    const text = event.dataTransfer.getData("text/plain");
+    const image = firstImagePath(text.split(/\s+/));
+    if (image) {
+      onImageDrop(image);
+    }
+  }
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+    // biome-ignore lint/a11y/noStaticElementInteractions: soltar arquivo não é um controle clicável
+    <div
+      className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3"
+      onDragOver={(event) => {
+        if (onImageDrop) {
+          event.preventDefault();
+        }
+      }}
+      onDrop={dropImage}
+    >
       <label className="flex flex-col gap-1 text-sm font-medium">
         {t("panel.prompt")}
         <textarea
@@ -241,6 +265,7 @@ export function PromptPanel({
           {t("panel.output3d")}
         </label>
       </fieldset>
+      {outputMode === "3d" ? <p className="text-xs text-zinc-500">{t("panel.dropImage")}</p> : null}
 
       <EditControls
         mode={editMode}

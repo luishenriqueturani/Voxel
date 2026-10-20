@@ -53,6 +53,18 @@ impl PythonBackend {
             Self::Cpu => "cpu",
         }
     }
+
+    #[must_use]
+    pub fn from_id(id: &str) -> Option<Self> {
+        match id {
+            "cuda" => Some(Self::Cuda),
+            "rocm_native" => Some(Self::RocmNative),
+            "rocm_safe_override" => Some(Self::RocmSafeOverride),
+            "xpu" => Some(Self::Xpu),
+            "cpu" => Some(Self::Cpu),
+            _ => None,
+        }
+    }
 }
 
 /// O que a ordem de fallback precisa saber sobre a máquina.
@@ -266,5 +278,10 @@ mod tests {
         assert!(!facts.cuda && !facts.xpu);
         assert_eq!(ImageBackend::Vulkan.id(), "vulkan");
         assert_eq!(PythonBackend::RocmNative.id(), "rocm_native");
+        assert_eq!(
+            PythonBackend::from_id("rocm_safe_override"),
+            Some(PythonBackend::RocmSafeOverride)
+        );
+        assert_eq!(PythonBackend::from_id("outro"), None);
     }
 }

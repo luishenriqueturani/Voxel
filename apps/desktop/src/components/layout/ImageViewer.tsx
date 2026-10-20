@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type PointerEvent as ReactPointerEvent, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { MeshPaths } from "../../hooks/useGenerationRequest";
 import { Button } from "../ui/button";
 import { MosaicPreview } from "./MosaicPreview";
 
@@ -25,6 +26,7 @@ type ImageViewerProps = {
   onRegenerate: () => void;
   onRemoveBackground?: () => void;
   onSendTo3d?: () => void;
+  meshFiles?: MeshPaths | null;
   canUndo?: boolean;
   onUndo?: () => void;
   mosaic?: boolean;
@@ -32,6 +34,11 @@ type ImageViewerProps = {
 };
 
 type Pan = { x: number; y: number };
+
+function fileName(path: string): string {
+  const parts = path.split(/[/\\]/);
+  return parts[parts.length - 1] ?? path;
+}
 
 function zoomByWheel(current: number, deltaY: number): number {
   const scaled = current * (deltaY < 0 ? 1.1 : 1 / 1.1);
@@ -57,6 +64,7 @@ export function ImageViewer({
   onRegenerate,
   onRemoveBackground,
   onSendTo3d,
+  meshFiles = null,
   canUndo = false,
   onUndo,
   mosaic = false,
@@ -233,6 +241,17 @@ export function ImageViewer({
             <Button variant="ghost" className="w-full whitespace-normal" onClick={onSendTo3d}>
               {t("viewer.sendTo3d")}
             </Button>
+          ) : null}
+          {meshFiles ? (
+            <p
+              className="text-xs break-all text-zinc-500"
+              title={`${meshFiles.glb}\n${meshFiles.obj}`}
+            >
+              {t("viewer.meshFiles", {
+                glb: fileName(meshFiles.glb),
+                obj: fileName(meshFiles.obj),
+              })}
+            </p>
           ) : null}
           <Button variant="ghost" className="w-full" disabled={!canSave} onClick={onSave}>
             {t("viewer.save")}

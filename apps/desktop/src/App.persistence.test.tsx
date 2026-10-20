@@ -9,6 +9,10 @@ const menuActions = vi.hoisted(() => ({
   current: undefined as ((id: string) => void) | undefined,
 }));
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(async () => () => undefined),
+}));
+
 vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
   invoke: vi.fn(

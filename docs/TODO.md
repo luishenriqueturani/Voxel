@@ -207,13 +207,13 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Worker Python e 3D
 
-- [ ] Servidor do worker Python (FastAPI) seguindo o protocolo
-- [ ] Adaptador do primeiro modelo imagem → 3D implementando `MeshBackend`
-- [ ] Remoção de fundo automática antes do 3D
-- [ ] Descarregar o modelo 2D da VRAM antes da etapa 3D
-- [ ] Modo 3D do painel: texto → imagem → 3D
-- [ ] 3D a partir de imagem existente (arrastar para o painel e "enviar para 3D")
-- [ ] Export GLB e OBJ
+- [x] Servidor do worker Python (FastAPI) seguindo o protocolo
+- [x] Adaptador do primeiro modelo imagem → 3D implementando `MeshBackend`
+- [x] Remoção de fundo automática antes do 3D
+- [x] Descarregar o modelo 2D da VRAM antes da etapa 3D
+- [x] Modo 3D do painel: texto → imagem → 3D
+- [x] 3D a partir de imagem existente (arrastar para o painel e "enviar para 3D")
+- [x] Export GLB e OBJ
 
 ### Visualizador 3D
 

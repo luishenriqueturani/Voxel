@@ -244,6 +244,8 @@ pub fn generate(
         saved.push(metadata);
     }
     output::write_metadata(&folder, &saved)?;
+    // Solta o modelo 2D enquanto o processo ainda está vivo. A malha só começa depois.
+    let _ = worker.unload();
     Ok(GeneratedImage {
         path: last_path,
         seed,

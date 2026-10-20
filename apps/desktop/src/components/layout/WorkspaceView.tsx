@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { MeshPaths } from "../../hooks/useGenerationRequest";
 import type { EditMode, EditPayload } from "../../lib/edit";
 import type { GalleryItem, PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
@@ -51,6 +52,8 @@ type WorkspaceViewProps = {
   onRegenerate: () => void;
   onRemoveBackground: () => void;
   onSendTo3d?: () => void;
+  onImageDrop?: (path: string) => void;
+  meshFiles?: MeshPaths | null;
   canUndoEdit?: boolean;
   onUndoEdit?: () => void;
 };
@@ -96,6 +99,8 @@ export function WorkspaceView({
   onRegenerate,
   onRemoveBackground,
   onSendTo3d,
+  onImageDrop,
+  meshFiles = null,
   canUndoEdit = false,
   onUndoEdit,
 }: WorkspaceViewProps) {
@@ -170,6 +175,7 @@ export function WorkspaceView({
           }}
           onGenerate={onGenerate}
           onCancel={onCancel}
+          onImageDrop={onImageDrop}
         />
       </aside>
       <main aria-label={t("main.label")} className="flex min-h-0 flex-1 flex-col">
@@ -219,6 +225,7 @@ export function WorkspaceView({
               onRegenerate={onRegenerate}
               onRemoveBackground={onRemoveBackground}
               onSendTo3d={onSendTo3d}
+              meshFiles={meshFiles}
               canUndo={canUndoEdit}
               onUndo={onUndoEdit}
             />

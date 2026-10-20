@@ -49,6 +49,7 @@
     "output": "Saída",
     "output2d": "2D",
     "output3d": "3D",
+    "dropImage": "Arraste uma imagem para gerar o 3D",
     "generate": "Gerar",
     "generating": "Gerando…",
     "cancel": "Cancelar",
@@ -236,6 +237,7 @@
     "removeBackground": "Remover fundo",
     "removing": "Removendo fundo…",
     "sendTo3d": "Enviar para 3D",
+    "meshFiles": "GLB {{glb}} · OBJ {{obj}}",
     "mosaic": "Mosaico",
     "mosaicPreview": "Textura repetida em mosaico 3 por 3"
   },

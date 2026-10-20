@@ -10,6 +10,8 @@ use voxel_hardware::PythonBackend;
 
 pub const PYTHON_VERSION: &str = "3.12";
 pub const TORCH_SPEC: &str = include_str!("../../../../../workers/python/constraints/torch.txt");
+const RUNTIME_SPEC: &str = include_str!("../../../../../workers/python/constraints/runtime.txt");
+const PYPI: &str = "https://pypi.org/simple";
 
 const CPU_INDEX: &str = "https://download.pytorch.org/whl/cpu";
 const CUDA_INDEX: &str = "https://download.pytorch.org/whl/cu130";
@@ -121,7 +123,7 @@ pub fn venv_args(venv: &Path) -> Vec<String> {
 
 #[must_use]
 pub fn pip_args(python: &Path, index: &str) -> Vec<String> {
-    vec![
+    let mut args = vec![
         "pip".to_owned(),
         "install".to_owned(),
         "--python".to_owned(),
@@ -131,8 +133,20 @@ pub fn pip_args(python: &Path, index: &str) -> Vec<String> {
         "--reinstall".to_owned(),
         "--index-url".to_owned(),
         index.to_owned(),
+        "--extra-index-url".to_owned(),
+        PYPI.to_owned(),
         torch_requirement().to_owned(),
-    ]
+    ];
+    args.extend(runtime_requirements());
+    args
+}
+
+fn runtime_requirements() -> impl Iterator<Item = String> {
+    RUNTIME_SPEC
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(str::to_owned)
 }
 
 /// Ambiente do processo. `ROCm` nativo tira o override; o fallback seguro desliga o assembly.
@@ -213,7 +227,10 @@ mod tests {
         assert!(args.iter().any(|arg| arg == "/dados/voxel/python/venv"));
         let pip = pip_args(&layout.python(), CPU_INDEX);
         assert!(pip.contains(&"--only-binary".to_owned()));
+        assert!(pip.contains(&"--extra-index-url".to_owned()));
         assert!(pip.contains(&"torch==2.14.0".to_owned()));
+        assert!(pip.contains(&"fastapi==0.156.1".to_owned()));
+        assert!(pip.contains(&"transformers==4.57.6".to_owned()));
     }
 
     #[test]

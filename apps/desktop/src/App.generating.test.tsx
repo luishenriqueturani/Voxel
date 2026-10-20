@@ -26,15 +26,15 @@ vi.mock("./native/menu", () => ({
 }));
 
 describe("geração", () => {
-  it("desativa o botão até a imagem terminar", async () => {
+  it("troca gerar por cancelar até a imagem terminar", async () => {
     const user = userEvent.setup();
     render(<App />);
 
     const generate = screen.getByRole("button", { name: "Gerar" });
     await user.click(generate);
 
-    const busy = screen.getByRole("button", { name: "Gerando…" });
-    expect(busy).toBeDisabled();
+    const busy = screen.getByRole("button", { name: "Cancelar" });
+    expect(busy).toBeEnabled();
     expect(busy).toHaveAttribute("aria-busy", "true");
 
     pending.resolve?.(null);

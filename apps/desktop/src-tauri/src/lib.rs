@@ -5,6 +5,7 @@ mod history;
 mod image_job;
 mod live_job;
 mod menu;
+mod mesh;
 mod models;
 mod output;
 pub mod paths;
@@ -97,7 +98,8 @@ pub fn run() {
             python_env::note_3d_intent,
             python_env::await_python_environment,
             python_env::reinstall_python_environment,
-            python_env::remove_python_environment
+            python_env::remove_python_environment,
+            mesh::mesh_from_image
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");

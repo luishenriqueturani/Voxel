@@ -41,6 +41,7 @@
     "allow-await-python-environment",
     "allow-reinstall-python-environment",
     "allow-remove-python-environment",
+    "allow-mesh-from-image",
     "dialog:allow-open",
     "dialog:allow-save"
   ]

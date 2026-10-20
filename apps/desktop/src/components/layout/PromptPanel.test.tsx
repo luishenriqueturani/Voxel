@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { frameSize, type GenerationParams, PromptPanel } from "./PromptPanel";
@@ -135,5 +135,34 @@ describe("PromptPanel", () => {
     );
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("aceita uma imagem arrastada para o painel em 3D", () => {
+    const onImageDrop = vi.fn();
+    render(
+      <PromptPanel
+        prompt=""
+        onPromptChange={vi.fn()}
+        negativePrompt=""
+        onNegativePromptChange={vi.fn()}
+        models={[]}
+        modelId=""
+        onModelChange={vi.fn()}
+        params={params}
+        onParamsChange={vi.fn()}
+        outputMode="3d"
+        onOutputModeChange={vi.fn()}
+        generating={false}
+        onGenerate={vi.fn()}
+        onImageDrop={onImageDrop}
+      />,
+    );
+    expect(screen.getByText("Arraste uma imagem para gerar o 3D")).toBeInTheDocument();
+    const panel = screen.getByText("Arraste uma imagem para gerar o 3D").parentElement;
+    if (panel === null) {
+      throw new Error("painel sem área de soltar");
+    }
+    fireEvent.drop(panel, { dataTransfer: { getData: () => "/tmp/notas.txt /tmp/gato.png" } });
+    expect(onImageDrop).toHaveBeenCalledWith("/tmp/gato.png");
   });
 });

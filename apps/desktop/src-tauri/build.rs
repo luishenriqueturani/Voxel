@@ -35,6 +35,7 @@ fn main() {
             "await_python_environment",
             "reinstall_python_environment",
             "remove_python_environment",
+            "mesh_from_image",
         ]),
     ))
     .expect("falha no build do Tauri");
