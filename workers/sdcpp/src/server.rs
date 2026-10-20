@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
@@ -15,8 +15,8 @@ use serde::Deserialize;
 use tokio::sync::Notify;
 use voxel_protocol::{
     Ack, CancelRequest, CompletedEvent, CompletedName, DecodeLatentsRequest, ErrorBody,
-    FailedEvent, FailedName, Health, JobOutput, LoadModelRequest, ProgressEvent, ProgressName,
-    Txt2ImgRequest, paths,
+    FailedEvent, FailedName, Health, Img2ImgRequest, InpaintRequest, JobOutput, LoadModelRequest,
+    ProgressEvent, ProgressName, Txt2ImgRequest, paths,
 };
 
 use crate::run::{self, Running};
@@ -27,7 +27,12 @@ struct AppState {
     cli: PathBuf,
     backend: String,
     model: Arc<Mutex<Option<PathBuf>>>,
-    jobs: Arc<Mutex<HashMap<String, Arc<Job>>>>,
+    jobs: Arc<Mutex<JobBook>>,
+}
+
+struct JobBook {
+    running: HashMap<String, Arc<Job>>,
+    cancelled: HashSet<String>,
 }
 
 struct Job {
@@ -59,7 +64,10 @@ pub async fn serve(
         cli,
         backend,
         model: Arc::new(Mutex::new(None)),
-        jobs: Arc::new(Mutex::new(HashMap::new())),
+        jobs: Arc::new(Mutex::new(JobBook {
+            running: HashMap::new(),
+            cancelled: HashSet::new(),
+        })),
     };
     axum::serve(listener, router(state))
         .await
@@ -73,8 +81,8 @@ fn router(state: AppState) -> Router {
         .route(paths::MODELS_UNLOAD, post(unload_model))
         .route(paths::JOBS_CANCEL, post(cancel_job))
         .route(paths::IMAGES_TXT2IMG, post(txt2img))
-        .route(paths::IMAGES_IMG2IMG, post(unavailable))
-        .route(paths::IMAGES_INPAINT, post(unavailable))
+        .route(paths::IMAGES_IMG2IMG, post(img2img))
+        .route(paths::IMAGES_INPAINT, post(inpaint))
         .route(paths::IMAGES_DECODE_LATENTS, post(decode_latents))
         .route(paths::EVENTS, get(events))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_token))
@@ -118,59 +126,55 @@ async fn unload_model(State(state): State<AppState>) -> Json<Ack> {
 }
 
 async fn cancel_job(State(state): State<AppState>, Json(body): Json<CancelRequest>) -> Json<Ack> {
-    if let Some(job) = state
-        .jobs
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
+    let mut book = state.jobs.lock().unwrap_or_else(PoisonError::into_inner);
+    let running = book
+        .running
         .get(&body.job_id)
-    {
-        job.running.cancel();
-    }
+        .map(|job| Arc::clone(&job.running));
+    note_cancel(&mut book.cancelled, running.as_deref(), &body.job_id);
     Json(Ack { accepted: true })
 }
 
-async fn unavailable() -> Response {
-    reject(StatusCode::NOT_IMPLEMENTED, "ainda não neste worker")
+fn note_cancel(cancelled: &mut HashSet<String>, running: Option<&Running>, job_id: &str) {
+    if let Some(running) = running {
+        running.cancel();
+    } else {
+        cancelled.insert(job_id.to_owned());
+    }
 }
 
-async fn txt2img(State(state): State<AppState>, Json(body): Json<Txt2ImgRequest>) -> Response {
-    let Some(model) = state
+fn take_cancel(cancelled: &mut HashSet<String>, job_id: &str, running: &Running) {
+    if cancelled.remove(job_id) {
+        running.cancel();
+    }
+}
+
+fn model_path(state: &AppState) -> Option<PathBuf> {
+    state
         .model
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
         .clone()
-    else {
-        return reject(StatusCode::CONFLICT, "modelo não carregado");
-    };
+}
+
+fn track_job(state: &AppState, job_id: &str) -> Arc<Job> {
     let job = Arc::new(Job {
         events: Mutex::new(Vec::new()),
         done: Mutex::new(false),
         running: Arc::new(Running::default()),
         notify: Notify::new(),
     });
-    let job_id = body.job_id.clone();
-    state
-        .jobs
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-        .insert(job_id.clone(), Arc::clone(&job));
-    let cli = state.cli.clone();
-    let backend = state.backend.clone();
-    let watched = Arc::clone(&job);
-    let report_id = job_id.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        run::txt2img(
-            &cli,
-            &model,
-            &backend,
-            &body,
-            &watched.running,
-            |step, total, preview| {
-                watched.push(progress(&report_id, step, total, preview.as_ref()));
-            },
-        )
-    })
-    .await;
+    let mut book = state.jobs.lock().unwrap_or_else(PoisonError::into_inner);
+    take_cancel(&mut book.cancelled, job_id, &job.running);
+    book.running.insert(job_id.to_owned(), Arc::clone(&job));
+    job
+}
+
+fn job_response(
+    job: &Job,
+    job_id: String,
+    result: Result<Result<PathBuf, String>, tokio::task::JoinError>,
+) -> Response {
     match result {
         Ok(Ok(path)) => {
             job.push(completed(&job_id, &path));
@@ -188,6 +192,84 @@ async fn txt2img(State(state): State<AppState>, Json(body): Json<Txt2ImgRequest>
         }
         Err(join_error) => reject(StatusCode::INTERNAL_SERVER_ERROR, &join_error.to_string()),
     }
+}
+
+async fn txt2img(State(state): State<AppState>, Json(body): Json<Txt2ImgRequest>) -> Response {
+    let Some(model) = model_path(&state) else {
+        return reject(StatusCode::CONFLICT, "modelo não carregado");
+    };
+    let job = track_job(&state, &body.job_id);
+    let job_id = body.job_id.clone();
+    let cli = state.cli.clone();
+    let backend = state.backend.clone();
+    let watched = Arc::clone(&job);
+    let report_id = job_id.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        run::txt2img(
+            &cli,
+            &model,
+            &backend,
+            &body,
+            &watched.running,
+            |step, total, preview| {
+                watched.push(progress(&report_id, step, total, preview.as_ref()));
+            },
+        )
+    })
+    .await;
+    job_response(&job, job_id, result)
+}
+
+async fn img2img(State(state): State<AppState>, Json(body): Json<Img2ImgRequest>) -> Response {
+    let Some(model) = model_path(&state) else {
+        return reject(StatusCode::CONFLICT, "modelo não carregado");
+    };
+    let job = track_job(&state, &body.job_id);
+    let job_id = body.job_id.clone();
+    let cli = state.cli.clone();
+    let backend = state.backend.clone();
+    let watched = Arc::clone(&job);
+    let report_id = job_id.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        run::img2img(
+            &cli,
+            &model,
+            &backend,
+            &body,
+            &watched.running,
+            |step, total, preview| {
+                watched.push(progress(&report_id, step, total, preview.as_ref()));
+            },
+        )
+    })
+    .await;
+    job_response(&job, job_id, result)
+}
+
+async fn inpaint(State(state): State<AppState>, Json(body): Json<InpaintRequest>) -> Response {
+    let Some(model) = model_path(&state) else {
+        return reject(StatusCode::CONFLICT, "modelo não carregado");
+    };
+    let job = track_job(&state, &body.job_id);
+    let job_id = body.job_id.clone();
+    let cli = state.cli.clone();
+    let backend = state.backend.clone();
+    let watched = Arc::clone(&job);
+    let report_id = job_id.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        run::inpaint(
+            &cli,
+            &model,
+            &backend,
+            &body,
+            &watched.running,
+            |step, total, preview| {
+                watched.push(progress(&report_id, step, total, preview.as_ref()));
+            },
+        )
+    })
+    .await;
+    job_response(&job, job_id, result)
 }
 
 async fn decode_latents(
@@ -257,7 +339,7 @@ async fn replay(mut socket: WebSocket, state: AppState, job_id: String) {
 
 fn job_snapshot(state: &AppState, job_id: &str) -> (Vec<serde_json::Value>, bool, bool) {
     let jobs = state.jobs.lock().unwrap_or_else(PoisonError::into_inner);
-    let Some(job) = jobs.get(job_id) else {
+    let Some(job) = jobs.running.get(job_id) else {
         return (Vec::new(), false, false);
     };
     (
@@ -322,4 +404,26 @@ fn reject(status: StatusCode, message: &str) -> Response {
         }),
     )
         .into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::Ordering;
+
+    use super::*;
+
+    #[test]
+    fn o_cancelamento_adiantado_vale_quando_o_job_aparece() {
+        let later = Running::default();
+        let mut cancelled = HashSet::new();
+        note_cancel(&mut cancelled, None, "job-1");
+        assert!(!later.cancel.load(Ordering::Relaxed));
+        take_cancel(&mut cancelled, "job-1", &later);
+        assert!(later.cancel.load(Ordering::Relaxed));
+
+        let current = Running::default();
+        note_cancel(&mut cancelled, Some(&current), "job-2");
+        assert!(current.cancel.load(Ordering::Relaxed));
+        assert!(!cancelled.contains("job-2"));
+    }
 }

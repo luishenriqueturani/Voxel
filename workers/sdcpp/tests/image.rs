@@ -65,6 +65,7 @@ exit 0
         height: 64,
         seed: 1,
         cfg_scale: None,
+        circular: None,
     };
     let generated = worker.txt2img(&request).expect("txt2img");
     assert_eq!(generated.path, output.display().to_string());
@@ -129,6 +130,7 @@ fn vulkan_entrega_png_e_progresso() {
         height: 512,
         seed: 1,
         cfg_scale: None,
+        circular: None,
     };
     let generated = worker.txt2img(&request).expect("txt2img");
     assert!(

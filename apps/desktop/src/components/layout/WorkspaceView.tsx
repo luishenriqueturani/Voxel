@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { EditMode, EditPayload } from "../../lib/edit";
 import type { GalleryItem, PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
 import { GalleryView } from "./GalleryView";
 import { ImageViewer } from "./ImageViewer";
+import { MaskEditor } from "./MaskEditor";
 import { type GenerationParams, type OutputMode, PromptPanel } from "./PromptPanel";
 
 type WorkspaceModel = { id: string; name: string };
@@ -23,6 +25,9 @@ type WorkspaceViewProps = {
   generating: boolean;
   locked: boolean;
   onGenerate: () => void;
+  onCancel?: () => void;
+  sourcePath: string | null;
+  editRef: { current: EditPayload };
   historyRevision: number;
   gallerySignal: number;
   viewerSignal: number;
@@ -45,6 +50,8 @@ type WorkspaceViewProps = {
   onCopy: () => void;
   onRegenerate: () => void;
   onRemoveBackground: () => void;
+  canUndoEdit?: boolean;
+  onUndoEdit?: () => void;
 };
 
 export function WorkspaceView({
@@ -62,6 +69,9 @@ export function WorkspaceView({
   generating,
   locked,
   onGenerate,
+  onCancel,
+  sourcePath,
+  editRef,
   historyRevision,
   gallerySignal,
   viewerSignal,
@@ -84,9 +94,32 @@ export function WorkspaceView({
   onCopy,
   onRegenerate,
   onRemoveBackground,
+  canUndoEdit = false,
+  onUndoEdit,
 }: WorkspaceViewProps) {
   const { t } = useTranslation();
   const [showGallery, setShowGallery] = useState(false);
+  const [editMode, setEditMode] = useState<EditMode>("new");
+  const [strength, setStrength] = useState(0.75);
+  const [instruction, setInstruction] = useState("");
+  const [maskPng, setMaskPng] = useState<string | null>(null);
+  const [mosaic, setMosaic] = useState(false);
+  const seenSource = useRef(sourcePath);
+  if (seenSource.current !== sourcePath) {
+    seenSource.current = sourcePath;
+    if (maskPng !== null) {
+      setMaskPng(null);
+    }
+  }
+  useEffect(() => {
+    editRef.current = { mode: editMode, strength, sourcePath, maskPng, instruction };
+  }, [editMode, editRef, instruction, maskPng, sourcePath, strength]);
+  useEffect(() => {
+    if (editMode === "tile") {
+      setMosaic(true);
+    }
+  }, [editMode]);
+  const painting = editMode === "inpaint" && shown !== null && !showGallery && !generating;
   useEffect(() => {
     if (gallerySignal > 0) {
       setShowGallery(true);
@@ -120,12 +153,21 @@ export function WorkspaceView({
           generating={generating}
           locked={locked}
           historyRevision={historyRevision}
+          editMode={editMode}
+          onEditModeChange={setEditMode}
+          strength={strength}
+          onStrengthChange={setStrength}
+          instruction={instruction}
+          onInstructionChange={setInstruction}
+          hasSource={sourcePath !== null}
+          hasMask={maskPng !== null}
           onHistoryError={onHistoryError}
           onRestore={(entry) => {
             setShowGallery(false);
             onRestoreHistory(entry);
           }}
           onGenerate={onGenerate}
+          onCancel={onCancel}
         />
       </aside>
       <main aria-label={t("main.label")} className="flex min-h-0 flex-1 flex-col">
@@ -135,7 +177,7 @@ export function WorkspaceView({
           </Button>
         </div>
         <div
-          className={`flex min-h-0 flex-1 overflow-auto p-6 ${showGallery ? "items-start" : "items-center justify-center"}`}
+          className={`flex min-h-0 flex-1 overflow-auto p-6 ${showGallery || painting ? "items-stretch" : "items-center justify-center"}`}
         >
           <h1 className="sr-only">Voxel</h1>
           {showGallery ? (
@@ -147,9 +189,18 @@ export function WorkspaceView({
                 onOpenGeneration(item);
               }}
             />
+          ) : painting && shown !== null ? (
+            <MaskEditor
+              src={shown}
+              onMask={setMaskPng}
+              canRevert={canUndoEdit}
+              onRevert={onUndoEdit}
+            />
           ) : (
             <ImageViewer
               src={shown}
+              mosaic={mosaic && !generating}
+              onToggleMosaic={() => setMosaic((open) => !open)}
               step={step}
               total={total}
               canSave={canSave}
@@ -165,6 +216,8 @@ export function WorkspaceView({
               onCopy={onCopy}
               onRegenerate={onRegenerate}
               onRemoveBackground={onRemoveBackground}
+              canUndo={canUndoEdit}
+              onUndo={onUndoEdit}
             />
           )}
         </div>

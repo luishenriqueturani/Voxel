@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use voxel_protocol::Txt2ImgRequest;
+use voxel_protocol::{Img2ImgRequest, InpaintRequest, Txt2ImgRequest};
 
 use crate::args::{self, DECODE_FALLBACKS, DecodeFallback};
 
@@ -50,9 +50,82 @@ pub fn txt2img(
     backend: &str,
     request: &Txt2ImgRequest,
     running: &Running,
-    mut on_progress: impl FnMut(i64, i64, Option<PathBuf>),
+    on_progress: impl FnMut(i64, i64, Option<PathBuf>),
 ) -> Result<PathBuf, String> {
     let output = PathBuf::from(&request.output_path);
+    let device = listed_device(binary, backend)?;
+    let work = work_for(&output, &request.job_id, device)?;
+    let arguments = args::txt2img_args(model, &work.output, &work.preview, &work.device, request);
+    finish(binary, model, &work, &arguments, running, on_progress)
+}
+
+/// Varia uma imagem já pronta. A intensidade vem em `--strength`.
+///
+/// # Errors
+///
+/// Falha se a origem, o binário ou a imagem resultante não existirem.
+pub fn img2img(
+    binary: &Path,
+    model: &Path,
+    backend: &str,
+    request: &Img2ImgRequest,
+    running: &Running,
+    on_progress: impl FnMut(i64, i64, Option<PathBuf>),
+) -> Result<PathBuf, String> {
+    if !Path::new(&request.image_path).is_file() {
+        return Err("imagem de origem ausente".to_owned());
+    }
+    let output = PathBuf::from(&request.output_path);
+    let device = listed_device(binary, backend)?;
+    let work = work_for(&output, &request.job_id, device)?;
+    let arguments = args::img2img_args(model, &work.output, &work.preview, &work.device, request);
+    finish(binary, model, &work, &arguments, running, on_progress)
+}
+
+/// Recria só a área branca da máscara.
+///
+/// # Errors
+///
+/// Falha se a origem, a máscara, o binário ou a imagem resultante não existirem.
+pub fn inpaint(
+    binary: &Path,
+    model: &Path,
+    backend: &str,
+    request: &InpaintRequest,
+    running: &Running,
+    on_progress: impl FnMut(i64, i64, Option<PathBuf>),
+) -> Result<PathBuf, String> {
+    if !Path::new(&request.image_path).is_file() {
+        return Err("imagem de origem ausente".to_owned());
+    }
+    if !Path::new(&request.mask_path).is_file() {
+        return Err("máscara ausente".to_owned());
+    }
+    let output = PathBuf::from(&request.output_path);
+    let device = listed_device(binary, backend)?;
+    let work = work_for(&output, &request.job_id, device)?;
+    let arguments = args::inpaint_args(model, &work.output, &work.preview, &work.device, request);
+    finish(binary, model, &work, &arguments, running, on_progress)
+}
+
+struct Work {
+    output: PathBuf,
+    preview: PathBuf,
+    latent: PathBuf,
+    device: String,
+}
+
+fn work_for(output: &Path, job_id: &str, device: String) -> Result<Work, String> {
+    let (output, preview, latent) = prepare(output, job_id)?;
+    Ok(Work {
+        output,
+        preview,
+        latent,
+        device,
+    })
+}
+
+fn prepare(output: &Path, job_id: &str) -> Result<(PathBuf, PathBuf, PathBuf), String> {
     if let Some(parent) = output
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -60,32 +133,48 @@ pub fn txt2img(
         std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
     let work = output.parent().unwrap_or(Path::new(".")).to_path_buf();
-    let preview = work.join(format!("{}.preview.png", request.job_id));
-    let latent = work.join(format!("{}.latent", request.job_id));
-    let device = listed_device(binary, backend)?;
-    let args = args::txt2img_args(model, &output, &preview, &device, request);
+    let preview = work.join(format!("{job_id}.preview.png"));
+    let latent = work.join(format!("{job_id}.latent"));
+    Ok((output.to_path_buf(), preview, latent))
+}
+
+fn finish(
+    binary: &Path,
+    model: &Path,
+    work: &Work,
+    arguments: &[String],
+    running: &Running,
+    mut on_progress: impl FnMut(i64, i64, Option<PathBuf>),
+) -> Result<PathBuf, String> {
     let status = spawn(
         binary,
-        &args,
-        &[("VOXEL_LATENT_OUT", latent.to_str().unwrap_or_default())],
+        arguments,
+        &[("VOXEL_LATENT_OUT", work.latent.to_str().unwrap_or_default())],
         running,
-        &preview,
+        &work.preview,
         &mut on_progress,
     )?;
-    if status.success() && is_png(&output) {
-        return Ok(output);
+    if status.success() && is_png(&work.output) {
+        return Ok(work.output.clone());
     }
     if running.cancel.load(Ordering::Relaxed) {
         return Err("cancelado".to_owned());
     }
-    if !latent.is_file() {
+    if !work.latent.is_file() {
         return Err(if status.detail.is_empty() {
             format!("saída {}", status.code.unwrap_or(-1))
         } else {
             status.detail
         });
     }
-    decode_saved(binary, model, &output, &device, &latent, running)
+    decode_saved(
+        binary,
+        model,
+        &work.output,
+        &work.device,
+        &work.latent,
+        running,
+    )
 }
 
 /// Decodifica um latente já gravado, na ordem de fallback.
@@ -270,6 +359,7 @@ mod tests {
             height: 512,
             seed: 1,
             cfg_scale: None,
+            circular: None,
         }
     }
 

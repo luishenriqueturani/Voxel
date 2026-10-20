@@ -112,7 +112,9 @@ describe("PromptPanel", () => {
     );
   });
 
-  it("mostra o loader e desativa o botão enquanto gera", () => {
+  it("troca gerar por cancelar enquanto a imagem está saindo", async () => {
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
     render(
       <PromptPanel
         prompt=""
@@ -128,8 +130,10 @@ describe("PromptPanel", () => {
         onOutputModeChange={vi.fn()}
         generating
         onGenerate={vi.fn()}
+        onCancel={onCancel}
       />,
     );
-    expect(screen.getByRole("button", { name: "Gerando…" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onCancel).toHaveBeenCalledOnce();
   });
 });

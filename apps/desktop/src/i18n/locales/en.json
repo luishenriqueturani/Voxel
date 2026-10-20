@@ -51,6 +51,7 @@
     "output3d": "3D",
     "generate": "Generate",
     "generating": "Generating…",
+    "cancel": "Cancel",
     "recent": "Recent prompts",
     "recentEmpty": "No recent prompts",
     "recentSearch": "Search prompts",
@@ -75,6 +76,31 @@
       "seed": "Number that repeats the same image. Empty picks a new one.",
       "count": "How many images to generate in a row. Each one uses the next seed."
     }
+  },
+  "edit": {
+    "mode": "Edit",
+    "new": "New",
+    "vary": "Vary",
+    "inpaint": "Paint",
+    "tile": "Texture",
+    "strength": "Strength",
+    "change": "What to change",
+    "changeHint": "Describe how the result should look. This text comes first and outweighs the prompt above.",
+    "needImage": "Open or generate an image before varying or painting.",
+    "needMask": "Paint the area that should change.",
+    "hint": {
+      "vary": "How much of the current image the model may change. Low keeps the photo. High recreates almost all of it.",
+      "inpaint": "The brush marks the area the model recreates. The rest of the image stays.",
+      "tile": "Generates a texture that repeats without a seam at the edges."
+    }
+  },
+  "mask": {
+    "label": "Mask",
+    "brush": "Brush",
+    "eraser": "Eraser",
+    "paint": "Paint",
+    "undo": "Undo",
+    "clear": "Clear"
   },
   "main": {
     "label": "Main area",
@@ -186,8 +212,11 @@
     "save": "Save",
     "copy": "Copy image",
     "regenerate": "Regenerate with the same seed",
+    "undo": "Undo",
     "removeBackground": "Remove background",
-    "removing": "Removing background…"
+    "removing": "Removing background…",
+    "mosaic": "Mosaic",
+    "mosaicPreview": "Texture repeated in a 3 by 3 mosaic"
   },
   "gallery": {
     "title": "Gallery",

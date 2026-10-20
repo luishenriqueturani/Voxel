@@ -9,18 +9,21 @@ import { WelcomeView } from "./components/layout/WelcomeView";
 import { WorkspaceView } from "./components/layout/WorkspaceView";
 import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
+import { useGenerationRequest } from "./hooks/useGenerationRequest";
 import { useImageEdit } from "./hooks/useImageEdit";
 import { useModelDownload } from "./hooks/useModelDownload";
 import { useNativeMenu } from "./hooks/useNativeMenu";
+import { blankEdit } from "./lib/edit";
 import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
+import { mergeStep, prefersDark, SUMMARY_KEYS } from "./lib/shell";
 import { loadImageBackend, restoreImageBackend, saveImageBackend } from "./native/backend";
 import type { ErrorNotice } from "./native/errors";
 import { openLocalPath } from "./native/files";
 import {
+  cancelGeneration,
   copyPreview,
   type GalleryImage,
-  generateImage,
   imageSrc,
   loadGenerationDefaults,
   saveGeneratedImage,
@@ -47,29 +50,7 @@ import {
 import { loadMachineStatus, type MachineStatus } from "./native/status";
 import { loadHfTokenStatus, saveHfToken } from "./native/token";
 
-const SUMMARY_KEYS = [
-  "error.summary.incompatibleKernel",
-  "error.summary.outOfMemory",
-  "error.summary.nativeCrash",
-  "error.summary.network",
-  "error.summary.unknown",
-] as const;
-
 type View = "workspace" | "settings" | "welcome";
-
-function mergeStep(steps: SetupStep[], step: SetupStep): SetupStep[] {
-  const index = steps.findIndex((current) => current.id === step.id);
-  if (index === -1) {
-    return [...steps, step];
-  }
-  const next = steps.slice();
-  next[index] = step;
-  return next;
-}
-
-function prefersDark(): boolean {
-  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
-}
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -106,6 +87,7 @@ export default function App() {
   });
   const [generating, setGenerating] = useState(false);
   const generatingRef = useRef(false);
+  const editRef = useRef(blankEdit);
   const [modelId, setModelId] = useState("sd15");
   const [slides, setSlides] = useState<GalleryImage[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
@@ -171,7 +153,19 @@ export default function App() {
 
   const { modelProgress, downloadCatalogModel } = useModelDownload(setLibrary, reportFailure);
 
-  const { removing, openImage, removeBackground, openGeneration, openHistory } = useImageEdit({
+  const {
+    removing,
+    openImage,
+    removeBackground,
+    openGeneration,
+    openHistory,
+    canUndoEdit,
+    holdEdit,
+    commitEdit,
+    discardEdit,
+    restoreEdit,
+    undoEdit,
+  } = useImageEdit({
     slides,
     setSlides,
     slideIndex,
@@ -182,73 +176,25 @@ export default function App() {
     openTitle: t("menu.file.openImage"),
   });
 
-  const requestGeneration = useCallback(
-    (seedOverride?: number) => {
-      if (generatingRef.current || removing) {
-        return;
-      }
-      generatingRef.current = true;
-      setGenerating(true);
-      setSlides([]);
-      setSlideIndex(0);
-      setFrame(null);
-      const typed = params.seed.trim() === "" ? null : Number(params.seed);
-      const seed = seedOverride ?? (typed !== null && Number.isFinite(typed) ? typed : null);
-      void generateImage(
-        {
-          prompt,
-          negativePrompt: negativePrompt === "" ? null : negativePrompt,
-          modelId,
-          width: params.width,
-          height: params.height,
-          steps: params.steps,
-          cfg: params.cfg,
-          seed,
-          count: params.count,
-        },
-        (progress) => {
-          setFrame((current) => ({
-            step: progress.step,
-            total: progress.total,
-            preview: progress.preview ?? current?.preview ?? null,
-          }));
-          if (
-            progress.ready &&
-            progress.preview &&
-            progress.path &&
-            typeof progress.seed === "number"
-          ) {
-            const slide = {
-              src: imageSrc(progress.preview),
-              path: progress.path,
-              seed: progress.seed,
-            };
-            const index = progress.index ?? 0;
-            setSlides((current) => {
-              const next = current.slice();
-              next[index] = slide;
-              return next;
-            });
-            setSlideIndex(index);
-          }
-        },
-      )
-        .then((image) => {
-          if (image === null || image.images.length === 0) {
-            return;
-          }
-          setSlides(image.images);
-          setSlideIndex(image.images.length - 1);
-          setHistoryRevision((current) => current + 1);
-        })
-        .catch(reportFailure)
-        .finally(() => {
-          generatingRef.current = false;
-          setGenerating(false);
-        });
-    },
-    [modelId, negativePrompt, params, prompt, removing, reportFailure],
-  );
+  const requestGeneration = useGenerationRequest({
+    generatingRef,
+    removing,
+    editRef,
+    holdEdit,
+    commitEdit,
+    discardEdit,
+    restoreEdit,
+    setGenerating,
+    setSlides,
+    setSlideIndex,
+    setFrame,
+    setHistoryRevision,
+    params,
+    prompt,
+    negativePrompt,
+    modelId,
+    reportFailure,
+  });
   useGenerateShortcut(requestGeneration);
 
   const onMenuAction = useCallback(
@@ -260,6 +206,8 @@ export default function App() {
         setTheme((current) => (current === "dark" ? "light" : "dark"));
       } else if (action === "generate") {
         requestGeneration();
+      } else if (action === "cancel-generation") {
+        void cancelGeneration();
       } else if (action === "redo-setup") {
         void resetSetup().then(() => {
           setSetupSteps([]);
@@ -274,6 +222,8 @@ export default function App() {
         openImage();
       } else if (action === "remove-background") {
         removeBackground();
+      } else if (action === "undo-edit") {
+        undoEdit();
       } else if (action === "gallery") {
         setView("workspace");
         setGallerySignal((current) => current + 1);
@@ -282,7 +232,7 @@ export default function App() {
         setViewerSignal((current) => current + 1);
       }
     },
-    [openImage, removeBackground, requestGeneration],
+    [openImage, removeBackground, requestGeneration, undoEdit],
   );
   useEffect(() => {
     let cancelled = false;
@@ -488,6 +438,11 @@ export default function App() {
           generating={generating}
           locked={removing}
           onGenerate={() => requestGeneration()}
+          onCancel={() => {
+            void cancelGeneration();
+          }}
+          sourcePath={selected?.path ?? null}
+          editRef={editRef}
           historyRevision={historyRevision}
           gallerySignal={gallerySignal}
           viewerSignal={viewerSignal}
@@ -524,6 +479,8 @@ export default function App() {
             setParams((current) => ({ ...current, seed: String(seed) }));
             requestGeneration(seed);
           }}
+          canUndoEdit={canUndoEdit}
+          onUndoEdit={undoEdit}
           onRemoveBackground={removeBackground}
         />
       ) : (

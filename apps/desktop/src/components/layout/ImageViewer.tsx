@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type PointerEvent as ReactPointerEvent, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../ui/button";
+import { MosaicPreview } from "./MosaicPreview";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 8;
@@ -23,6 +24,10 @@ type ImageViewerProps = {
   onCopy: () => void;
   onRegenerate: () => void;
   onRemoveBackground?: () => void;
+  canUndo?: boolean;
+  onUndo?: () => void;
+  mosaic?: boolean;
+  onToggleMosaic?: () => void;
 };
 
 type Pan = { x: number; y: number };
@@ -50,6 +55,10 @@ export function ImageViewer({
   onCopy,
   onRegenerate,
   onRemoveBackground,
+  canUndo = false,
+  onUndo,
+  mosaic = false,
+  onToggleMosaic,
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -132,7 +141,9 @@ export function ImageViewer({
   return (
     <div className="flex h-full w-full min-h-0 gap-4">
       <div className={`flex min-h-0 min-w-0 flex-1 ${src ? "" : "items-center justify-center"}`}>
-        {src ? (
+        {src && mosaic ? (
+          <MosaicPreview src={src} />
+        ) : src ? (
           <div
             ref={setStage}
             data-testid="viewer-stage"
@@ -193,6 +204,21 @@ export function ImageViewer({
           ) : null}
           <span className="text-sm text-zinc-500">{t("viewer.zoom", { value: percent })}</span>
           <p className="text-sm text-zinc-500">{t("viewer.gesture")}</p>
+          {onToggleMosaic ? (
+            <Button
+              variant="ghost"
+              className="w-full"
+              aria-pressed={mosaic}
+              onClick={onToggleMosaic}
+            >
+              {t("viewer.mosaic")}
+            </Button>
+          ) : null}
+          {onUndo ? (
+            <Button variant="ghost" className="w-full" disabled={!canUndo} onClick={onUndo}>
+              {t("viewer.undo")}
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             className="w-full whitespace-normal"

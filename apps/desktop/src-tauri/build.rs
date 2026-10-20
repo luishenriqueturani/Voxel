@@ -13,6 +13,7 @@ fn main() {
             "set_image_backend",
             "restore_image_backend",
             "generate_image",
+            "cancel_generation",
             "generation_defaults",
             "open_edit_image",
             "remove_background",

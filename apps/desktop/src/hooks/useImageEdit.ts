@@ -1,4 +1,5 @@
 import { type Dispatch, type SetStateAction, useCallback, useRef, useState } from "react";
+import { popSlides, pushSlides } from "../lib/slideHistory";
 import { loadImageFile, openImageForEdit, removeImageBackground } from "../native/background";
 import type { GalleryImage } from "../native/generation";
 import { loadPromptImages, type PromptEntry } from "../native/history";
@@ -29,10 +30,55 @@ export function useImageEdit({
   removeBackground: () => void;
   openGeneration: (entry: { path: string; seed: number }) => void;
   openHistory: (entry: PromptEntry) => void;
+  canUndoEdit: boolean;
+  holdEdit: () => void;
+  commitEdit: () => void;
+  discardEdit: () => void;
+  restoreEdit: () => void;
+  undoEdit: () => void;
 } {
   const [removing, setRemoving] = useState(false);
+  const [editHistory, setEditHistory] = useState<GalleryImage[][]>([]);
   const removingRef = useRef(false);
   const historyTicket = useRef(0);
+  const pendingEdit = useRef<GalleryImage[] | null>(null);
+
+  const holdEdit = useCallback(() => {
+    pendingEdit.current = slides.length === 0 ? null : slides.map((slide) => ({ ...slide }));
+  }, [slides]);
+
+  const commitEdit = useCallback(() => {
+    const snapshot = pendingEdit.current;
+    pendingEdit.current = null;
+    if (snapshot === null) {
+      return;
+    }
+    setEditHistory((current) => pushSlides(current, snapshot));
+  }, []);
+
+  const discardEdit = useCallback(() => {
+    pendingEdit.current = null;
+  }, []);
+
+  const restoreEdit = useCallback(() => {
+    const snapshot = pendingEdit.current;
+    pendingEdit.current = null;
+    if (snapshot === null) {
+      return;
+    }
+    setSlides(snapshot);
+    setSlideIndex(Math.max(0, snapshot.length - 1));
+  }, [setSlideIndex, setSlides]);
+
+  const undoEdit = useCallback(() => {
+    const restored = popSlides(editHistory);
+    if (restored.slides === null) {
+      return;
+    }
+    setEditHistory(restored.history);
+    setSlides(restored.slides);
+    setSlideIndex(Math.max(0, restored.slides.length - 1));
+  }, [editHistory, setSlideIndex, setSlides]);
 
   const openImage = useCallback(() => {
     if (busy || removingRef.current) {
@@ -58,12 +104,19 @@ export function useImageEdit({
       return;
     }
     const index = slideIndex;
+    pendingEdit.current = slides.map((slide) => ({ ...slide }));
     removingRef.current = true;
     setRemoving(true);
     void removeImageBackground(current.path)
       .then((image) => {
         if (image === null) {
+          pendingEdit.current = null;
           return;
+        }
+        const snapshot = pendingEdit.current;
+        pendingEdit.current = null;
+        if (snapshot !== null) {
+          setEditHistory((current) => pushSlides(current, snapshot));
         }
         setSlides((existing) =>
           existing.map((slide, position) =>
@@ -73,7 +126,10 @@ export function useImageEdit({
           ),
         );
       })
-      .catch(reportFailure)
+      .catch((error: unknown) => {
+        pendingEdit.current = null;
+        reportFailure(error);
+      })
       .finally(() => {
         removingRef.current = false;
         setRemoving(false);
@@ -143,5 +199,17 @@ export function useImageEdit({
     [busy, reportFailure, setSlideIndex, setSlides, setView],
   );
 
-  return { removing, openImage, removeBackground, openGeneration, openHistory };
+  return {
+    removing,
+    openImage,
+    removeBackground,
+    openGeneration,
+    openHistory,
+    canUndoEdit: editHistory.length > 0,
+    holdEdit,
+    commitEdit,
+    discardEdit,
+    restoreEdit,
+    undoEdit,
+  };
 }

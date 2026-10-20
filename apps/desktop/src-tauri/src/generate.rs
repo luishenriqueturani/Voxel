@@ -4,12 +4,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use voxel_hardware::{GenerationDefaults, Profile, defaults_for};
 use voxel_models::Catalog;
-use voxel_protocol::{
-    ImageBackend, LoadModelRequest, ModelKind, Txt2ImgRequest, WorkerEvent, WorkerProcess,
-};
+use voxel_protocol::{ImageBackend, LoadModelRequest, ModelKind, WorkerEvent, WorkerProcess};
+
+use crate::image_job::{self, ImageCall};
 
 use crate::db::{Database, GenerationRecord};
 use crate::output::{self, ImageMetadata};
@@ -43,6 +43,18 @@ pub struct GenerateRequest {
     pub cfg: f64,
     pub seed: Option<i64>,
     pub count: u32,
+    #[serde(default)]
+    pub mode: String,
+    #[serde(default = "default_strength")]
+    pub strength: f64,
+    #[serde(default)]
+    pub source_path: Option<String>,
+    #[serde(default)]
+    pub mask_png: Option<String>,
+}
+
+fn default_strength() -> f64 {
+    0.75
 }
 
 /// Imagem pronta e a seed usada. A interface lê o arquivo pelo protocolo de assets.
@@ -151,6 +163,11 @@ pub fn generate(
     paths: &AppPaths,
     request: &GenerateRequest,
 ) -> Result<GeneratedImage, String> {
+    let jobs = app.state::<crate::live_job::LiveJobs>();
+    let _session = jobs.enter();
+    if jobs.stopped() {
+        return Err("cancelado".to_owned());
+    }
     let choice = backend_choice(database)?;
     let bins = discover();
     let model = resolve_model(paths, &request.model_id, &bins)?;
@@ -175,6 +192,9 @@ pub fn generate(
             kind: ModelKind::Image,
         })
         .map_err(|error| error.to_string())?;
+    if jobs.stopped() {
+        return Err("cancelado".to_owned());
+    }
     let folder = output::item_directory(&output::today_dir(&output_root()), &request.prompt);
     std::fs::create_dir_all(&folder).map_err(|error| error.to_string())?;
     let seed = request.seed.unwrap_or_else(random_seed);
@@ -184,6 +204,9 @@ pub fn generate(
     for index in 0..limits.count {
         let file = format!("imagem_{:02}.png", index + 1);
         let output = folder.join(&file);
+        if jobs.stopped() {
+            return Err("cancelado".to_owned());
+        }
         let image_seed = seed.saturating_add(i64::from(index));
         let started = Instant::now();
         render_one(app, &worker, request, &limits, &output, image_seed, index)?;
@@ -257,6 +280,10 @@ fn limits_of(request: &GenerateRequest) -> Limits {
     }
 }
 
+fn keep_step(total: i64, expected: i64, has_preview: bool) -> bool {
+    total == expected || has_preview
+}
+
 fn render_one(
     app: &AppHandle,
     worker: &WorkerProcess,
@@ -267,6 +294,11 @@ fn render_one(
     index: u32,
 ) -> Result<(), String> {
     let job_id = format!("gen-{}-{index}", std::process::id());
+    let jobs = app.state::<crate::live_job::LiveJobs>();
+    jobs.track(worker.port(), worker.token(), &job_id);
+    if jobs.stopped() {
+        return Err("cancelado".to_owned());
+    }
     let port = worker.port();
     let token = worker.token().to_owned();
     let watched = job_id.clone();
@@ -278,14 +310,14 @@ fn render_one(
     let progress = std::thread::spawn(move || {
         let _ = WorkerProcess::watch_until(port, &token, &watched, &flag, |event| {
             if let WorkerEvent::Progress(step) = event {
-                // O decode em tiles também imprime passo/total, e não é o denoising.
-                if step.total != expected {
-                    return;
-                }
                 let preview = step
                     .preview_path
                     .as_deref()
                     .and_then(|path| preview_base64(Path::new(path)));
+                // O img2img anda menos passos que o pedido. O decode em tiles não traz prévia.
+                if !keep_step(step.total, expected, preview.is_some()) {
+                    return;
+                }
                 let _ = emitter.emit(
                     "generation://progress",
                     GenerationProgress {
@@ -302,21 +334,34 @@ fn render_one(
             }
         });
     });
-    let generated = worker.txt2img(&Txt2ImgRequest {
-        job_id,
-        prompt: request.prompt.clone(),
-        negative_prompt: request.negative_prompt.clone(),
-        model_id: request.model_id.clone(),
-        output_path: output.display().to_string(),
-        steps: limits.steps,
-        width: limits.width,
-        height: limits.height,
-        seed,
-        cfg_scale: Some(limits.cfg),
-    });
+    let generated = image_job::submit(
+        worker,
+        &ImageCall {
+            mode: request.mode.clone(),
+            prompt: request.prompt.clone(),
+            negative_prompt: request.negative_prompt.clone(),
+            model_id: request.model_id.clone(),
+            width: limits.width,
+            height: limits.height,
+            steps: limits.steps,
+            cfg: limits.cfg,
+            seed,
+            strength: request.strength,
+            source_path: request.source_path.clone(),
+            mask_png: request.mask_png.clone(),
+            output: output.to_path_buf(),
+            job_id,
+        },
+    );
     stop.store(true, Ordering::Relaxed);
     let _ = progress.join();
-    generated.map_err(|error| error.to_string())?;
+    if let Err(error) = generated {
+        if app.state::<crate::live_job::LiveJobs>().stopped() || error.contains("cancelado") {
+            let _ = std::fs::remove_file(output);
+            return Err("cancelado".to_owned());
+        }
+        return Err(error);
+    }
     Ok(())
 }
 
@@ -515,6 +560,10 @@ mod tests {
             cfg: 7.0,
             seed: None,
             count: 1,
+            mode: String::new(),
+            strength: 0.75,
+            source_path: None,
+            mask_png: None,
         };
         let wide = super::limits_of(&request);
         assert_eq!((wide.width, wide.height), (1024, 576));
@@ -526,5 +575,12 @@ mod tests {
         request.height = 4_000;
         let snapped = super::limits_of(&request);
         assert_eq!((snapped.width, snapped.height), (320, 1024));
+    }
+
+    #[test]
+    fn a_previa_da_edicao_entra_mesmo_com_outro_total() {
+        assert!(super::keep_step(20, 20, false));
+        assert!(super::keep_step(15, 20, true));
+        assert!(!super::keep_step(4, 20, false));
     }
 }

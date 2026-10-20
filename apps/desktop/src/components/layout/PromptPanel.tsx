@@ -1,9 +1,11 @@
 import * as Popover from "@radix-ui/react-popover";
-import { Info, Loader2, Settings } from "lucide-react";
+import { Info, Settings } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { EditMode } from "../../lib/edit";
 import type { PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
+import { EditControls, editReady } from "./EditControls";
 import { RecentPrompts } from "./RecentPrompts";
 
 export type OutputMode = "2d" | "3d";
@@ -79,7 +81,16 @@ type PromptPanelProps = {
   historyRevision?: number;
   onHistoryError?: (error: unknown) => void;
   onRestore?: (entry: PromptEntry) => void;
+  editMode?: EditMode;
+  onEditModeChange?: (mode: EditMode) => void;
+  strength?: number;
+  onStrengthChange?: (value: number) => void;
+  instruction?: string;
+  onInstructionChange?: (value: string) => void;
+  hasSource?: boolean;
+  hasMask?: boolean;
   onGenerate: () => void;
+  onCancel?: () => void;
 };
 
 const fieldClass =
@@ -90,6 +101,22 @@ function ignoreHistoryError(_error: unknown) {
 }
 
 function ignoreRestore(_entry: PromptEntry) {
+  return undefined;
+}
+
+function ignoreMode(_mode: EditMode) {
+  return undefined;
+}
+
+function ignoreStrength(_value: number) {
+  return undefined;
+}
+
+function ignoreInstruction(_value: string) {
+  return undefined;
+}
+
+function ignoreCancel() {
   return undefined;
 }
 
@@ -110,7 +137,16 @@ export function PromptPanel({
   historyRevision = 0,
   onHistoryError = ignoreHistoryError,
   onRestore = ignoreRestore,
+  editMode = "new",
+  onEditModeChange = ignoreMode,
+  strength = 0.75,
+  onStrengthChange = ignoreStrength,
+  instruction = "",
+  onInstructionChange = ignoreInstruction,
+  hasSource = false,
+  hasMask = false,
   onGenerate,
+  onCancel = ignoreCancel,
 }: PromptPanelProps) {
   const { t } = useTranslation();
   const promptRef = useRef<HTMLTextAreaElement>(null);
@@ -206,14 +242,24 @@ export function PromptPanel({
         </label>
       </fieldset>
 
+      <EditControls
+        mode={editMode}
+        onModeChange={onEditModeChange}
+        strength={strength}
+        onStrengthChange={onStrengthChange}
+        instruction={instruction}
+        onInstructionChange={onInstructionChange}
+        hasSource={hasSource}
+        hasMask={hasMask}
+      />
+
       <Button
         className="w-full"
-        disabled={generating || locked}
+        disabled={!generating && (locked || !editReady(editMode, hasSource, hasMask))}
         aria-busy={generating || locked}
-        onClick={onGenerate}
+        onClick={generating ? onCancel : onGenerate}
       >
-        {generating ? <Loader2 aria-hidden="true" className="animate-spin" size={16} /> : null}
-        {generating ? t("panel.generating") : t("panel.generate")}
+        {generating ? t("panel.cancel") : t("panel.generate")}
       </Button>
 
       <RecentPrompts

@@ -66,7 +66,8 @@
           "width": { "type": "integer" },
           "height": { "type": "integer" },
           "seed": { "type": "integer" },
-          "cfgScale": { "type": "number" }
+          "cfgScale": { "type": "number" },
+          "circular": { "type": "boolean" }
         },
         "required": ["jobId", "prompt", "modelId", "outputPath", "steps", "width", "height", "seed"]
       },
@@ -75,11 +76,17 @@
         "properties": {
           "jobId": { "type": "string" },
           "prompt": { "type": "string" },
+          "negativePrompt": { "type": "string" },
           "modelId": { "type": "string" },
           "imagePath": { "type": "string" },
           "outputPath": { "type": "string" },
           "steps": { "type": "integer" },
-          "strength": { "type": "number" }
+          "strength": { "type": "number" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "seed": { "type": "integer" },
+          "cfgScale": { "type": "number" },
+          "circular": { "type": "boolean" }
         },
         "required": ["jobId", "prompt", "modelId", "imagePath", "outputPath", "steps", "strength"]
       },
@@ -88,12 +95,20 @@
         "properties": {
           "jobId": { "type": "string" },
           "prompt": { "type": "string" },
+          "negativePrompt": { "type": "string" },
           "modelId": { "type": "string" },
           "imagePath": { "type": "string" },
           "maskPath": { "type": "string" },
-          "outputPath": { "type": "string" }
+          "outputPath": { "type": "string" },
+          "steps": { "type": "integer" },
+          "strength": { "type": "number" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "seed": { "type": "integer" },
+          "cfgScale": { "type": "number" },
+          "circular": { "type": "boolean" }
         },
-        "required": ["jobId", "prompt", "modelId", "imagePath", "maskPath", "outputPath"]
+        "required": ["jobId", "prompt", "modelId", "imagePath", "maskPath", "outputPath", "steps", "strength"]
       },
       "DecodeLatentsRequest": {
         "type": "object",

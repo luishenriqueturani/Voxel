@@ -39,25 +39,40 @@ class Txt2ImgRequest(TypedDict):
     height: int
     seed: int
     cfgScale: NotRequired[float]
+    circular: NotRequired[bool]
 
 
 class Img2ImgRequest(TypedDict):
     jobId: str
     prompt: str
+    negativePrompt: NotRequired[str]
     modelId: str
     imagePath: str
     outputPath: str
     steps: int
     strength: float
+    width: NotRequired[int]
+    height: NotRequired[int]
+    seed: NotRequired[int]
+    cfgScale: NotRequired[float]
+    circular: NotRequired[bool]
 
 
 class InpaintRequest(TypedDict):
     jobId: str
     prompt: str
+    negativePrompt: NotRequired[str]
     modelId: str
     imagePath: str
     maskPath: str
     outputPath: str
+    steps: int
+    strength: float
+    width: NotRequired[int]
+    height: NotRequired[int]
+    seed: NotRequired[int]
+    cfgScale: NotRequired[float]
+    circular: NotRequired[bool]
 
 
 class DecodeLatentsRequest(TypedDict):

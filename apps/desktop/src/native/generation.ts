@@ -55,6 +55,10 @@ export type GenerationRequest = {
   cfg: number;
   seed: number | null;
   count: number;
+  mode?: string;
+  strength?: number;
+  sourcePath?: string | null;
+  maskPng?: string | null;
 };
 
 export type GenerationDefaults = {
@@ -94,6 +98,33 @@ export async function loadGenerationDefaults(): Promise<GenerationDefaults | nul
   }
   const value = await invoke("generation_defaults");
   return isDefaults(value) ? value : null;
+}
+
+export function isCancelled(error: unknown): boolean {
+  return errorText(error).toLowerCase().includes("cancelado");
+}
+
+function errorText(error: unknown): string {
+  if (typeof error === "string") {
+    return error;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = error.message;
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+  return "";
+}
+
+export async function cancelGeneration(): Promise<void> {
+  if (!isTauri()) {
+    return;
+  }
+  await invoke("cancel_generation");
 }
 
 export async function generateImage(

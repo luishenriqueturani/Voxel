@@ -245,6 +245,25 @@ impl WorkerProcess {
     fn url(&self, path: &str) -> String {
         format!("http://127.0.0.1:{}{path}", self.port)
     }
+
+    /// Pede o cancelamento de um job já anunciado, sem o processo supervisor.
+    ///
+    /// # Errors
+    ///
+    /// Falha se o worker não responder.
+    pub fn cancel_at(port: u16, token: &str, job_id: &str) -> Result<Ack, WorkerError> {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()?;
+        let response = client
+            .post(format!("http://127.0.0.1:{port}{}", paths::JOBS_CANCEL))
+            .bearer_auth(token)
+            .json(&CancelRequest {
+                job_id: job_id.to_owned(),
+            })
+            .send()?;
+        read_json(response)
+    }
 }
 
 impl ImageBackend for WorkerProcess {

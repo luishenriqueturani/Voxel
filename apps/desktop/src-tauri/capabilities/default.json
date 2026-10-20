@@ -19,6 +19,7 @@
     "allow-set-image-backend",
     "allow-restore-image-backend",
     "allow-generate-image",
+    "allow-cancel-generation",
     "allow-generation-defaults",
     "allow-open-edit-image",
     "allow-remove-background",

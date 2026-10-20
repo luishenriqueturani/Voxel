@@ -51,6 +51,7 @@
     "output3d": "3D",
     "generate": "Gerar",
     "generating": "Gerando…",
+    "cancel": "Cancelar",
     "recent": "Prompts recentes",
     "recentEmpty": "Nenhum prompt recente",
     "recentSearch": "Buscar prompts",
@@ -75,6 +76,31 @@
       "seed": "Número que repete a mesma imagem. Vazio sorteia outra.",
       "count": "Quantas imagens gerar em sequência. Cada uma usa a seed seguinte."
     }
+  },
+  "edit": {
+    "mode": "Edição",
+    "new": "Nova",
+    "vary": "Variar",
+    "inpaint": "Pintar",
+    "tile": "Textura",
+    "strength": "Intensidade",
+    "change": "O que mudar",
+    "changeHint": "Descreva como o resultado deve ficar. Esse texto entra na frente e pesa mais que o prompt de cima.",
+    "needImage": "Abra ou gere uma imagem para variar ou pintar.",
+    "needMask": "Pinte a área que deve mudar.",
+    "hint": {
+      "vary": "Quanto da imagem atual o modelo pode mudar. Baixa mantém a foto. Alta recria quase tudo.",
+      "inpaint": "O pincel marca a área que o modelo recria. O resto da imagem fica.",
+      "tile": "Gera uma textura que se repete sem emenda nas bordas."
+    }
+  },
+  "mask": {
+    "label": "Máscara",
+    "brush": "Pincel",
+    "eraser": "Borracha",
+    "paint": "Pintar",
+    "undo": "Desfazer",
+    "clear": "Limpar"
   },
   "main": {
     "label": "Área principal",
@@ -186,8 +212,11 @@
     "save": "Salvar",
     "copy": "Copiar imagem",
     "regenerate": "Regerar com a mesma seed",
+    "undo": "Desfazer",
     "removeBackground": "Remover fundo",
-    "removing": "Removendo fundo…"
+    "removing": "Removendo fundo…",
+    "mosaic": "Mosaico",
+    "mosaicPreview": "Textura repetida em mosaico 3 por 3"
   },
   "gallery": {
     "title": "Galeria",

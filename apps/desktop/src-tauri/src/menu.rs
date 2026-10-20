@@ -54,7 +54,7 @@ pub fn menu_groups() -> Vec<MenuGroup> {
         MenuGroup {
             id: "edit",
             items: vec![
-                item("edit.undo", false, None),
+                item("edit.undo", true, None),
                 item("edit.redo", false, None),
                 item("edit.copy", false, None),
                 item("edit.paste", false, None),
@@ -67,7 +67,7 @@ pub fn menu_groups() -> Vec<MenuGroup> {
             id: "generate",
             items: vec![
                 item("generate.run", true, Some("CmdOrCtrl+Return")),
-                item("generate.cancel", false, None),
+                item("generate.cancel", true, None),
                 item("generate.regenerate", false, None),
             ],
         },

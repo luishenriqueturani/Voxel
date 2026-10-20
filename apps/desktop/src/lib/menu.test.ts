@@ -23,9 +23,11 @@ describe("actionForMenu", () => {
     expect(actionForMenu("edit.preferences")).toBe("settings");
     expect(actionForMenu("view.theme")).toBe("toggle-theme");
     expect(actionForMenu("generate.run")).toBe("generate");
+    expect(actionForMenu("generate.cancel")).toBe("cancel-generation");
     expect(actionForMenu("help.redoSetup")).toBe("redo-setup");
     expect(actionForMenu("file.openImage")).toBe("open-image");
     expect(actionForMenu("edit.removeBackground")).toBe("remove-background");
+    expect(actionForMenu("edit.undo")).toBe("undo-edit");
     expect(actionForMenu("view.gallery")).toBe("gallery");
     expect(actionForMenu("view.viewer")).toBe("viewer");
   });

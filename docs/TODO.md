@@ -188,11 +188,11 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Edição de imagem (§4.2)
 
-- [ ] Img2img com controle de intensidade
-- [ ] Editor de máscara com pincel (tamanho, borracha, desfazer)
-- [ ] Inpainting usando a máscara
-- [ ] Texturas tileáveis (padding circular)
-- [ ] Pré-visualização de textura em mosaico 3×3
+- [x] Img2img com controle de intensidade
+- [x] Editor de máscara com pincel (tamanho, borracha, desfazer)
+- [x] Inpainting usando a máscara
+- [x] Texturas tileáveis (padding circular)
+- [x] Pré-visualização de textura em mosaico 3×3
 
 ### Ambiente Python (§7.3)
 

@@ -2,6 +2,8 @@ mod background;
 mod db;
 mod generate;
 mod history;
+mod image_job;
+mod live_job;
 mod menu;
 mod models;
 mod output;
@@ -45,6 +47,7 @@ pub fn run() {
             app.manage(database);
             app.manage(paths);
             app.manage(SetupGate::default());
+            app.manage(live_job::LiveJobs::default());
 
             let menu = build_menu(app.handle(), &default_labels())?;
             app.set_menu(menu)?;
@@ -70,6 +73,7 @@ pub fn run() {
             set_image_backend,
             restore_image_backend,
             generate_image,
+            cancel_generation,
             generation_defaults,
             open_edit_image,
             remove_background,
@@ -210,6 +214,12 @@ async fn generate_image(
 #[allow(clippy::needless_pass_by_value)]
 fn generation_defaults(database: State<'_, Database>) -> voxel_hardware::GenerationDefaults {
     generate::generation_defaults(&database)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn cancel_generation(jobs: State<'_, live_job::LiveJobs>) {
+    jobs.request_stop();
 }
 
 #[tauri::command]

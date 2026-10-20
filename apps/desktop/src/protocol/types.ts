@@ -35,25 +35,40 @@ export type Txt2ImgRequest = {
   height: number;
   seed: number;
   cfgScale?: number;
+  circular?: boolean;
 };
 
 export type Img2ImgRequest = {
   jobId: string;
   prompt: string;
+  negativePrompt?: string;
   modelId: string;
   imagePath: string;
   outputPath: string;
   steps: number;
   strength: number;
+  width?: number;
+  height?: number;
+  seed?: number;
+  cfgScale?: number;
+  circular?: boolean;
 };
 
 export type InpaintRequest = {
   jobId: string;
   prompt: string;
+  negativePrompt?: string;
   modelId: string;
   imagePath: string;
   maskPath: string;
   outputPath: string;
+  steps: number;
+  strength: number;
+  width?: number;
+  height?: number;
+  seed?: number;
+  cfgScale?: number;
+  circular?: boolean;
 };
 
 export type DecodeLatentsRequest = {

@@ -33,6 +33,7 @@ fn txt(path: &Path, job: &str) -> Txt2ImgRequest {
         height: 8,
         seed: 1,
         cfg_scale: None,
+        circular: None,
     }
 }
 
@@ -129,11 +130,17 @@ fn comandos_de_imagem_gravam_png() {
         &Img2ImgRequest {
             job_id: "job-img".to_owned(),
             prompt: "um gato".to_owned(),
+            negative_prompt: None,
             model_id: "sd".to_owned(),
             image_path: "/entrada.png".to_owned(),
             output_path: image.display().to_string(),
             steps: 2,
             strength: 0.5,
+            width: None,
+            height: None,
+            seed: None,
+            cfg_scale: None,
+            circular: None,
         },
     )
     .expect("img2img");
@@ -147,10 +154,18 @@ fn comandos_de_imagem_gravam_png() {
         &InpaintRequest {
             job_id: "job-paint".to_owned(),
             prompt: "um gato".to_owned(),
+            negative_prompt: None,
             model_id: "sd".to_owned(),
             image_path: "/entrada.png".to_owned(),
             mask_path: "/mascara.png".to_owned(),
             output_path: painted.display().to_string(),
+            steps: 2,
+            strength: 1.0,
+            width: None,
+            height: None,
+            seed: None,
+            cfg_scale: None,
+            circular: None,
         },
     )
     .expect("inpaint");
