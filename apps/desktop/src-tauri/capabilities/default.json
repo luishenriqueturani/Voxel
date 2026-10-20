@@ -36,6 +36,11 @@
     "allow-import-model",
     "allow-remove-model",
     "allow-models-directory",
+    "allow-python-environment-status",
+    "allow-note-3d-intent",
+    "allow-await-python-environment",
+    "allow-reinstall-python-environment",
+    "allow-remove-python-environment",
     "dialog:allow-open",
     "dialog:allow-save"
   ]

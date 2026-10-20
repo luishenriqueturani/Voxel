@@ -13,6 +13,7 @@ import { useGenerationRequest } from "./hooks/useGenerationRequest";
 import { useImageEdit } from "./hooks/useImageEdit";
 import { useModelDownload } from "./hooks/useModelDownload";
 import { useNativeMenu } from "./hooks/useNativeMenu";
+import { usePythonEnvironment } from "./hooks/usePythonEnvironment";
 import { blankEdit } from "./lib/edit";
 import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
@@ -70,6 +71,7 @@ export default function App() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [outputMode, setOutputMode] = useState<OutputMode>("2d");
+  const [waitingEnvironment, setWaitingEnvironment] = useState(false);
   const [frame, setFrame] = useState<{
     step: number;
     total: number;
@@ -176,6 +178,7 @@ export default function App() {
     openTitle: t("menu.file.openImage"),
   });
 
+  const python = usePythonEnvironment();
   const requestGeneration = useGenerationRequest({
     generatingRef,
     removing,
@@ -194,6 +197,9 @@ export default function App() {
     negativePrompt,
     modelId,
     reportFailure,
+    outputMode,
+    prepareEnvironment: python.wait,
+    setWaitingEnvironment,
   });
   useGenerateShortcut(requestGeneration);
 
@@ -434,9 +440,14 @@ export default function App() {
           params={params}
           onParamsChange={setParams}
           outputMode={outputMode}
-          onOutputModeChange={setOutputMode}
+          onOutputModeChange={(mode) => {
+            setOutputMode(mode);
+            if (mode === "3d") {
+              void python.note("panel");
+            }
+          }}
           generating={generating}
-          locked={removing}
+          locked={removing || waitingEnvironment}
           onGenerate={() => requestGeneration()}
           onCancel={() => {
             void cancelGeneration();
@@ -482,6 +493,9 @@ export default function App() {
           canUndoEdit={canUndoEdit}
           onUndoEdit={undoEdit}
           onRemoveBackground={removeBackground}
+          onSendTo3d={() => {
+            void python.note("send-to-3d");
+          }}
         />
       ) : (
         <SettingsView
@@ -524,9 +538,20 @@ export default function App() {
             });
           }}
           onBack={() => setView("workspace")}
+          environment={python.progress ?? null}
+          onReinstallEnvironment={() => {
+            void python.reinstall();
+          }}
+          onRemoveEnvironment={() => {
+            void python.remove().catch(reportFailure);
+          }}
         />
       )}
-      <StatusBar status={machine} onOpenSettings={() => setView("settings")} />
+      <StatusBar
+        status={machine}
+        environment={python.progress}
+        onOpenSettings={() => setView("settings")}
+      />
       {notice !== null ? (
         <ErrorModal
           summary={t(summaryKey)}

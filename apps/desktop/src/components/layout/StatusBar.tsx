@@ -1,9 +1,12 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
+import { environmentLabel } from "../../lib/pythonStatus";
+import type { PythonProgress } from "../../native/pythonEnv";
 import type { MachineStatus } from "../../native/status";
 
 type StatusBarProps = {
   status: MachineStatus | null;
+  environment?: PythonProgress;
   onOpenSettings: () => void;
 };
 
@@ -11,7 +14,7 @@ function gib(bytes: number): string {
   return (bytes / 1024 ** 3).toFixed(1);
 }
 
-export function StatusBar({ status, onOpenSettings }: StatusBarProps) {
+export function StatusBar({ status, environment, onOpenSettings }: StatusBarProps) {
   const { t } = useTranslation();
   const unknown = t("status.unknown");
   const memory = (used: number | null, total: number | null) =>
@@ -59,7 +62,7 @@ export function StatusBar({ status, onOpenSettings }: StatusBarProps) {
         {t("status.queue")}: {unknown}
       </span>
       <span>
-        {t("status.environment")}: {unknown}
+        {t("status.environment")}: {environmentLabel(environment, t)}
       </span>
       {isTauri() ? null : (
         <button

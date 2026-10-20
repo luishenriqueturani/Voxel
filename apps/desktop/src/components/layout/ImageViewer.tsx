@@ -24,6 +24,7 @@ type ImageViewerProps = {
   onCopy: () => void;
   onRegenerate: () => void;
   onRemoveBackground?: () => void;
+  onSendTo3d?: () => void;
   canUndo?: boolean;
   onUndo?: () => void;
   mosaic?: boolean;
@@ -55,6 +56,7 @@ export function ImageViewer({
   onCopy,
   onRegenerate,
   onRemoveBackground,
+  onSendTo3d,
   canUndo = false,
   onUndo,
   mosaic = false,
@@ -227,6 +229,11 @@ export function ImageViewer({
           >
             {removing ? t("viewer.removing") : t("viewer.removeBackground")}
           </Button>
+          {onSendTo3d ? (
+            <Button variant="ghost" className="w-full whitespace-normal" onClick={onSendTo3d}>
+              {t("viewer.sendTo3d")}
+            </Button>
+          ) : null}
           <Button variant="ghost" className="w-full" disabled={!canSave} onClick={onSave}>
             {t("viewer.save")}
           </Button>

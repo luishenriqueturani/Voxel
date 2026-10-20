@@ -30,6 +30,11 @@ fn main() {
             "import_model",
             "remove_model",
             "models_directory",
+            "python_environment_status",
+            "note_3d_intent",
+            "await_python_environment",
+            "reinstall_python_environment",
+            "remove_python_environment",
         ]),
     ))
     .expect("falha no build do Tauri");

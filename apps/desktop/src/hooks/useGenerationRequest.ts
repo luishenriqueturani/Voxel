@@ -1,5 +1,5 @@
 import { type Dispatch, type MutableRefObject, type SetStateAction, useCallback } from "react";
-import type { GenerationParams } from "../components/layout/PromptPanel";
+import type { GenerationParams, OutputMode } from "../components/layout/PromptPanel";
 import { canStartEdit, type EditPayload, generationRequest } from "../lib/edit";
 import { type GalleryImage, generateImage, imageSrc, isCancelled } from "../native/generation";
 
@@ -27,6 +27,9 @@ type GenerationRequestOptions = {
   negativePrompt: string;
   modelId: string;
   reportFailure: (error: unknown) => void;
+  outputMode: OutputMode;
+  prepareEnvironment: () => Promise<void>;
+  setWaitingEnvironment: (value: boolean) => void;
 };
 
 export function useGenerationRequest({
@@ -47,10 +50,24 @@ export function useGenerationRequest({
   negativePrompt,
   modelId,
   reportFailure,
+  outputMode,
+  prepareEnvironment,
+  setWaitingEnvironment,
 }: GenerationRequestOptions): (seedOverride?: number) => void {
   return useCallback(
     (seedOverride?: number) => {
       if (generatingRef.current || removing) {
+        return;
+      }
+      if (outputMode === "3d") {
+        generatingRef.current = true;
+        setWaitingEnvironment(true);
+        void prepareEnvironment()
+          .catch(reportFailure)
+          .finally(() => {
+            generatingRef.current = false;
+            setWaitingEnvironment(false);
+          });
         return;
       }
       const edit = editRef.current;
@@ -132,8 +149,11 @@ export function useGenerationRequest({
       params,
       prompt,
       removing,
+      outputMode,
+      prepareEnvironment,
       reportFailure,
       restoreEdit,
+      setWaitingEnvironment,
       setFrame,
       setGenerating,
       setHistoryRevision,

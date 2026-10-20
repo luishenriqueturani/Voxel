@@ -9,6 +9,7 @@ mod models;
 mod output;
 pub mod paths;
 mod probe;
+mod python_env;
 mod setup;
 mod status;
 
@@ -24,6 +25,7 @@ use probe::discover;
 use setup::{SetupChoices, SetupConfirmation, SetupSnapshot};
 use tauri::{AppHandle, Emitter, Manager, State};
 use voxel_logging::{AppLog, DEFAULT_RETENTION_DAYS};
+use voxel_models::{Catalog, Kind};
 
 #[derive(Default)]
 struct SetupGate(Mutex<()>);
@@ -48,6 +50,7 @@ pub fn run() {
             app.manage(paths);
             app.manage(SetupGate::default());
             app.manage(live_job::LiveJobs::default());
+            app.manage(python_env::Environment::default());
 
             let menu = build_menu(app.handle(), &default_labels())?;
             app.set_menu(menu)?;
@@ -89,7 +92,12 @@ pub fn run() {
             list_models,
             import_model,
             remove_model,
-            models_directory
+            models_directory,
+            python_env::python_environment_status,
+            python_env::note_3d_intent,
+            python_env::await_python_environment,
+            python_env::reinstall_python_environment,
+            python_env::remove_python_environment
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");
@@ -262,7 +270,16 @@ async fn download_model(
     let database = database.inner().clone();
     let paths = paths.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        models::download(&app, &database, &paths, &model_id, confirmed)
+        let saved = models::download(&app, &database, &paths, &model_id, confirmed)?;
+        if Catalog::bundled().ok().is_some_and(|catalog| {
+            catalog
+                .get(&model_id)
+                .is_some_and(|model| model.kind == Kind::Mesh)
+        }) {
+            app.state::<python_env::Environment>()
+                .note(&app, python_env::Intent::ModelDownload);
+        }
+        Ok(saved)
     })
     .await
     .map_err(|error| error.to_string())?

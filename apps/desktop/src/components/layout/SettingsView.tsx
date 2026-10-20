@@ -1,7 +1,9 @@
 import { useTranslation } from "react-i18next";
 import type { Theme } from "../../lib/preferences";
 import type { DownloadProgress, ListedModel } from "../../native/models";
+import type { PythonProgress } from "../../native/pythonEnv";
 import { Button } from "../ui/button";
+import { EnvironmentSection } from "./EnvironmentSection";
 import { ModelsSection } from "./ModelsSection";
 
 export const SETTING_SECTIONS = [
@@ -34,6 +36,9 @@ type SettingsViewProps = {
   onOpenFolder: () => void;
   onImport: () => void;
   onBack: () => void;
+  environment: PythonProgress | null;
+  onReinstallEnvironment: () => void;
+  onRemoveEnvironment: () => void;
 };
 
 const IMAGE_BACKENDS = ["vulkan", "rocm", "cuda", "cpu"] as const;
@@ -57,6 +62,9 @@ export function SettingsView({
   onOpenFolder,
   onImport,
   onBack,
+  environment,
+  onReinstallEnvironment,
+  onRemoveEnvironment,
 }: SettingsViewProps) {
   const { t, i18n } = useTranslation();
 
@@ -154,6 +162,12 @@ export function SettingsView({
             onRemove={onRemove}
             onOpenFolder={onOpenFolder}
             onImport={onImport}
+          />
+        ) : section === "environment" ? (
+          <EnvironmentSection
+            progress={environment}
+            onReinstall={onReinstallEnvironment}
+            onRemove={onRemoveEnvironment}
           />
         ) : (
           <p className="text-sm text-zinc-500">{t("settings.empty")}</p>

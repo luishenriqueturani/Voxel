@@ -196,14 +196,14 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Ambiente Python (§7.3)
 
-- [ ] Instalação via `uv` de Python isolado e venv na pasta de dados do app
-- [ ] Instalação do PyTorch na variante certa (CUDA, ROCm ou CPU) conforme o hardware
-- [ ] Aplicação das variáveis de ambiente validadas na fase 1 ao iniciar o worker
-- [ ] Gatilhos de intenção 3D: opção 3D no painel, "Gerar 3D" em item de fluxo, template com 3D, download de modelo 3D, "enviar para 3D"
-- [ ] Instalação em segundo plano com progresso e tamanho na barra de status
-- [ ] Gerações 3D pedidas durante a instalação aguardam o ambiente em vez de falhar
-- [ ] Teste real do ambiente ao final da instalação
-- [ ] Seção "Ambiente 3D" nas configurações: estado, reinstalar, remover
+- [x] Instalação via `uv` de Python isolado e venv na pasta de dados do app
+- [x] Instalação do PyTorch na variante certa (CUDA, ROCm ou CPU) conforme o hardware
+- [x] Aplicação das variáveis de ambiente validadas na fase 1 ao iniciar o worker
+- [x] Gatilhos de intenção 3D: opção 3D no painel, "Gerar 3D" em item de fluxo, template com 3D, download de modelo 3D, "enviar para 3D"
+- [x] Instalação em segundo plano com progresso e tamanho na barra de status
+- [x] Gerações 3D pedidas durante a instalação aguardam o ambiente em vez de falhar
+- [x] Teste real do ambiente ao final da instalação
+- [x] Seção "Ambiente 3D" nas configurações: estado, reinstalar, remover
 
 ### Worker Python e 3D
 

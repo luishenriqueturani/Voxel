@@ -50,6 +50,7 @@ type WorkspaceViewProps = {
   onCopy: () => void;
   onRegenerate: () => void;
   onRemoveBackground: () => void;
+  onSendTo3d?: () => void;
   canUndoEdit?: boolean;
   onUndoEdit?: () => void;
 };
@@ -94,6 +95,7 @@ export function WorkspaceView({
   onCopy,
   onRegenerate,
   onRemoveBackground,
+  onSendTo3d,
   canUndoEdit = false,
   onUndoEdit,
 }: WorkspaceViewProps) {
@@ -216,6 +218,7 @@ export function WorkspaceView({
               onCopy={onCopy}
               onRegenerate={onRegenerate}
               onRemoveBackground={onRemoveBackground}
+              onSendTo3d={onSendTo3d}
               canUndo={canUndoEdit}
               onUndo={onUndoEdit}
             />

@@ -26,6 +26,9 @@ describe("configurações de hardware", () => {
         onOpenFolder={vi.fn()}
         onImport={vi.fn()}
         onBack={vi.fn()}
+        environment={null}
+        onReinstallEnvironment={vi.fn()}
+        onRemoveEnvironment={vi.fn()}
       />,
     );
 
@@ -59,6 +62,9 @@ describe("token do Hugging Face", () => {
         onOpenFolder={vi.fn()}
         onImport={vi.fn()}
         onBack={vi.fn()}
+        environment={null}
+        onReinstallEnvironment={vi.fn()}
+        onRemoveEnvironment={vi.fn()}
       />,
     );
 
