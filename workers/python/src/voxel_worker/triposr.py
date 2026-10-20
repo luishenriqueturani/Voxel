@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.util
 import shutil
+import sys
 import tempfile
 import threading
+import types
 from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol, cast
@@ -117,8 +120,23 @@ class Loaded:
 Progress = Callable[[int, int], None]
 
 
+def install_background_stub() -> None:
+    """O TripoSR importa o `rembg` ao carregar. O fundo já saiu pelo U²-Net."""
+    if importlib.util.find_spec("rembg") is not None:
+        return
+    module = types.ModuleType("rembg")
+
+    def unused(*_args: object, **_kwargs: object) -> None:
+        raise MeshError("o fundo já foi removido antes do TripoSR")
+
+    module.remove = unused  # type: ignore[attr-defined]
+    module.new_session = unused  # type: ignore[attr-defined]
+    sys.modules["rembg"] = module
+
+
 def load_modules() -> Loaded:
     install_marching_cubes()
+    install_background_stub()
     try:
         import torch
         from PIL import Image

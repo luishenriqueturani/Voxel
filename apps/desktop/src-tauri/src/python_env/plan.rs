@@ -231,6 +231,7 @@ mod tests {
         assert!(pip.contains(&"torch==2.14.0".to_owned()));
         assert!(pip.contains(&"fastapi==0.156.1".to_owned()));
         assert!(pip.contains(&"transformers==4.57.6".to_owned()));
+        assert!(pip.contains(&"omegaconf==2.4.0".to_owned()));
     }
 
     #[test]

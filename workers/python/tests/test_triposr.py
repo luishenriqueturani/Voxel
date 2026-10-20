@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 import threading
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -12,6 +15,7 @@ from voxel_worker.triposr import (
     MeshError,
     device_of,
     image_to_mesh,
+    install_background_stub,
     load_modules,
 )
 
@@ -101,6 +105,25 @@ class _Torch:
 def test_o_config_e_o_da_medicao() -> None:
     assert "cond_image_size: 512" in CONFIG
     assert "facebook/dino-vitb16" in CONFIG
+
+
+def test_o_rembg_nao_precisa_estar_instalado(monkeypatch: pytest.MonkeyPatch) -> None:
+    real = importlib.util.find_spec
+
+    def missing(name: str) -> object:
+        if name == "rembg":
+            return None
+        return real(name)
+
+    monkeypatch.setattr(importlib.util, "find_spec", missing)
+    sys.modules.pop("rembg", None)
+    install_background_stub()
+    stub = cast(Any, sys.modules["rembg"])
+    try:
+        with pytest.raises(MeshError, match="já foi removido"):
+            stub.remove()
+    finally:
+        sys.modules.pop("rembg", None)
 
 
 def test_sem_o_codigo_do_modelo_a_mensagem_diz_o_que_falta() -> None:

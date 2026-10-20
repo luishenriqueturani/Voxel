@@ -1,4 +1,16 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke, isTauri } from "@tauri-apps/api/core";
+
+const INLINE = /^(https?:|blob:)/;
+
+export function meshUrl(path: string): string | null {
+  if (INLINE.test(path)) {
+    return path;
+  }
+  if (!isTauri()) {
+    return null;
+  }
+  return convertFileSrc(path);
+}
 
 export type MeshResult = {
   imagePath: string;

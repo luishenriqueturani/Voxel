@@ -66,7 +66,7 @@ impl WorkerProcess {
         let program = program.as_ref().to_path_buf();
         let scenario = scenario.to_owned();
         let (process, port, token, client) =
-            launch(&program, &scenario, env, &[], timeout, STARTUP_LIMIT)?;
+            launch(&program, &scenario, &[], env, &[], timeout, STARTUP_LIMIT)?;
         Ok(Self {
             process,
             port,
@@ -79,12 +79,16 @@ impl WorkerProcess {
 
     /// Sobe o worker sem as variáveis herdadas e com mais tempo para o interpretador.
     ///
+    /// `args` entra depois do programa. O Python precisa de `-m voxel_worker`: o
+    /// interpretador sozinho, sem terminal, encerra com código 0.
+    ///
     /// # Errors
     ///
     /// Falha se o processo não subir, não anunciar a porta ou não responder no `/health`.
     pub fn spawn_isolated(
         program: impl AsRef<Path>,
         scenario: &str,
+        args: &[&str],
         env: &[(&str, &str)],
         remove: &[&str],
         timeout: Duration,
@@ -93,7 +97,7 @@ impl WorkerProcess {
         let program = program.as_ref().to_path_buf();
         let scenario = scenario.to_owned();
         let (process, port, token, client) =
-            launch(&program, &scenario, env, remove, timeout, startup)?;
+            launch(&program, &scenario, args, env, remove, timeout, startup)?;
         Ok(Self {
             process,
             port,
@@ -115,6 +119,7 @@ impl WorkerProcess {
         let (process, port, token, client) = launch(
             &program,
             &scenario,
+            &[],
             &[],
             &[],
             Duration::from_secs(3),
@@ -366,6 +371,7 @@ impl MeshPostProcess for WorkerProcess {
 fn launch(
     program: &Path,
     scenario: &str,
+    args: &[&str],
     env: &[(&str, &str)],
     remove: &[&str],
     timeout: Duration,
@@ -377,6 +383,7 @@ fn launch(
         .build()?;
     let mut command = Command::new(program);
     command
+        .args(args)
         .env("VOXEL_TOKEN", &token)
         .env("VOXEL_SCENARIO", scenario);
     for key in remove {

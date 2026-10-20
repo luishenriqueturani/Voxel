@@ -2,7 +2,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type PointerEvent as ReactPointerEvent, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MeshPaths } from "../../hooks/useGenerationRequest";
+import { meshUrl } from "../../native/mesh";
 import { Button } from "../ui/button";
+import { MeshViewer } from "./MeshViewer";
 import { MosaicPreview } from "./MosaicPreview";
 
 const MIN_ZOOM = 1;
@@ -78,6 +80,11 @@ export function ImageViewer({
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [pan, setPan] = useState<Pan>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
+  const [showMesh, setShowMesh] = useState(true);
+  const [wireframe, setWireframe] = useState(false);
+  const [textured, setTextured] = useState(true);
+  const [triangles, setTriangles] = useState<number | null>(null);
+  const [meshGeneration, setMeshGeneration] = useState(meshFiles?.glb ?? "");
   const [shownSrc, setShownSrc] = useState(src);
   const percent = Math.round(zoom * 100);
   zoomRef.current = zoom;
@@ -148,10 +155,30 @@ export function ImageViewer({
     setPanning(false);
   }
 
+  const meshId = meshFiles?.glb ?? "";
+  if (meshGeneration !== meshId) {
+    setMeshGeneration(meshId);
+    setShowMesh(meshId !== "");
+    setWireframe(false);
+    setTextured(true);
+    setTriangles(null);
+  }
+  const viewingMesh = meshFiles !== null && showMesh;
+  const meshAddress = viewingMesh ? meshUrl(meshFiles.glb) : null;
+
   return (
     <div className="flex h-full w-full min-h-0 gap-4">
-      <div className={`flex min-h-0 min-w-0 flex-1 ${src ? "" : "items-center justify-center"}`}>
-        {src && mosaic ? (
+      <div
+        className={`flex min-h-0 min-w-0 flex-1 ${src || viewingMesh ? "" : "items-center justify-center"}`}
+      >
+        {viewingMesh ? (
+          <MeshViewer
+            url={meshAddress}
+            wireframe={wireframe}
+            textured={textured}
+            onTriangles={setTriangles}
+          />
+        ) : src && mosaic ? (
           <MosaicPreview src={src} />
         ) : src ? (
           <div
@@ -182,7 +209,7 @@ export function ImageViewer({
           <p className="text-sm text-zinc-500">{t("main.empty")}</p>
         )}
       </div>
-      {src ? (
+      {src || viewingMesh ? (
         <aside className="flex w-52 shrink-0 flex-col gap-2 overflow-y-auto">
           {count > 1 ? (
             <div className="flex items-center justify-between gap-1">
@@ -212,8 +239,46 @@ export function ImageViewer({
           {total > 0 ? (
             <p className="text-sm text-zinc-500">{t("generation.step", { step, total })}</p>
           ) : null}
-          <span className="text-sm text-zinc-500">{t("viewer.zoom", { value: percent })}</span>
-          <p className="text-sm text-zinc-500">{t("viewer.gesture")}</p>
+          {viewingMesh ? (
+            <>
+              {triangles !== null ? (
+                <p className="text-sm text-zinc-500">
+                  {t("viewer.polygons", { count: triangles })}
+                </p>
+              ) : null}
+              <Button
+                variant="ghost"
+                className="w-full"
+                aria-pressed={wireframe}
+                onClick={() => setWireframe((current) => !current)}
+              >
+                {t("viewer.wireframe")}
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full"
+                aria-pressed={textured}
+                onClick={() => setTextured((current) => !current)}
+              >
+                {t("viewer.texture")}
+              </Button>
+              <p className="text-sm text-zinc-500">{t("viewer.meshGesture")}</p>
+            </>
+          ) : (
+            <>
+              <span className="text-sm text-zinc-500">{t("viewer.zoom", { value: percent })}</span>
+              <p className="text-sm text-zinc-500">{t("viewer.gesture")}</p>
+            </>
+          )}
+          {meshFiles ? (
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => setShowMesh((current) => !current)}
+            >
+              {viewingMesh ? t("viewer.showImage") : t("viewer.showMesh")}
+            </Button>
+          ) : null}
           {onToggleMosaic ? (
             <Button
               variant="ghost"

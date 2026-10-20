@@ -217,8 +217,8 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Visualizador 3D
 
-- [ ] Viewer com `react-three-fiber`: orbitar, zoom, wireframe, textura
-- [ ] Exibir contagem de polígonos
+- [x] Viewer com `react-three-fiber`: orbitar, zoom, wireframe, textura
+- [x] Exibir contagem de polígonos
 
 ### Busca no Hugging Face
 

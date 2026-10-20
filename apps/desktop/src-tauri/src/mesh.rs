@@ -90,8 +90,16 @@ fn render(app: &AppHandle, paths: &AppPaths, cutout: &Path) -> Result<(String, S
         .map(|(key, value)| (key.as_str(), value.as_str()))
         .collect();
     let remove: Vec<&str> = prepared.remove.iter().map(String::as_str).collect();
-    let worker = WorkerProcess::spawn_isolated(&python, "ok", &env, &remove, STARTUP, STARTUP)
-        .map_err(|error| error.to_string())?;
+    let worker = WorkerProcess::spawn_isolated(
+        &python,
+        "ok",
+        &["-m", "voxel_worker"],
+        &env,
+        &remove,
+        STARTUP,
+        STARTUP,
+    )
+    .map_err(|error| error.to_string())?;
     worker
         .load_model(&LoadModelRequest {
             model_id: MESH_MODEL.to_owned(),

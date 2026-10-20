@@ -3,6 +3,35 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ImageViewer } from "./ImageViewer";
 
+vi.mock("../../native/mesh", () => ({
+  meshUrl: (path: string) => `mesh:${path}`,
+}));
+
+vi.mock("./MeshViewer", () => ({
+  MeshViewer: ({
+    url,
+    wireframe,
+    textured,
+    onTriangles,
+  }: {
+    url: string | null;
+    wireframe: boolean;
+    textured: boolean;
+    onTriangles: (count: number) => void;
+  }) => (
+    <div
+      data-testid="mesh-viewer"
+      data-url={url ?? ""}
+      data-wireframe={String(wireframe)}
+      data-textured={String(textured)}
+    >
+      <button type="button" onClick={() => onTriangles(12)}>
+        contar
+      </button>
+    </div>
+  ),
+}));
+
 describe("ImageViewer", () => {
   it("aproxima com ctrl e scroll, arrasta com o botão do meio, copia, salva e regera", async () => {
     const user = userEvent.setup();
@@ -113,5 +142,42 @@ describe("ImageViewer", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "Removendo fundo…" })).toBeDisabled();
+  });
+
+  it("orbita a malha, alterna arame e textura e conta os polígonos", async () => {
+    const user = userEvent.setup();
+    render(
+      <ImageViewer
+        src="data:image/png;base64,aaaa"
+        step={0}
+        total={0}
+        canSave
+        canRegenerate={false}
+        meshFiles={{ glb: "/tmp/gato.glb", obj: "/tmp/gato.obj" }}
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+
+    const mesh = screen.getByTestId("mesh-viewer");
+    expect(mesh).toHaveAttribute("data-url", "mesh:/tmp/gato.glb");
+    expect(mesh).toHaveAttribute("data-textured", "true");
+    expect(mesh).toHaveAttribute("data-wireframe", "false");
+    expect(screen.getByText("Arraste para orbitar. A rolagem aproxima.")).toBeInTheDocument();
+    expect(screen.getByText("GLB gato.glb · OBJ gato.obj")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Arame" }));
+    expect(screen.getByTestId("mesh-viewer")).toHaveAttribute("data-wireframe", "true");
+    await user.click(screen.getByRole("button", { name: "Textura" }));
+    expect(screen.getByTestId("mesh-viewer")).toHaveAttribute("data-textured", "false");
+    await user.click(screen.getByRole("button", { name: "contar" }));
+    expect(screen.getByText("12 polígonos")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Ver imagem" }));
+    expect(screen.queryByTestId("mesh-viewer")).not.toBeInTheDocument();
+    expect(screen.getByRole("img")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver malha" }));
+    expect(screen.getByTestId("mesh-viewer")).toBeInTheDocument();
   });
 });
