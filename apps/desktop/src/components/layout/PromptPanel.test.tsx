@@ -46,6 +46,13 @@ describe("frameSize", () => {
 });
 
 describe("PromptPanel", () => {
+  it("deixa o prompt crescer na vertical", () => {
+    renderPanel();
+    const prompt = screen.getByRole("textbox", { name: "Prompt" });
+    expect(prompt).toHaveClass("resize-y");
+    expect(prompt).not.toHaveClass("flex-1");
+  });
+
   it("separa as proporções horizontais e verticais", async () => {
     const user = userEvent.setup();
     const onParamsChange = renderPanel();

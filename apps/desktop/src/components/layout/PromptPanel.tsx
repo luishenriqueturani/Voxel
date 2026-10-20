@@ -100,15 +100,15 @@ export function PromptPanel({
   }, []);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
-      <label className="flex min-h-0 flex-col gap-1 text-sm font-medium">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+      <label className="flex flex-col gap-1 text-sm font-medium">
         {t("panel.prompt")}
         <textarea
           id="prompt"
           ref={promptRef}
           value={prompt}
           onChange={(event) => onPromptChange(event.target.value)}
-          className={`${fieldClass} min-h-28 flex-1 resize-y`}
+          className={`${fieldClass} min-h-28 resize-y`}
         />
       </label>
 
@@ -118,7 +118,7 @@ export function PromptPanel({
           aria-label={t("panel.negative")}
           value={negativePrompt}
           onChange={(event) => onNegativePromptChange(event.target.value)}
-          className={`${fieldClass} mt-1 min-h-16`}
+          className={`${fieldClass} mt-1 min-h-16 resize-y`}
         />
       </details>
 
