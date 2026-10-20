@@ -6,7 +6,7 @@ Aplicação desktop para Linux que gera e edita imagens 2D e gera modelos 3D com
 
 ## Requisitos
 
-- [Rust](https://rustup.rs/) 1.90 ou superior
+- [Rust](https://rustup.rs/) 1.92 ou superior
 - [Bun](https://bun.sh/)
 - [uv](https://github.com/astral-sh/uv)
 - GNU Make

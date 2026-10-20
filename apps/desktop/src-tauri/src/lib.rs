@@ -1,3 +1,4 @@
+mod background;
 mod db;
 mod generate;
 mod menu;
@@ -11,6 +12,7 @@ mod status;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use background::{open_edit_image, remove_background};
 use db::{Database, SettingsUpdate, UserSettings};
 use menu::{build_menu, default_labels};
 use paths::AppPaths;
@@ -67,6 +69,8 @@ pub fn run() {
             restore_image_backend,
             generate_image,
             generation_defaults,
+            open_edit_image,
+            remove_background,
             machine_status,
             copy_generation,
             hf_token_status,

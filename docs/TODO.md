@@ -171,10 +171,10 @@ Legenda: `[ ]` pendente · `[x]` concluída · `[~]` em andamento
 
 ### Remoção de fundo
 
-- [ ] `BackgroundRemover` no core via ONNX Runtime em CPU
-- [ ] Remover fundo de imagem gerada ou aberta do disco (Arquivo → Abrir imagem para edição)
-- [ ] Pré-visualização da transparência e export PNG transparente
-- [ ] Ação "Remover fundo" no visualizador e no menu Editar
+- [x] `BackgroundRemover` no core via ONNX Runtime em CPU
+- [x] Remover fundo de imagem gerada ou aberta do disco (Arquivo → Abrir imagem para edição)
+- [x] Pré-visualização da transparência e export PNG transparente
+- [x] Ação "Remover fundo" no visualizador e no menu Editar
 
 ### Histórico e galeria
 

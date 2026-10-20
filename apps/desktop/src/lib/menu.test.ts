@@ -24,6 +24,8 @@ describe("actionForMenu", () => {
     expect(actionForMenu("view.theme")).toBe("toggle-theme");
     expect(actionForMenu("generate.run")).toBe("generate");
     expect(actionForMenu("help.redoSetup")).toBe("redo-setup");
+    expect(actionForMenu("file.openImage")).toBe("open-image");
+    expect(actionForMenu("edit.removeBackground")).toBe("remove-background");
   });
 
   it("ignora itens ainda sem função", () => {

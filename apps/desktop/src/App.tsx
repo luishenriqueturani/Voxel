@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorModal } from "./components/layout/ErrorModal";
-import { ImageViewer } from "./components/layout/ImageViewer";
-import {
-  type GenerationParams,
-  type OutputMode,
-  PromptPanel,
-} from "./components/layout/PromptPanel";
+import type { GenerationParams, OutputMode } from "./components/layout/PromptPanel";
 import { type SettingSection, SettingsView } from "./components/layout/SettingsView";
 import { StatusBar } from "./components/layout/StatusBar";
 import { WelcomeView } from "./components/layout/WelcomeView";
+import { WorkspaceView } from "./components/layout/WorkspaceView";
 import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
+import { useImageEdit } from "./hooks/useImageEdit";
 import { useNativeMenu } from "./hooks/useNativeMenu";
 import { actionForMenu } from "./lib/menu";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
@@ -168,9 +165,20 @@ export default function App() {
     });
   }, []);
 
+  const { removing, openImage, removeBackground } = useImageEdit({
+    slides,
+    setSlides,
+    slideIndex,
+    setSlideIndex,
+    setView,
+    busy: generating,
+    reportFailure,
+    openTitle: t("menu.file.openImage"),
+  });
+
   const requestGeneration = useCallback(
     (seedOverride?: number) => {
-      if (generatingRef.current) {
+      if (generatingRef.current || removing) {
         return;
       }
       generatingRef.current = true;
@@ -232,7 +240,7 @@ export default function App() {
           setGenerating(false);
         });
     },
-    [modelId, negativePrompt, params, prompt, reportFailure],
+    [modelId, negativePrompt, params, prompt, removing, reportFailure],
   );
   useGenerateShortcut(requestGeneration);
 
@@ -255,9 +263,13 @@ export default function App() {
           setSetupRun((current) => current + 1);
           setView("welcome");
         });
+      } else if (action === "open-image") {
+        openImage();
+      } else if (action === "remove-background") {
+        removeBackground();
       }
     },
-    [requestGeneration],
+    [openImage, removeBackground, requestGeneration],
   );
   useEffect(() => {
     let cancelled = false;
@@ -462,58 +474,53 @@ export default function App() {
           onContinue={() => setView("workspace")}
         />
       ) : view === "workspace" ? (
-        <div className="flex min-h-0 flex-1">
-          <aside className="flex w-80 shrink-0 border-r border-zinc-200 dark:border-zinc-800">
-            <PromptPanel
-              prompt={prompt}
-              onPromptChange={setPrompt}
-              negativePrompt={negativePrompt}
-              onNegativePromptChange={setNegativePrompt}
-              models={imageModels}
-              modelId={modelId}
-              onModelChange={setModelId}
-              params={params}
-              onParamsChange={setParams}
-              outputMode={outputMode}
-              onOutputModeChange={setOutputMode}
-              generating={generating}
-              onGenerate={() => requestGeneration()}
-            />
-          </aside>
-          <main
-            aria-label={t("main.label")}
-            className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-6"
-          >
-            <h1 className="sr-only">Voxel</h1>
-            <ImageViewer
-              src={shown}
-              step={generating ? (frame?.step ?? 0) : 0}
-              total={generating ? (frame?.total ?? 0) : 0}
-              canSave={selected !== null && !generating}
-              canRegenerate={selected !== null && !generating}
-              index={slideIndex}
-              count={generating ? 0 : slides.length}
-              onPrevious={() => setSlideIndex((current) => Math.max(0, current - 1))}
-              onNext={() => setSlideIndex((current) => Math.min(slides.length - 1, current + 1))}
-              onSave={() => {
-                if (selected) {
-                  void saveGeneratedImage(selected.path).catch(reportFailure);
-                }
-              }}
-              onCopy={() => {
-                if (shown) {
-                  void copyPreview(shown).catch(reportFailure);
-                }
-              }}
-              onRegenerate={() => {
-                if (selected) {
-                  setParams((current) => ({ ...current, seed: String(selected.seed) }));
-                  requestGeneration(selected.seed);
-                }
-              }}
-            />
-          </main>
-        </div>
+        <WorkspaceView
+          prompt={prompt}
+          onPromptChange={setPrompt}
+          negativePrompt={negativePrompt}
+          onNegativePromptChange={setNegativePrompt}
+          models={imageModels}
+          modelId={modelId}
+          onModelChange={setModelId}
+          params={params}
+          onParamsChange={setParams}
+          outputMode={outputMode}
+          onOutputModeChange={setOutputMode}
+          generating={generating}
+          locked={removing}
+          onGenerate={() => requestGeneration()}
+          shown={shown}
+          step={generating ? (frame?.step ?? 0) : 0}
+          total={generating ? (frame?.total ?? 0) : 0}
+          canSave={selected !== null && !generating && !removing}
+          canRegenerate={selected?.seed != null && !generating && !removing}
+          canRemove={selected !== null && !generating && !removing}
+          removing={removing}
+          transparent={!generating && selected?.transparent === true}
+          index={slideIndex}
+          count={generating ? 0 : slides.length}
+          onPrevious={() => setSlideIndex((current) => Math.max(0, current - 1))}
+          onNext={() => setSlideIndex((current) => Math.min(slides.length - 1, current + 1))}
+          onSave={() => {
+            if (selected) {
+              void saveGeneratedImage(selected.path).catch(reportFailure);
+            }
+          }}
+          onCopy={() => {
+            if (shown) {
+              void copyPreview(shown).catch(reportFailure);
+            }
+          }}
+          onRegenerate={() => {
+            if (selected?.seed == null) {
+              return;
+            }
+            const seed = selected.seed;
+            setParams((current) => ({ ...current, seed: String(seed) }));
+            requestGeneration(seed);
+          }}
+          onRemoveBackground={removeBackground}
+        />
       ) : (
         <SettingsView
           section={section}

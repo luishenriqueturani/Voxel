@@ -178,7 +178,9 @@
     "position": "{{current}} / {{total}}",
     "save": "Save",
     "copy": "Copy image",
-    "regenerate": "Regenerate with the same seed"
+    "regenerate": "Regenerate with the same seed",
+    "removeBackground": "Remove background",
+    "removing": "Removing background…"
   },
   "power": {
     "body": "The {{gpu}} uses the 12V-2x6 connector, which has melt reports. A 300 W power limit is recommended.",

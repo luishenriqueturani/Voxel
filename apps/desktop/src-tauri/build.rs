@@ -14,6 +14,8 @@ fn main() {
             "restore_image_backend",
             "generate_image",
             "generation_defaults",
+            "open_edit_image",
+            "remove_background",
             "machine_status",
             "copy_generation",
             "hf_token_status",

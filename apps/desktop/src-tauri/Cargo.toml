@@ -16,6 +16,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 voxel-hardware.workspace = true
+voxel-imaging.workspace = true
 voxel-logging.workspace = true
 voxel-models.workspace = true
 voxel-protocol.workspace = true

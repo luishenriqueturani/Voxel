@@ -20,6 +20,8 @@
     "allow-restore-image-backend",
     "allow-generate-image",
     "allow-generation-defaults",
+    "allow-open-edit-image",
+    "allow-remove-background",
     "allow-machine-status",
     "allow-copy-generation",
     "allow-hf-token-status",

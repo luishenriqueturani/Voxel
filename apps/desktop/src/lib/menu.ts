@@ -1,4 +1,10 @@
-export type MenuEffect = "settings" | "toggle-theme" | "generate" | "redo-setup";
+export type MenuEffect =
+  | "settings"
+  | "toggle-theme"
+  | "generate"
+  | "redo-setup"
+  | "open-image"
+  | "remove-background";
 
 export function actionForMenu(id: string): MenuEffect | null {
   switch (id) {
@@ -10,6 +16,10 @@ export function actionForMenu(id: string): MenuEffect | null {
       return "generate";
     case "help.redoSetup":
       return "redo-setup";
+    case "file.openImage":
+      return "open-image";
+    case "edit.removeBackground":
+      return "remove-background";
     default:
       return null;
   }

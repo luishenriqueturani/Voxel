@@ -72,4 +72,46 @@ describe("ImageViewer", () => {
     await user.click(screen.getByRole("button", { name: "Anterior" }));
     expect(onPrevious).toHaveBeenCalledOnce();
   });
+
+  it("mostra o xadrez e remove o fundo da imagem aberta", async () => {
+    const user = userEvent.setup();
+    const onRemoveBackground = vi.fn();
+    const view = render(
+      <ImageViewer
+        src="data:image/png;base64,aaaa"
+        step={0}
+        total={0}
+        canSave
+        canRegenerate={false}
+        canRemove
+        transparent
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        onRemoveBackground={onRemoveBackground}
+      />,
+    );
+
+    expect(screen.getByTestId("viewer-stage")).toHaveClass("transparency-grid");
+    await user.click(screen.getByRole("button", { name: "Remover fundo" }));
+    expect(onRemoveBackground).toHaveBeenCalledOnce();
+
+    view.rerender(
+      <ImageViewer
+        src="data:image/png;base64,aaaa"
+        step={0}
+        total={0}
+        canSave
+        canRegenerate={false}
+        canRemove
+        removing
+        transparent
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        onRemoveBackground={onRemoveBackground}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Removendo fundo…" })).toBeDisabled();
+  });
 });

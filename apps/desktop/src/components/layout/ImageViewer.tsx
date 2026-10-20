@@ -12,6 +12,9 @@ type ImageViewerProps = {
   total: number;
   canSave: boolean;
   canRegenerate: boolean;
+  canRemove?: boolean;
+  removing?: boolean;
+  transparent?: boolean;
   index?: number;
   count?: number;
   onPrevious?: () => void;
@@ -19,6 +22,7 @@ type ImageViewerProps = {
   onSave: () => void;
   onCopy: () => void;
   onRegenerate: () => void;
+  onRemoveBackground?: () => void;
 };
 
 type Pan = { x: number; y: number };
@@ -35,6 +39,9 @@ export function ImageViewer({
   total,
   canSave,
   canRegenerate,
+  canRemove = false,
+  removing = false,
+  transparent = false,
   index = 0,
   count = 0,
   onPrevious,
@@ -42,6 +49,7 @@ export function ImageViewer({
   onSave,
   onCopy,
   onRegenerate,
+  onRemoveBackground,
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -130,7 +138,7 @@ export function ImageViewer({
             data-testid="viewer-stage"
             role="application"
             aria-label={t("generation.preview")}
-            className={`relative h-full min-h-0 w-full overflow-hidden ${panning ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`relative h-full min-h-0 w-full overflow-hidden ${transparent ? "transparency-grid" : ""} ${panning ? "cursor-grabbing" : "cursor-grab"}`}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={endPan}
@@ -185,6 +193,14 @@ export function ImageViewer({
           ) : null}
           <span className="text-sm text-zinc-500">{t("viewer.zoom", { value: percent })}</span>
           <p className="text-sm text-zinc-500">{t("viewer.gesture")}</p>
+          <Button
+            variant="ghost"
+            className="w-full whitespace-normal"
+            disabled={!canRemove || removing}
+            onClick={onRemoveBackground}
+          >
+            {removing ? t("viewer.removing") : t("viewer.removeBackground")}
+          </Button>
           <Button variant="ghost" className="w-full" disabled={!canSave} onClick={onSave}>
             {t("viewer.save")}
           </Button>

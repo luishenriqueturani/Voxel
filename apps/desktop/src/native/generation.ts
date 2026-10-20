@@ -18,7 +18,8 @@ export type GenerationProgress = {
 export type GalleryImage = {
   src: string;
   path: string;
-  seed: number;
+  seed: number | null;
+  transparent?: boolean;
 };
 
 type SavedFile = {

@@ -69,6 +69,7 @@ type PromptPanelProps = {
   outputMode: OutputMode;
   onOutputModeChange: (mode: OutputMode) => void;
   generating: boolean;
+  locked?: boolean;
   onGenerate: () => void;
 };
 
@@ -88,6 +89,7 @@ export function PromptPanel({
   outputMode,
   onOutputModeChange,
   generating,
+  locked = false,
   onGenerate,
 }: PromptPanelProps) {
   const { t } = useTranslation();
@@ -184,7 +186,12 @@ export function PromptPanel({
         </label>
       </fieldset>
 
-      <Button className="w-full" disabled={generating} aria-busy={generating} onClick={onGenerate}>
+      <Button
+        className="w-full"
+        disabled={generating || locked}
+        aria-busy={generating || locked}
+        onClick={onGenerate}
+      >
         {generating ? <Loader2 aria-hidden="true" className="animate-spin" size={16} /> : null}
         {generating ? t("panel.generating") : t("panel.generate")}
       </Button>
