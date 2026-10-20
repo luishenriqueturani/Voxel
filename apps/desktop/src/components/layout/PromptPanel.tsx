@@ -6,16 +6,20 @@ import { Button } from "../ui/button";
 
 export type OutputMode = "2d" | "3d";
 
-export const ASPECTS = ["1:1", "4:3", "16:9", "3:4", "9:16"] as const;
+export const ASPECTS = ["1:1", "4:3", "3:2", "16:9", "21:9", "3:4", "2:3", "9:16", "9:21"] as const;
 
 export type AspectRatio = (typeof ASPECTS)[number];
 
 const RATIOS: Record<AspectRatio, readonly [number, number]> = {
   "1:1": [1, 1],
   "4:3": [4, 3],
+  "3:2": [3, 2],
   "16:9": [16, 9],
+  "21:9": [21, 9],
   "3:4": [3, 4],
+  "2:3": [2, 3],
   "9:16": [9, 16],
+  "9:21": [9, 21],
 };
 
 const SIDE_MIN = 256;
@@ -268,11 +272,15 @@ function ModelSettings({
           <option value="1:1">1:1</option>
           <optgroup label={t("panel.aspectHorizontal")}>
             <option value="4:3">4:3</option>
+            <option value="3:2">3:2</option>
             <option value="16:9">16:9</option>
+            <option value="21:9">21:9</option>
           </optgroup>
           <optgroup label={t("panel.aspectVertical")}>
             <option value="3:4">3:4</option>
+            <option value="2:3">2:3</option>
             <option value="9:16">9:16</option>
+            <option value="9:21">9:21</option>
           </optgroup>
         </select>
         <span className="text-zinc-500">

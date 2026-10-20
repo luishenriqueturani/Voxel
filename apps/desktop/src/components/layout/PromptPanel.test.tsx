@@ -39,6 +39,12 @@ describe("frameSize", () => {
   it("encaixa a proporção na grade de 64, com o lado longo na resolução", () => {
     expect(frameSize(1024, "16:9")).toEqual({ width: 1024, height: 576 });
     expect(frameSize(1024, "9:16")).toEqual({ width: 576, height: 1024 });
+    expect(frameSize(1024, "3:2")).toEqual({ width: 1024, height: 704 });
+    expect(frameSize(1024, "2:3")).toEqual({ width: 704, height: 1024 });
+    expect(frameSize(1024, "21:9")).toEqual({ width: 1024, height: 448 });
+    expect(frameSize(1024, "9:21")).toEqual({ width: 448, height: 1024 });
+    expect(frameSize(512, "21:9")).toEqual({ width: 512, height: 256 });
+    expect(frameSize(512, "3:2")).toEqual({ width: 512, height: 320 });
     expect(frameSize(512, "4:3")).toEqual({ width: 512, height: 384 });
     expect(frameSize(512, "3:4")).toEqual({ width: 384, height: 512 });
     expect(frameSize(768, "16:9")).toEqual({ width: 768, height: 448 });
@@ -62,6 +68,14 @@ describe("PromptPanel", () => {
     const tall = screen.getByRole("option", { name: "9:16" });
     expect(wide.parentElement).toHaveAttribute("label", "Horizontal");
     expect(tall.parentElement).toHaveAttribute("label", "Vertical");
+    expect(screen.getByRole("option", { name: "3:2" }).parentElement).toHaveAttribute(
+      "label",
+      "Horizontal",
+    );
+    expect(screen.getByRole("option", { name: "2:3" }).parentElement).toHaveAttribute(
+      "label",
+      "Vertical",
+    );
     expect(screen.getByRole("option", { name: "1:1" }).parentElement?.tagName).toBe("SELECT");
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Proporção" }), "16:9");
@@ -78,6 +92,23 @@ describe("PromptPanel", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Proporção" }), "9:16");
     expect(onParamsChange).toHaveBeenCalledWith(
       expect.objectContaining({ aspect: "9:16", width: 576, height: 1024 }),
+    );
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Proporção" }), "3:2");
+    expect(onParamsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ aspect: "3:2", width: 1024, height: 704 }),
+    );
+    await user.selectOptions(screen.getByRole("combobox", { name: "Proporção" }), "2:3");
+    expect(onParamsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ aspect: "2:3", width: 704, height: 1024 }),
+    );
+    await user.selectOptions(screen.getByRole("combobox", { name: "Proporção" }), "21:9");
+    expect(onParamsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ aspect: "21:9", width: 1024, height: 448 }),
+    );
+    await user.selectOptions(screen.getByRole("combobox", { name: "Proporção" }), "9:21");
+    expect(onParamsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ aspect: "9:21", width: 448, height: 1024 }),
     );
   });
 
