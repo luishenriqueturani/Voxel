@@ -12,6 +12,7 @@ authors = ["Luís Henrique"]
 [workspace.dependencies]
 voxel-hardware = { path = "crates/hardware" }
 voxel-queue = { path = "crates/queue" }
+voxel-mesh = { path = "crates/mesh" }
 voxel-models = { path = "crates/models" }
 voxel-imaging = { path = "crates/imaging" }
 voxel-logging = { path = "crates/logging" }

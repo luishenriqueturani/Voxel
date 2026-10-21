@@ -112,6 +112,16 @@ describe("PromptPanel", () => {
     );
   });
 
+  it("aceita mais de quatro imagens", async () => {
+    const user = userEvent.setup();
+    const onParamsChange = renderPanel();
+    await user.click(screen.getByRole("button", { name: "Configurações do modelo" }));
+    const field = screen.getByLabelText("Quantidade de imagens");
+    expect(field).not.toHaveAttribute("max");
+    fireEvent.change(field, { target: { value: "8" } });
+    expect(onParamsChange).toHaveBeenCalledWith(expect.objectContaining({ count: 8 }));
+  });
+
   it("troca gerar por cancelar enquanto a imagem está saindo", async () => {
     const user = userEvent.setup();
     const onCancel = vi.fn();
@@ -164,5 +174,43 @@ describe("PromptPanel", () => {
     }
     fireEvent.drop(panel, { dataTransfer: { getData: () => "/tmp/notas.txt /tmp/gato.png" } });
     expect(onImageDrop).toHaveBeenCalledWith("/tmp/gato.png");
+  });
+
+  it("deixa a otimização 3D desligada até ser marcada", async () => {
+    const user = userEvent.setup();
+    const onParamsChange = renderPanel();
+    await user.click(screen.getByRole("button", { name: "Configurações do modelo" }));
+    expect(screen.queryByRole("checkbox", { name: "Otimizar para jogos" })).not.toBeInTheDocument();
+
+    render(
+      <PromptPanel
+        prompt=""
+        onPromptChange={vi.fn()}
+        negativePrompt=""
+        onNegativePromptChange={vi.fn()}
+        models={[]}
+        modelId=""
+        onModelChange={vi.fn()}
+        params={params}
+        onParamsChange={onParamsChange}
+        outputMode="3d"
+        onOutputModeChange={vi.fn()}
+        generating={false}
+        onGenerate={vi.fn()}
+      />,
+    );
+    const settings = screen.getAllByRole("button", { name: "Configurações do modelo" });
+    const threeD = settings[1];
+    if (threeD === undefined) {
+      throw new Error("painel 3D sem configurações");
+    }
+    await user.click(threeD);
+    const toggle = screen.getByRole("checkbox", { name: "Otimizar para jogos" });
+    expect(toggle).not.toBeChecked();
+    expect(screen.queryByRole("spinbutton", { name: "Triângulos" })).not.toBeInTheDocument();
+    await user.click(toggle);
+    expect(onParamsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ optimizeMesh: true, targetTriangles: 10_000, textureSize: 1024 }),
+    );
   });
 });

@@ -7,6 +7,7 @@ import { firstImagePath } from "../../lib/mesh";
 import type { PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
 import { EditControls, editReady } from "./EditControls";
+import { MeshOptimizeFields } from "./MeshOptimizeFields";
 import { RecentPrompts } from "./RecentPrompts";
 
 export type OutputMode = "2d" | "3d";
@@ -58,6 +59,9 @@ export type GenerationParams = {
   cfg: number;
   seed: string;
   count: number;
+  optimizeMesh?: boolean;
+  targetTriangles?: number;
+  textureSize?: number;
 };
 
 export type PanelModel = {
@@ -237,6 +241,9 @@ export function PromptPanel({
               className="z-10 w-64 rounded-md border border-zinc-300 bg-white p-3 shadow-md dark:border-zinc-700 dark:bg-zinc-900"
             >
               <ModelSettings params={params} onChange={onParamsChange} />
+              {outputMode === "3d" ? (
+                <MeshOptimizeFields params={params} onChange={onParamsChange} />
+              ) : null}
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
@@ -442,7 +449,6 @@ function ModelSettings({
           type="number"
           value={params.count}
           min={1}
-          max={4}
           className={fieldClass}
           onChange={(event) => set({ count: Number(event.target.value) })}
         />

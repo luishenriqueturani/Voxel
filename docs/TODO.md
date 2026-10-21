@@ -234,12 +234,12 @@ Os modelos medidos do catálogo ficam no topo, como recomendados. O restante é 
 
 ### Pós-processamento 3D opcional (§4.3)
 
-- [ ] Opção desligada por padrão nas configurações do modelo 3D
-- [ ] Decimação com alvo de triângulos configurável
-- [ ] Redimensionar texturas (512 / 1024 / 2048)
-- [ ] Centralizar, normalizar escala e pivô no chão
-- [ ] Export FBX
-- [ ] Preservar o arquivo original e salvar o otimizado ao lado
+- [x] Opção desligada por padrão nas configurações do modelo 3D
+- [x] Decimação com alvo de triângulos configurável
+- [x] Redimensionar texturas (512 / 1024 / 2048)
+- [x] Centralizar, normalizar escala e pivô no chão
+- [x] Export FBX
+- [x] Preservar o arquivo original e salvar o otimizado ao lado
 
 ---
 

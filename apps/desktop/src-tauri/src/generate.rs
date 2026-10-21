@@ -278,7 +278,7 @@ fn limits_of(request: &GenerateRequest) -> Limits {
         } else {
             7.0
         },
-        count: request.count.clamp(1, 4),
+        count: request.count.max(1),
     }
 }
 
@@ -577,6 +577,10 @@ mod tests {
         request.height = 4_000;
         let snapped = super::limits_of(&request);
         assert_eq!((snapped.width, snapped.height), (320, 1024));
+        request.count = 12;
+        assert_eq!(super::limits_of(&request).count, 12);
+        request.count = 0;
+        assert_eq!(super::limits_of(&request).count, 1);
     }
 
     #[test]

@@ -180,4 +180,36 @@ describe("ImageViewer", () => {
     await user.click(screen.getByRole("button", { name: "Ver malha" }));
     expect(screen.getByTestId("mesh-viewer")).toBeInTheDocument();
   });
+
+  it("mostra a cópia otimizada e o FBX ao lado do original", () => {
+    render(
+      <ImageViewer
+        src="data:image/png;base64,aaaa"
+        step={0}
+        total={0}
+        canSave
+        canRegenerate={false}
+        meshFiles={{
+          glb: "/tmp/gato.glb",
+          obj: "/tmp/gato.obj",
+          optimizedGlb: "/tmp/gato_otimizado.glb",
+          optimizedObj: "/tmp/gato_otimizado.obj",
+          optimizedFbx: "/tmp/gato_otimizado.fbx",
+        }}
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("mesh-viewer")).toHaveAttribute(
+      "data-url",
+      "mesh:/tmp/gato_otimizado.glb",
+    );
+    expect(screen.getByText("GLB gato.glb · OBJ gato.obj")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Otimizado GLB gato_otimizado.glb · OBJ gato_otimizado.obj · FBX gato_otimizado.fbx",
+      ),
+    ).toBeInTheDocument();
+  });
 });

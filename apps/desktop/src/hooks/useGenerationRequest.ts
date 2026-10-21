@@ -8,7 +8,7 @@ import {
 import type { GenerationParams, OutputMode } from "../components/layout/PromptPanel";
 import { blankEdit, canStartEdit, type EditPayload, generationRequest } from "../lib/edit";
 import { type GalleryImage, generateImage, imageSrc, isCancelled } from "../native/generation";
-import { meshFromImage } from "../native/mesh";
+import { meshFromImage, meshOptimize } from "../native/mesh";
 import type { PythonIntent } from "../native/pythonEnv";
 
 type Frame = {
@@ -20,6 +20,9 @@ type Frame = {
 export type MeshPaths = {
   glb: string;
   obj: string;
+  optimizedGlb?: string | null;
+  optimizedObj?: string | null;
+  optimizedFbx?: string | null;
 };
 
 type GenerationRequestOptions = {
@@ -91,15 +94,21 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
 
   const showMesh = useCallback(
     async (path: string, seed: number | null) => {
-      const mesh = await meshFromImage(path);
+      const mesh = await meshFromImage(path, meshOptimize(params));
       if (mesh === null) {
         return;
       }
       setSlides([{ src: imageSrc(mesh.preview), path: mesh.imagePath, seed, transparent: true }]);
       setSlideIndex(0);
-      setMeshFiles({ glb: mesh.glbPath, obj: mesh.objPath });
+      setMeshFiles({
+        glb: mesh.glbPath,
+        obj: mesh.objPath,
+        optimizedGlb: mesh.optimizedGlb,
+        optimizedObj: mesh.optimizedObj,
+        optimizedFbx: mesh.optimizedFbx,
+      });
     },
-    [setSlideIndex, setSlides],
+    [params, setSlideIndex, setSlides],
   );
 
   const request = useCallback(

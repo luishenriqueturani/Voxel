@@ -155,16 +155,16 @@ export function ImageViewer({
     setPanning(false);
   }
 
-  const meshId = meshFiles?.glb ?? "";
-  if (meshGeneration !== meshId) {
-    setMeshGeneration(meshId);
-    setShowMesh(meshId !== "");
+  const shownMesh = meshFiles?.optimizedGlb || meshFiles?.glb || "";
+  if (meshGeneration !== shownMesh) {
+    setMeshGeneration(shownMesh);
+    setShowMesh(shownMesh !== "");
     setWireframe(false);
     setTextured(true);
     setTriangles(null);
   }
   const viewingMesh = meshFiles !== null && showMesh;
-  const meshAddress = viewingMesh ? meshUrl(meshFiles.glb) : null;
+  const meshAddress = viewingMesh ? meshUrl(shownMesh) : null;
 
   return (
     <div className="flex h-full w-full min-h-0 gap-4">
@@ -308,15 +308,26 @@ export function ImageViewer({
             </Button>
           ) : null}
           {meshFiles ? (
-            <p
-              className="text-xs break-all text-zinc-500"
-              title={`${meshFiles.glb}\n${meshFiles.obj}`}
-            >
-              {t("viewer.meshFiles", {
-                glb: fileName(meshFiles.glb),
-                obj: fileName(meshFiles.obj),
-              })}
-            </p>
+            <>
+              <p
+                className="text-xs break-all text-zinc-500"
+                title={`${meshFiles.glb}\n${meshFiles.obj}`}
+              >
+                {t("viewer.meshFiles", {
+                  glb: fileName(meshFiles.glb),
+                  obj: fileName(meshFiles.obj),
+                })}
+              </p>
+              {meshFiles.optimizedGlb && meshFiles.optimizedObj && meshFiles.optimizedFbx ? (
+                <p className="text-xs break-all text-zinc-500">
+                  {t("viewer.optimizedFiles", {
+                    glb: fileName(meshFiles.optimizedGlb),
+                    obj: fileName(meshFiles.optimizedObj),
+                    fbx: fileName(meshFiles.optimizedFbx),
+                  })}
+                </p>
+              ) : null}
+            </>
           ) : null}
           <Button variant="ghost" className="w-full" disabled={!canSave} onClick={onSave}>
             {t("viewer.save")}

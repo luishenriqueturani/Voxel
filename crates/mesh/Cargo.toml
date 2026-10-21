@@ -1,0 +1,17 @@
+[package]
+name = "voxel-mesh"
+description = "Decimação, textura e exportação de malhas do Voxel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+gltf = "1.4"
+image = { version = "0.25", default-features = false, features = ["png"] }
+meshopt = "0.7"
+serde_json.workspace = true
+
+[lints]
+workspace = true

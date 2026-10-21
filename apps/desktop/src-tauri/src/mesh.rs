@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 use voxel_hardware::PythonBackend;
 use voxel_models::Catalog;
@@ -26,6 +26,20 @@ pub struct MeshFiles {
     pub glb_path: String,
     pub obj_path: String,
     pub preview: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_glb: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_obj: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_fbx: Option<String>,
+}
+
+/// Pedido da cópia otimizada. Ausente quando a opção está desligada.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeshOptimize {
+    pub triangles: u32,
+    pub texture_size: u32,
 }
 
 /// Espera o ambiente, recorta o fundo e grava GLB e OBJ.
@@ -39,14 +53,20 @@ pub async fn mesh_from_image(
     app: AppHandle,
     paths: State<'_, AppPaths>,
     source: String,
+    optimize: Option<MeshOptimize>,
 ) -> Result<MeshFiles, String> {
     let paths = paths.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || from_image(&app, &paths, &source))
+    tauri::async_runtime::spawn_blocking(move || from_image(&app, &paths, &source, optimize))
         .await
         .map_err(|error| error.to_string())?
 }
 
-fn from_image(app: &AppHandle, paths: &AppPaths, source: &str) -> Result<MeshFiles, String> {
+fn from_image(
+    app: &AppHandle,
+    paths: &AppPaths,
+    source: &str,
+    optimize: Option<MeshOptimize>,
+) -> Result<MeshFiles, String> {
     let jobs = app.state::<LiveJobs>();
     let _session = jobs.enter();
     if jobs.stopped() {
@@ -60,12 +80,38 @@ fn from_image(app: &AppHandle, paths: &AppPaths, source: &str) -> Result<MeshFil
     let cutout = cut_file(paths, input)?;
     let preview = encode_base64(&std::fs::read(&cutout).map_err(|error| error.to_string())?);
     let (glb, obj) = render(app, paths, &cutout)?;
+    let optimized = optimized_copy(Path::new(&glb), optimize)?;
     Ok(MeshFiles {
         image_path: cutout.display().to_string(),
         glb_path: glb,
         obj_path: obj,
         preview,
+        optimized_glb: optimized.as_ref().map(|item| item.0.clone()),
+        optimized_obj: optimized.as_ref().map(|item| item.1.clone()),
+        optimized_fbx: optimized.as_ref().map(|item| item.2.clone()),
     })
+}
+
+fn optimized_copy(
+    glb: &Path,
+    options: Option<MeshOptimize>,
+) -> Result<Option<(String, String, String)>, String> {
+    let Some(options) = options else {
+        return Ok(None);
+    };
+    let written = voxel_mesh::optimize(
+        glb,
+        voxel_mesh::Options {
+            triangles: options.triangles,
+            texture_size: options.texture_size,
+        },
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(Some((
+        written.glb.display().to_string(),
+        written.obj.display().to_string(),
+        written.fbx.display().to_string(),
+    )))
 }
 
 fn render(app: &AppHandle, paths: &AppPaths, cutout: &Path) -> Result<(String, String), String> {
