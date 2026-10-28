@@ -3,6 +3,10 @@ import { meshOptimize, meshUrl } from "./mesh";
 
 const state = vi.hoisted(() => ({ inside: false }));
 
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  open: vi.fn(),
+}));
+
 vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => state.inside,
   invoke: vi.fn(),

@@ -12,6 +12,7 @@ import {
   type MeshOrigin,
   type MeshPick,
   type MeshView,
+  mergeViews,
   meshViewsOf,
   pickForPath,
 } from "../lib/meshViews";
@@ -31,6 +32,7 @@ export type MeshPaths = {
   optimizedGlb?: string | null;
   optimizedObj?: string | null;
   optimizedFbx?: string | null;
+  references?: string[];
 };
 
 type GenerationRequestOptions = {
@@ -68,6 +70,9 @@ type GenerationActions = {
   meshPick: MeshPick | null;
   confirmMesh: (views: MeshView[], primaryPath: string) => void;
   cancelMesh: () => void;
+  addMeshPaths: (paths: string[]) => void;
+  addCurrentViews: () => void;
+  canAddCurrent: boolean;
 };
 
 function chosenSeed(typed: string, override?: number): number | null {
@@ -87,6 +92,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
   const [meshPick, setMeshPick] = useState<MeshPick | null>(null);
   const meshPickRef = useRef<MeshPick | null>(null);
   const prepareRef = useRef(false);
+  const pickToken = useRef(0);
   const {
     generatingRef,
     removing,
@@ -120,7 +126,8 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
     }
     const primary = views.some((view) => view.path === primaryPath) ? primaryPath : first.path;
     prepareRef.current = prepare;
-    const pick = { views, primaryPath: primary };
+    pickToken.current += 1;
+    const pick = { token: pickToken.current, views, primaryPath: primary };
     meshPickRef.current = pick;
     setMeshPick(pick);
   }, []);
@@ -131,8 +138,12 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
   }, []);
 
   const showMesh = useCallback(
-    async (path: string, seed: number | null) => {
-      const mesh = await meshFromImage(path, meshOptimize(params));
+    async (views: MeshView[], primaryPath: string, seed: number | null) => {
+      const mesh = await meshFromImage(
+        views.map((view) => view.path),
+        primaryPath,
+        meshOptimize(params),
+      );
       if (mesh === null) {
         return;
       }
@@ -144,6 +155,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
         optimizedGlb: mesh.optimizedGlb,
         optimizedObj: mesh.optimizedObj,
         optimizedFbx: mesh.optimizedFbx,
+        references: mesh.references,
       });
     },
     [params, setSlideIndex, setSlides],
@@ -166,7 +178,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
         setGenerating(false);
       };
       const run = () =>
-        showMesh(primary.path, primary.seed)
+        showMesh(views, primary.path, primary.seed)
           .catch((error: unknown) => {
             if (!isCancelled(error)) {
               reportFailure(error);
@@ -343,6 +355,48 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
     ],
   );
 
+  const addMeshPaths = useCallback(
+    (paths: string[]) => {
+      if (generatingRef.current || removing) {
+        return;
+      }
+      const incoming = paths.flatMap((path) => {
+        const trimmed = path.trim();
+        if (trimmed === "") {
+          return [];
+        }
+        const known = slides.find((slide) => slide.path === trimmed);
+        return [known ?? { path: trimmed, src: "", seed: null }];
+      });
+      const unique = mergeViews([], incoming);
+      const first = unique[0];
+      if (first === undefined) {
+        return;
+      }
+      const open = meshPickRef.current;
+      if (open) {
+        const views = mergeViews(open.views, unique);
+        if (views.length === open.views.length) {
+          return;
+        }
+        const pick = { ...open, views };
+        meshPickRef.current = pick;
+        setMeshPick(pick);
+        return;
+      }
+      openPick(unique, first.path, true);
+    },
+    [generatingRef, openPick, removing, slides],
+  );
+
+  const addCurrentViews = useCallback(() => {
+    addMeshPaths(slides.map((slide) => slide.path));
+  }, [addMeshPaths, slides]);
+
+  const canAddCurrent = slides.some(
+    (slide) => !meshPick?.views.some((view) => view.path === slide.path),
+  );
+
   const sendImage = useCallback(
     (path: string) => {
       if (generatingRef.current || removing || path === "") {
@@ -363,5 +417,8 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
     meshPick,
     confirmMesh,
     cancelMesh,
+    addMeshPaths,
+    addCurrentViews,
+    canAddCurrent,
   };
 }

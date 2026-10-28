@@ -3,7 +3,7 @@ import { Info, Settings } from "lucide-react";
 import { type DragEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { EditMode } from "../../lib/edit";
-import { firstImagePath } from "../../lib/mesh";
+import { imagePaths } from "../../lib/mesh";
 import type { MeshOrigin } from "../../lib/meshViews";
 import type { PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
@@ -100,7 +100,7 @@ type PromptPanelProps = {
   hasMask?: boolean;
   onGenerate: () => void;
   onCancel?: () => void;
-  onImageDrop?: (path: string) => void;
+  onImageDrop?: (paths: string[]) => void;
 };
 
 const fieldClass =
@@ -178,10 +178,9 @@ export function PromptPanel({
       return;
     }
     event.preventDefault();
-    const text = event.dataTransfer.getData("text/plain");
-    const image = firstImagePath(text.split(/\s+/));
-    if (image) {
-      onImageDrop(image);
+    const images = imagePaths(event.dataTransfer.getData("text/plain").split(/\s+/));
+    if (images.length > 0) {
+      onImageDrop(images);
     }
   }
 

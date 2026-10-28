@@ -260,6 +260,7 @@
     "sendTo3d": "Enviar para 3D",
     "meshFiles": "GLB {{glb}} · OBJ {{obj}}",
     "optimizedFiles": "Otimizado GLB {{glb}} · OBJ {{obj}} · FBX {{fbx}}",
+    "references": "Vistas {{files}}",
     "wireframe": "Arame",
     "texture": "Textura",
     "showMesh": "Ver malha",
@@ -279,7 +280,10 @@
     "up": "Subir {{name}}",
     "down": "Descer {{name}}",
     "confirm": "Gerar malha",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "limit": "O modelo atual reconstrói a vista principal. As outras imagens vão para a pasta do resultado.",
+    "fromDisk": "Do disco",
+    "fromGeneration": "Da geração"
   },
   "gallery": {
     "title": "Galeria",

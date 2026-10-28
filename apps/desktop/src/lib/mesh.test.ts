@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { applyAppearance, firstImagePath, type MeshNode, trianglesIn } from "./mesh";
+import { applyAppearance, firstImagePath, imagePaths, type MeshNode, trianglesIn } from "./mesh";
 
 describe("firstImagePath", () => {
   it("escolhe a primeira imagem e ignora o resto", () => {
     expect(firstImagePath(["notas.txt", "/tmp/gato.PNG", "/tmp/outro.jpg"])).toBe("/tmp/gato.PNG");
     expect(firstImagePath(["modelo.glb"])).toBeNull();
+  });
+});
+
+describe("imagePaths", () => {
+  it("junta todas as imagens e ignora o resto", () => {
+    expect(imagePaths(["notas.txt", "/tmp/gato.png", "/tmp/lado.jpg"])).toEqual([
+      "/tmp/gato.png",
+      "/tmp/lado.jpg",
+    ]);
   });
 });
 

@@ -258,12 +258,12 @@ Com o modelo atual, a reconstrução usa a vista principal. As outras imagens v�
 - [x] Texto gera as imagens pedidas e abre a seleção; a malha espera a confirmação
 - [x] "Enviar para 3D" abre a mesma seleção em vez de iniciar a malha
 - [x] Seleção com uma ou várias imagens, ordem ajustável e uma vista principal
-- [ ] Incluir imagens do disco, arrastadas e as da geração atual
+- [x] Incluir imagens do disco, arrastadas e as da geração atual
 - [x] Cancelar a seleção não gera malha
-- [ ] O pedido de malha aceita a lista; o TripoSR reconstrói a vista principal
-- [ ] As demais vistas são copiadas para a pasta do resultado
-- [ ] A seleção explica que o modelo atual usa uma vista e guarda as outras
-- [ ] Modelo multi-vista, quando medido nesta máquina, recebe a lista inteira
+- [x] O pedido de malha aceita a lista; o TripoSR reconstrói a vista principal
+- [x] As demais vistas são copiadas para a pasta do resultado
+- [x] A seleção explica que o modelo atual usa uma vista e guarda as outras
+- [x] Modelo multi-vista, quando medido nesta máquina, recebe a lista inteira
 
 ### Ajustes do uso diário
 

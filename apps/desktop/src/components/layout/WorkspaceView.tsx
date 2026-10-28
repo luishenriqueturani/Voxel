@@ -4,6 +4,7 @@ import type { MeshPaths } from "../../hooks/useGenerationRequest";
 import type { EditMode, EditPayload } from "../../lib/edit";
 import type { MeshOrigin, MeshPick, MeshView } from "../../lib/meshViews";
 import type { GalleryItem, PromptEntry } from "../../native/history";
+import { pickMeshImages } from "../../native/mesh";
 import { Button } from "../ui/button";
 import { GalleryView } from "./GalleryView";
 import { ImageViewer } from "./ImageViewer";
@@ -25,6 +26,10 @@ function ignoreMeshCancel() {
   return undefined;
 }
 
+function ignorePaths(_paths: string[]) {
+  return undefined;
+}
+
 type WorkspaceViewProps = {
   prompt: string;
   onPromptChange: (value: string) => void;
@@ -43,6 +48,9 @@ type WorkspaceViewProps = {
   meshPick?: MeshPick | null;
   onConfirmMesh?: (views: MeshView[], primaryPath: string) => void;
   onCancelMesh?: () => void;
+  onAddMeshPaths?: (paths: string[]) => void;
+  onAddCurrentViews?: () => void;
+  canAddCurrent?: boolean;
   generating: boolean;
   locked: boolean;
   onGenerate: () => void;
@@ -72,7 +80,7 @@ type WorkspaceViewProps = {
   onRegenerate: () => void;
   onRemoveBackground: () => void;
   onSendTo3d?: () => void;
-  onImageDrop?: (path: string) => void;
+  onImageDrop?: (paths: string[]) => void;
   meshFiles?: MeshPaths | null;
   canUndoEdit?: boolean;
   onUndoEdit?: () => void;
@@ -96,6 +104,9 @@ export function WorkspaceView({
   meshPick = null,
   onConfirmMesh = ignoreMeshConfirm,
   onCancelMesh = ignoreMeshCancel,
+  onAddMeshPaths = ignorePaths,
+  onAddCurrentViews = ignoreMeshCancel,
+  canAddCurrent = false,
   generating,
   locked,
   onGenerate,
@@ -262,9 +273,19 @@ export function WorkspaceView({
         </div>
         {meshPick !== null ? (
           <MeshViewPicker
-            key={`${meshPick.primaryPath}:${meshPick.views.map((view) => view.path).join("|")}`}
+            key={meshPick.token}
             views={meshPick.views}
             primaryPath={meshPick.primaryPath}
+            canAddCurrent={canAddCurrent}
+            onAddPaths={onAddMeshPaths}
+            onAddFromDisk={() => {
+              void pickMeshImages().then((paths) => {
+                if (paths.length > 0) {
+                  onAddMeshPaths(paths);
+                }
+              });
+            }}
+            onAddCurrent={onAddCurrentViews}
             onConfirm={onConfirmMesh}
             onCancel={onCancelMesh}
           />

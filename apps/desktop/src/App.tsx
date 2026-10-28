@@ -187,6 +187,9 @@ export default function App() {
     meshPick,
     confirmMesh,
     cancelMesh,
+    addMeshPaths,
+    addCurrentViews,
+    canAddCurrent,
   } = useGenerationRequest({
     generatingRef,
     removing,
@@ -213,7 +216,7 @@ export default function App() {
     slideIndex,
   });
   useGenerateShortcut(requestGeneration);
-  useMeshDrop(sendImage);
+  useMeshDrop(addMeshPaths);
 
   useEffect(() => {
     let cancelled = false;
@@ -449,10 +452,13 @@ export default function App() {
           meshPick={meshPick}
           onConfirmMesh={confirmMesh}
           onCancelMesh={cancelMesh}
+          onAddMeshPaths={addMeshPaths}
+          onAddCurrentViews={addCurrentViews}
+          canAddCurrent={canAddCurrent}
           generating={generating}
           locked={removing || waitingEnvironment || meshPick !== null}
           onGenerate={() => requestGeneration()}
-          onImageDrop={sendImage}
+          onImageDrop={addMeshPaths}
           meshFiles={meshFiles}
           onCancel={() => {
             void cancelGeneration();

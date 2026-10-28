@@ -1,21 +1,56 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type DragEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { imagePaths } from "../../lib/mesh";
 import { type MeshView, moveView, viewName, viewSrc } from "../../lib/meshViews";
 import { Button } from "../ui/button";
 
 type MeshViewPickerProps = {
   views: MeshView[];
   primaryPath: string;
+  canAddCurrent?: boolean;
+  onAddPaths?: (paths: string[]) => void;
+  onAddFromDisk?: () => void;
+  onAddCurrent?: () => void;
   onConfirm: (views: MeshView[], primaryPath: string) => void;
   onCancel: () => void;
 };
 
-export function MeshViewPicker({ views, primaryPath, onConfirm, onCancel }: MeshViewPickerProps) {
+function ignorePaths(_paths: string[]) {
+  return undefined;
+}
+
+function ignoreClick() {
+  return undefined;
+}
+
+export function MeshViewPicker({
+  views,
+  primaryPath,
+  canAddCurrent = false,
+  onAddPaths = ignorePaths,
+  onAddFromDisk = ignoreClick,
+  onAddCurrent = ignoreClick,
+  onConfirm,
+  onCancel,
+}: MeshViewPickerProps) {
   const { t } = useTranslation();
   const [order, setOrder] = useState(views);
   const [included, setIncluded] = useState(views.map((view) => view.path));
   const [primary, setPrimary] = useState(primaryPath);
+  const known = useRef(new Set(views.map((view) => view.path)));
+
+  useEffect(() => {
+    const fresh = views.filter((view) => !known.current.has(view.path));
+    if (fresh.length === 0) {
+      return;
+    }
+    for (const view of fresh) {
+      known.current.add(view.path);
+    }
+    setOrder((current) => [...current, ...fresh]);
+    setIncluded((current) => [...current, ...fresh.map((view) => view.path)]);
+  }, [views]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -48,6 +83,14 @@ export function MeshViewPicker({ views, primaryPath, onConfirm, onCancel }: Mesh
 
   const canConfirm = included.includes(primary);
 
+  function dropImages(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const images = imagePaths(event.dataTransfer.getData("text/plain").split(/\s+/));
+    if (images.length > 0) {
+      onAddPaths(images);
+    }
+  }
+
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-zinc-950/40 p-6">
       <div
@@ -55,12 +98,25 @@ export function MeshViewPicker({ views, primaryPath, onConfirm, onCancel }: Mesh
         aria-modal="true"
         aria-labelledby="mesh-pick-title"
         className="flex max-h-full w-full max-w-lg flex-col gap-3 overflow-hidden rounded-lg border border-zinc-300 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+        onDragOver={(event) => {
+          event.preventDefault();
+        }}
+        onDrop={dropImages}
       >
         <div className="flex flex-col gap-1">
           <h2 id="mesh-pick-title" className="text-base font-medium">
             {t("meshPick.title")}
           </h2>
           <p className="text-sm text-zinc-500">{t("meshPick.hint")}</p>
+          <p className="text-sm text-zinc-500">{t("meshPick.limit")}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onAddFromDisk}>
+            {t("meshPick.fromDisk")}
+          </Button>
+          <Button variant="ghost" disabled={!canAddCurrent} onClick={onAddCurrent}>
+            {t("meshPick.fromGeneration")}
+          </Button>
         </div>
         <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
           {order.map((view, index) => {

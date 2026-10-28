@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { MeshView } from "../../lib/meshViews";
@@ -63,5 +63,36 @@ describe("MeshViewPicker", () => {
 
     await user.keyboard("{Escape}");
     expect(onCancel).toHaveBeenCalledTimes(2);
+  });
+
+  it("explica a vista principal e aceita disco, geração e arraste", async () => {
+    const user = userEvent.setup();
+    const onAddPaths = vi.fn();
+    const onAddFromDisk = vi.fn();
+    const onAddCurrent = vi.fn();
+    const props = {
+      primaryPath: "/tmp/frente.png",
+      canAddCurrent: true,
+      onAddPaths,
+      onAddFromDisk,
+      onAddCurrent,
+      onConfirm: vi.fn(),
+      onCancel: vi.fn(),
+    };
+    const { rerender } = render(<MeshViewPicker {...props} views={views.slice(0, 1)} />);
+
+    expect(screen.getByText(/reconstrói a vista principal/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Do disco" }));
+    await user.click(screen.getByRole("button", { name: "Da geração" }));
+    expect(onAddFromDisk).toHaveBeenCalledOnce();
+    expect(onAddCurrent).toHaveBeenCalledOnce();
+
+    fireEvent.drop(screen.getByRole("dialog"), {
+      dataTransfer: { getData: () => "/tmp/notas.txt /tmp/lado.png" },
+    });
+    expect(onAddPaths).toHaveBeenCalledWith(["/tmp/lado.png"]);
+
+    rerender(<MeshViewPicker {...props} views={views.slice(0, 2)} />);
+    expect(screen.getByRole("checkbox", { name: "Usar lado.png" })).toBeChecked();
   });
 });

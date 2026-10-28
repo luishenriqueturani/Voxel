@@ -1,13 +1,13 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
-import { firstImagePath } from "../lib/mesh";
+import { imagePaths } from "../lib/mesh";
 
 type DragDrop = {
   paths?: string[];
 };
 
-export function useMeshDrop(onImage: (path: string) => void): void {
+export function useMeshDrop(onImages: (paths: string[]) => void): void {
   useEffect(() => {
     if (!isTauri()) {
       return undefined;
@@ -15,9 +15,9 @@ export function useMeshDrop(onImage: (path: string) => void): void {
     let stop: () => void = () => undefined;
     let cancelled = false;
     void listen<DragDrop>("tauri://drag-drop", (event) => {
-      const image = firstImagePath(event.payload.paths ?? []);
-      if (image) {
-        onImage(image);
+      const images = imagePaths(event.payload.paths ?? []);
+      if (images.length > 0) {
+        onImages(images);
       }
     })
       .then((unlisten) => {
@@ -32,5 +32,5 @@ export function useMeshDrop(onImage: (path: string) => void): void {
       cancelled = true;
       stop();
     };
-  }, [onImage]);
+  }, [onImages]);
 }

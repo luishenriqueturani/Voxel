@@ -2,8 +2,12 @@ const IMAGE = /\.(png|jpe?g|webp|bmp)$/i;
 const CLAY = "#c8c8c8";
 const WHITE = "#ffffff";
 
+export function imagePaths(paths: readonly string[]): string[] {
+  return paths.map((path) => path.trim()).filter((path) => IMAGE.test(path));
+}
+
 export function firstImagePath(paths: readonly string[]): string | null {
-  return paths.find((path) => IMAGE.test(path.trim())) ?? null;
+  return imagePaths(paths)[0] ?? null;
 }
 
 type GeometryLike = {

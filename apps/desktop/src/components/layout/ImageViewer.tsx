@@ -318,6 +318,13 @@ export function ImageViewer({
                   obj: fileName(meshFiles.obj),
                 })}
               </p>
+              {meshFiles.references && meshFiles.references.length > 0 ? (
+                <p className="text-xs break-all text-zinc-500">
+                  {t("viewer.references", {
+                    files: meshFiles.references.map(fileName).join(", "),
+                  })}
+                </p>
+              ) : null}
               {meshFiles.optimizedGlb && meshFiles.optimizedObj && meshFiles.optimizedFbx ? (
                 <p className="text-xs break-all text-zinc-500">
                   {t("viewer.optimizedFiles", {

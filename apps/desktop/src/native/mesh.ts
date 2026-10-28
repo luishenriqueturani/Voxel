@@ -1,4 +1,6 @@
 import { convertFileSrc, invoke, isTauri } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
+import { imagePaths } from "../lib/mesh";
 
 const INLINE = /^(https?:|blob:)/;
 
@@ -20,6 +22,7 @@ export type MeshResult = {
   optimizedGlb: string | null;
   optimizedObj: string | null;
   optimizedFbx: string | null;
+  references: string[];
 };
 
 export type MeshOptimize = {
@@ -69,16 +72,36 @@ function readMesh(value: unknown): MeshResult | null {
     optimizedGlb: optionalPath(mesh.optimizedGlb),
     optimizedObj: optionalPath(mesh.optimizedObj),
     optimizedFbx: optionalPath(mesh.optimizedFbx),
+    references: referencePaths(mesh.references),
   };
 }
 
+function referencePaths(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
+}
+
+export async function pickMeshImages(): Promise<string[]> {
+  if (!isTauri()) {
+    return [];
+  }
+  const selected = await open({
+    multiple: true,
+    filters: [{ name: "Imagem", extensions: ["png", "jpg", "jpeg", "webp", "bmp"] }],
+  });
+  if (Array.isArray(selected)) {
+    return imagePaths(selected);
+  }
+  return typeof selected === "string" ? imagePaths([selected]) : [];
+}
+
 export async function meshFromImage(
-  source: string,
+  views: string[],
+  primary: string,
   optimize: MeshOptimize | null = null,
 ): Promise<MeshResult | null> {
   if (!isTauri()) {
     return null;
   }
-  const value = await invoke("mesh_from_image", { source, optimize });
+  const value = await invoke("mesh_from_image", { views, primary, optimize });
   return readMesh(value);
 }

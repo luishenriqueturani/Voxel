@@ -87,6 +87,7 @@ describe("useGenerationRequest", () => {
       optimizedGlb: null,
       optimizedObj: null,
       optimizedFbx: null,
+      references: [],
     });
   });
 
@@ -115,7 +116,7 @@ describe("useGenerationRequest", () => {
     });
 
     await waitFor(() => {
-      expect(meshFromImage).toHaveBeenCalledWith("/tmp/frente.png", null);
+      expect(meshFromImage).toHaveBeenCalledWith(["/tmp/frente.png"], "/tmp/frente.png", null);
     });
     expect(noteIntent).not.toHaveBeenCalled();
     expect(result.current.meshPick).toBeNull();
@@ -157,7 +158,7 @@ describe("useGenerationRequest", () => {
 
     await waitFor(() => {
       expect(noteIntent).toHaveBeenCalledWith("send-to-3d");
-      expect(meshFromImage).toHaveBeenCalledWith("/tmp/c.png", null);
+      expect(meshFromImage).toHaveBeenCalledWith(["/tmp/c.png"], "/tmp/c.png", null);
     });
   });
 
@@ -174,6 +175,26 @@ describe("useGenerationRequest", () => {
     expect(generateImage).not.toHaveBeenCalled();
     expect(result.current.meshPick?.primaryPath).toBe("/tmp/frente.png");
     expect(result.current.meshPick?.views).toHaveLength(2);
+    expect(meshFromImage).not.toHaveBeenCalled();
+  });
+
+  it("junta imagens do disco e da geração na seleção aberta", () => {
+    const { result } = renderRequest();
+
+    act(() => {
+      result.current.addMeshPaths(["/tmp/fora.png"]);
+    });
+    expect(result.current.canAddCurrent).toBe(true);
+
+    act(() => {
+      result.current.addCurrentViews();
+    });
+
+    expect(result.current.meshPick?.views.map((view) => view.path)).toEqual([
+      "/tmp/fora.png",
+      "/tmp/frente.png",
+      "/tmp/lado.png",
+    ]);
     expect(meshFromImage).not.toHaveBeenCalled();
   });
 });

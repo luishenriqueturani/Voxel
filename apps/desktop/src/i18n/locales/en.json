@@ -260,6 +260,7 @@
     "sendTo3d": "Send to 3D",
     "meshFiles": "GLB {{glb}} · OBJ {{obj}}",
     "optimizedFiles": "Optimized GLB {{glb}} · OBJ {{obj}} · FBX {{fbx}}",
+    "references": "Views {{files}}",
     "wireframe": "Wireframe",
     "texture": "Texture",
     "showMesh": "Show mesh",
@@ -279,7 +280,10 @@
     "up": "Move {{name}} up",
     "down": "Move {{name}} down",
     "confirm": "Generate mesh",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "limit": "The current model reconstructs the main view. The other images go to the result folder.",
+    "fromDisk": "From disk",
+    "fromGeneration": "From this generation"
   },
   "gallery": {
     "title": "Gallery",

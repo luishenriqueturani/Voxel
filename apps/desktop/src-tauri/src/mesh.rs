@@ -32,6 +32,8 @@ pub struct MeshFiles {
     pub optimized_obj: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub optimized_fbx: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub references: Vec<String>,
 }
 
 /// Pedido da cópia otimizada. Ausente quando a opção está desligada.
@@ -52,19 +54,23 @@ pub struct MeshOptimize {
 pub async fn mesh_from_image(
     app: AppHandle,
     paths: State<'_, AppPaths>,
-    source: String,
+    views: Vec<String>,
+    primary: String,
     optimize: Option<MeshOptimize>,
 ) -> Result<MeshFiles, String> {
     let paths = paths.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || from_image(&app, &paths, &source, optimize))
-        .await
-        .map_err(|error| error.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        from_image(&app, &paths, &views, &primary, optimize)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 fn from_image(
     app: &AppHandle,
     paths: &AppPaths,
-    source: &str,
+    views: &[String],
+    primary: &str,
     optimize: Option<MeshOptimize>,
 ) -> Result<MeshFiles, String> {
     let jobs = app.state::<LiveJobs>();
@@ -73,13 +79,27 @@ fn from_image(
         return Err("cancelado".to_owned());
     }
     app.state::<Environment>().wait_ready(app)?;
-    let input = Path::new(source);
-    if !input.is_file() {
-        return Err("imagem ausente".to_owned());
+    let ordered: Vec<PathBuf> = views.iter().map(PathBuf::from).collect();
+    let primary_path = PathBuf::from(primary);
+    if ordered.is_empty() || !ordered.iter().any(|path| path == &primary_path) {
+        return Err("vista principal ausente".to_owned());
     }
-    let cutout = cut_file(paths, input)?;
+    for path in &ordered {
+        if !path.is_file() {
+            return Err("imagem ausente".to_owned());
+        }
+    }
+    let model = std::env::var("VOXEL_MESH_BACKEND").unwrap_or_else(|_| MESH_MODEL.to_owned());
+    let inputs = views_for_model(measured_multiview_models(), &model, &ordered, &primary_path);
+    let source = inputs.first().ok_or("vista principal ausente")?;
+    let cutout = cut_file(paths, source)?;
     let preview = encode_base64(&std::fs::read(&cutout).map_err(|error| error.to_string())?);
     let (glb, obj) = render(app, paths, &cutout)?;
+    let folder = Path::new(&glb)
+        .parent()
+        .ok_or("imagem ausente")?
+        .to_path_buf();
+    let references = copy_references(&folder, &ordered, &primary_path)?;
     let optimized = optimized_copy(Path::new(&glb), optimize)?;
     Ok(MeshFiles {
         image_path: cutout.display().to_string(),
@@ -89,7 +109,66 @@ fn from_image(
         optimized_glb: optimized.as_ref().map(|item| item.0.clone()),
         optimized_obj: optimized.as_ref().map(|item| item.1.clone()),
         optimized_fbx: optimized.as_ref().map(|item| item.2.clone()),
+        references,
     })
+}
+
+/// Nenhum modelo multi-vista foi medido nesta máquina. O `InstantMesh` não sobe:
+/// o ponto de entrada pede um rasterizador CUDA.
+fn measured_multiview_models() -> &'static [&'static str] {
+    &[]
+}
+
+fn views_for_model(
+    measured: &[&str],
+    model: &str,
+    ordered: &[PathBuf],
+    primary: &Path,
+) -> Vec<PathBuf> {
+    if measured.contains(&model) {
+        ordered.to_vec()
+    } else {
+        vec![primary.to_path_buf()]
+    }
+}
+
+fn copy_references(dir: &Path, views: &[PathBuf], primary: &Path) -> Result<Vec<String>, String> {
+    let mut written = Vec::new();
+    for view in views {
+        if view.as_path() == primary {
+            continue;
+        }
+        written.push(unique_copy(dir, view)?.display().to_string());
+    }
+    Ok(written)
+}
+
+fn unique_copy(dir: &Path, source: &Path) -> Result<PathBuf, String> {
+    let name = source.file_name().ok_or("imagem ausente")?;
+    let direct = dir.join(name);
+    if direct.as_path() == source {
+        return Ok(direct);
+    }
+    if !direct.exists() {
+        std::fs::copy(source, &direct).map_err(|error| error.to_string())?;
+        return Ok(direct);
+    }
+    let stem = source
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .ok_or("imagem ausente")?;
+    let extension = source
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("png");
+    for index in 2..1_000 {
+        let candidate = dir.join(format!("{stem}_{index}.{extension}"));
+        if !candidate.exists() {
+            std::fs::copy(source, &candidate).map_err(|error| error.to_string())?;
+            return Ok(candidate);
+        }
+    }
+    Err("imagem ausente".to_owned())
 }
 
 fn optimized_copy(
@@ -330,5 +409,43 @@ mod tests {
         );
         let _ = std::fs::remove_dir_all(&root);
         assert_eq!(found, Some(file));
+    }
+
+    #[test]
+    fn o_triposr_usa_a_principal_e_o_multi_vista_usa_a_lista() {
+        let ordered = vec![
+            PathBuf::from("/tmp/frente.png"),
+            PathBuf::from("/tmp/lado.png"),
+        ];
+        let primary = PathBuf::from("/tmp/lado.png");
+        assert_eq!(
+            views_for_model(&[], "triposr", &ordered, &primary),
+            vec![primary.clone()]
+        );
+        assert_eq!(
+            views_for_model(&["instantmesh"], "instantmesh", &ordered, &primary),
+            ordered
+        );
+    }
+
+    #[test]
+    fn as_outras_vistas_vao_para_a_pasta_do_resultado() {
+        let root = std::env::temp_dir().join(format!("voxel-vistas-{}", std::process::id()));
+        let folder = root.join("saida");
+        std::fs::create_dir_all(&folder).expect("pasta");
+        let primary = folder.join("frente.png");
+        let side = root.join("lado.png");
+        std::fs::write(&primary, "frente").expect("frente");
+        std::fs::write(&side, "lado").expect("lado");
+        let copied =
+            copy_references(&folder, &[primary.clone(), side.clone()], &primary).expect("copiar");
+        assert_eq!(copied, vec![folder.join("lado.png").display().to_string()]);
+        assert_eq!(
+            std::fs::read(folder.join("lado.png")).expect("ler"),
+            b"lado"
+        );
+        let again = copy_references(&folder, &[primary.clone(), side], &primary).expect("de novo");
+        assert_eq!(again, vec![folder.join("lado_2.png").display().to_string()]);
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

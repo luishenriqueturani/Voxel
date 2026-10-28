@@ -7,9 +7,19 @@ export type MeshView = {
 };
 
 export type MeshPick = {
+  token: number;
   views: MeshView[];
   primaryPath: string;
 };
+
+export function mergeViews(
+  current: readonly MeshView[],
+  incoming: readonly MeshView[],
+): MeshView[] {
+  const seen = new Set(current.map((view) => view.path));
+  const extra = incoming.filter((view) => view.path !== "" && !seen.has(view.path));
+  return extra.length === 0 ? [...current] : [...current, ...extra];
+}
 
 export function viewName(path: string): string {
   const parts = path.split(/[/\\]/);
@@ -38,9 +48,9 @@ export function moveView<T>(items: readonly T[], index: number, direction: -1 | 
 
 export function pickForPath(views: readonly MeshView[], path: string): MeshPick {
   if (views.some((view) => view.path === path)) {
-    return { views: [...views], primaryPath: path };
+    return { token: 0, views: [...views], primaryPath: path };
   }
-  return { views: [{ path, src: "", seed: null }], primaryPath: path };
+  return { token: 0, views: [{ path, src: "", seed: null }], primaryPath: path };
 }
 
 export function viewSrc(src: string): string | null {

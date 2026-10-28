@@ -177,7 +177,7 @@ describe("PromptPanel", () => {
       throw new Error("painel sem área de soltar");
     }
     fireEvent.drop(panel, { dataTransfer: { getData: () => "/tmp/notas.txt /tmp/gato.png" } });
-    expect(onImageDrop).toHaveBeenCalledWith("/tmp/gato.png");
+    expect(onImageDrop).toHaveBeenCalledWith(["/tmp/gato.png"]);
   });
 
   it("deixa a otimização 3D desligada até ser marcada", async () => {
