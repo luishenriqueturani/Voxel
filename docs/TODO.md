@@ -265,6 +265,22 @@ Com o modelo atual, a reconstrução usa a vista principal. As outras imagens v�
 - [ ] A seleção explica que o modelo atual usa uma vista e guarda as outras
 - [ ] Modelo multi-vista, quando medido nesta máquina, recebe a lista inteira
 
+### Ajustes do uso diário
+
+Uma semana de uso. O Voltar das configurações está no cabeçalho do conteúdo e some quando a página rola; no monitor largo esse canto fica longe da mão, que descansa na esquerda. A lista de recentes troca o prompt em edição no clique e a consulta para em 30. O seletor só lista arquivo reconhecido como imagem. O SHA-256 depois do download lê o arquivo inteiro sem contar o progresso.
+
+- [ ] Botão Voltar fixo no topo do menu de configurações, em todas as categorias e fora da rolagem
+- [ ] Imagem de referência no painel: escolher um arquivo do disco e gerar a partir dele, com a força que a edição já usa
+- [ ] Descrição curta ao passar o mouse ou focar cada opção de edição (Nova, Variar, Pintar, Textura). Variar é a que parte da imagem atual
+- [ ] A coluna da esquerda rola só a lista de prompts recentes; prompt, modelo e Gerar permanecem na tela
+- [ ] Botão no fim da lista para trazer o restante dos prompts, na própria lista
+- [ ] Clique num recente abre um modal com o prompt, o negativo, os parâmetros e as imagens salvas. Repetir aplica no painel. Fechar deixa intacto o texto que está sendo escrito
+- [ ] Barra de status nomeia o backend da geração de imagem: Vulkan, ROCm, CUDA ou CPU
+- [ ] Na tela de modelos, a lista de baixados e a pesquisa rolam cada uma no seu quadro
+- [ ] Progresso da verificação de integridade, em bytes lidos sobre o tamanho do arquivo
+- [ ] Todo modelo instalado aparece no seletor, com arquitetura desconhecida ou não
+- [ ] Sem preset para o arquivo, um modal pergunta a família e os parâmetros antes de gerar. Os modelos já medidos continuam saindo configurados, e o mesmo modal altera esse preset
+
 ---
 
 ## Fase 4 — 1.0, parte 2: fluxos
@@ -309,6 +325,14 @@ Com o modelo atual, a reconstrução usa a vista principal. As outras imagens v�
 - [ ] Filtros por data, modelo, fluxo e tipo (2D/3D)
 - [ ] Comparar variações lado a lado
 
+### O que o SD 1.5 não cobre
+
+Coisas novas. A pasta de modelos vem primeiro: `~/.local/share/voxel/models` está enchendo o disco da home. O título por IA e as famílias além do SD 1.5 dependem de uma medição nesta máquina antes de entrar no app.
+
+- [ ] Escolher a pasta de modelos. O padrão continua o de hoje. A troca pergunta se move os arquivos já baixados. Download e importação usam a pasta escolhida
+- [ ] Título curto no prompt recente, lido por um modelo de texto antes da imagem. Medir primeiro um modelo leve em GGUF nesta máquina. Ollama fica para o caso de essa medição não achar caminho. A imagem não espera um título que falhou
+- [ ] Medir na RX 7600 o que o stable-diffusion.cpp já abre além do SD 1.5: SDXL, Flux quantizado e Qwen Image em INT8, FP16 ou GGUF, dentro dos 8 GB. Ligar as famílias que completam uma imagem. As que não cabem ficam no seletor com o motivo
+
 ---
 
 ## Fase 5 — Polimento da 1.0
@@ -336,6 +360,7 @@ Com o modelo atual, a reconstrução usa a vista principal. As outras imagens v�
 - [ ] Wildcards no prompt (§5.7)
 - [ ] Presets de estilo no painel (§4.5)
 - [ ] LoRAs (§4.5)
+- [ ] Ajuste leve de um modelo que já roda (LoRA), treinado no PyTorch do ambiente 3D e devolvido ao runtime de inferência. Um modelo base do zero não cabe nos 8 GB desta placa. O item de LoRA acima é usar um arquivo pronto
 - [ ] Selo que distingue formato e quantização (safetensors, GGUF, MLX, NVFP4, Q4_K_M e afins), além do tamanho do arquivo (`docs/pesquisa/formatos-de-modelo.md`)
 - [ ] Upscale de imagens (§4.5)
 - [ ] `PKGBUILD` (AUR) ou AppImage nas releases (§12.3)
