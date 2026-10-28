@@ -4,6 +4,7 @@ import { type DragEvent, type ReactNode, useEffect, useRef, useState } from "rea
 import { useTranslation } from "react-i18next";
 import type { EditMode } from "../../lib/edit";
 import { firstImagePath } from "../../lib/mesh";
+import type { MeshOrigin } from "../../lib/meshViews";
 import type { PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
 import { EditControls, editReady } from "./EditControls";
@@ -81,6 +82,9 @@ type PromptPanelProps = {
   onParamsChange: (params: GenerationParams) => void;
   outputMode: OutputMode;
   onOutputModeChange: (mode: OutputMode) => void;
+  meshOrigin?: MeshOrigin;
+  onMeshOriginChange?: (origin: MeshOrigin) => void;
+  hasMeshViews?: boolean;
   generating: boolean;
   locked?: boolean;
   historyRevision?: number;
@@ -126,6 +130,10 @@ function ignoreCancel() {
   return undefined;
 }
 
+function ignoreOrigin(_origin: MeshOrigin) {
+  return undefined;
+}
+
 export function PromptPanel({
   prompt,
   onPromptChange,
@@ -138,6 +146,9 @@ export function PromptPanel({
   onParamsChange,
   outputMode,
   onOutputModeChange,
+  meshOrigin = "text",
+  onMeshOriginChange = ignoreOrigin,
+  hasMeshViews = false,
   generating,
   locked = false,
   historyRevision = 0,
@@ -272,7 +283,37 @@ export function PromptPanel({
           {t("panel.output3d")}
         </label>
       </fieldset>
-      {outputMode === "3d" ? <p className="text-xs text-zinc-500">{t("panel.dropImage")}</p> : null}
+      {outputMode === "3d" ? (
+        <>
+          <fieldset className="flex gap-4 text-sm">
+            <legend className="mb-1 font-medium">{t("panel.origin")}</legend>
+            <label className="flex items-center gap-1.5">
+              <input
+                type="radio"
+                name="mesh-origin"
+                value="text"
+                checked={meshOrigin === "text"}
+                onChange={() => onMeshOriginChange("text")}
+              />
+              {t("panel.originText")}
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input
+                type="radio"
+                name="mesh-origin"
+                value="images"
+                checked={meshOrigin === "images"}
+                onChange={() => onMeshOriginChange("images")}
+              />
+              {t("panel.originImages")}
+            </label>
+          </fieldset>
+          <p className="text-xs text-zinc-500">
+            {meshOrigin === "images" ? t("panel.originImagesHint") : t("panel.originTextHint")}
+          </p>
+          <p className="text-xs text-zinc-500">{t("panel.dropImage")}</p>
+        </>
+      ) : null}
 
       <EditControls
         mode={editMode}
@@ -287,11 +328,21 @@ export function PromptPanel({
 
       <Button
         className="w-full"
-        disabled={!generating && (locked || !editReady(editMode, hasSource, hasMask))}
+        disabled={
+          !generating &&
+          (locked ||
+            (outputMode === "3d" && meshOrigin === "images"
+              ? !hasMeshViews
+              : !editReady(editMode, hasSource, hasMask)))
+        }
         aria-busy={generating || locked}
         onClick={generating ? onCancel : onGenerate}
       >
-        {generating ? t("panel.cancel") : t("panel.generate")}
+        {generating
+          ? t("panel.cancel")
+          : outputMode === "3d" && meshOrigin === "images"
+            ? t("panel.chooseViews")
+            : t("panel.generate")}
       </Button>
 
       <RecentPrompts

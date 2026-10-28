@@ -49,7 +49,13 @@
     "output": "Output",
     "output2d": "2D",
     "output3d": "3D",
-    "dropImage": "Drop an image to generate 3D",
+    "dropImage": "Drop an image to choose the 3D views",
+    "origin": "Source",
+    "originText": "Text",
+    "originImages": "Images",
+    "originTextHint": "Text generates the images. The mesh waits for the selection.",
+    "originImagesHint": "Uses the images already ready. The mesh waits for the selection.",
+    "chooseViews": "Choose views",
     "generate": "Generate",
     "generating": "Generating…",
     "cancel": "Cancel",
@@ -264,6 +270,16 @@
     "polygons_other": "{{count}} polygons",
     "mosaic": "Mosaic",
     "mosaicPreview": "Texture repeated in a 3 by 3 mosaic"
+  },
+  "meshPick": {
+    "title": "Views for 3D",
+    "hint": "Mark the images, arrange them, and choose the main view.",
+    "include": "Use {{name}}",
+    "primary": "Main view of {{name}}",
+    "up": "Move {{name}} up",
+    "down": "Move {{name}} down",
+    "confirm": "Generate mesh",
+    "cancel": "Cancel"
   },
   "gallery": {
     "title": "Gallery",

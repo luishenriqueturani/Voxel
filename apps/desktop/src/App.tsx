@@ -182,6 +182,11 @@ export default function App() {
     request: requestGeneration,
     sendImage,
     meshFiles,
+    meshOrigin,
+    setMeshOrigin,
+    meshPick,
+    confirmMesh,
+    cancelMesh,
   } = useGenerationRequest({
     generatingRef,
     removing,
@@ -204,6 +209,8 @@ export default function App() {
     prepareEnvironment: python.wait,
     noteIntent: python.note,
     setWaitingEnvironment,
+    slides,
+    slideIndex,
   });
   useGenerateShortcut(requestGeneration);
   useMeshDrop(sendImage);
@@ -436,8 +443,14 @@ export default function App() {
               void python.note("panel");
             }
           }}
+          meshOrigin={meshOrigin}
+          onMeshOriginChange={setMeshOrigin}
+          hasMeshViews={slides.length > 0}
+          meshPick={meshPick}
+          onConfirmMesh={confirmMesh}
+          onCancelMesh={cancelMesh}
           generating={generating}
-          locked={removing || waitingEnvironment}
+          locked={removing || waitingEnvironment || meshPick !== null}
           onGenerate={() => requestGeneration()}
           onImageDrop={sendImage}
           meshFiles={meshFiles}

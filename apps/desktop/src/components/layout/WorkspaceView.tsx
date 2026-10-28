@@ -2,14 +2,28 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MeshPaths } from "../../hooks/useGenerationRequest";
 import type { EditMode, EditPayload } from "../../lib/edit";
+import type { MeshOrigin, MeshPick, MeshView } from "../../lib/meshViews";
 import type { GalleryItem, PromptEntry } from "../../native/history";
 import { Button } from "../ui/button";
 import { GalleryView } from "./GalleryView";
 import { ImageViewer } from "./ImageViewer";
 import { MaskEditor } from "./MaskEditor";
+import { MeshViewPicker } from "./MeshViewPicker";
 import { type GenerationParams, type OutputMode, PromptPanel } from "./PromptPanel";
 
 type WorkspaceModel = { id: string; name: string };
+
+function ignoreOrigin(_origin: MeshOrigin) {
+  return undefined;
+}
+
+function ignoreMeshConfirm(_views: MeshView[], _primaryPath: string) {
+  return undefined;
+}
+
+function ignoreMeshCancel() {
+  return undefined;
+}
 
 type WorkspaceViewProps = {
   prompt: string;
@@ -23,6 +37,12 @@ type WorkspaceViewProps = {
   onParamsChange: (params: GenerationParams) => void;
   outputMode: OutputMode;
   onOutputModeChange: (mode: OutputMode) => void;
+  meshOrigin?: MeshOrigin;
+  onMeshOriginChange?: (origin: MeshOrigin) => void;
+  hasMeshViews?: boolean;
+  meshPick?: MeshPick | null;
+  onConfirmMesh?: (views: MeshView[], primaryPath: string) => void;
+  onCancelMesh?: () => void;
   generating: boolean;
   locked: boolean;
   onGenerate: () => void;
@@ -70,6 +90,12 @@ export function WorkspaceView({
   onParamsChange,
   outputMode,
   onOutputModeChange,
+  meshOrigin = "text",
+  onMeshOriginChange = ignoreOrigin,
+  hasMeshViews = false,
+  meshPick = null,
+  onConfirmMesh = ignoreMeshConfirm,
+  onCancelMesh = ignoreMeshCancel,
   generating,
   locked,
   onGenerate,
@@ -157,6 +183,9 @@ export function WorkspaceView({
           onParamsChange={onParamsChange}
           outputMode={outputMode}
           onOutputModeChange={onOutputModeChange}
+          meshOrigin={meshOrigin}
+          onMeshOriginChange={onMeshOriginChange}
+          hasMeshViews={hasMeshViews}
           generating={generating}
           locked={locked}
           historyRevision={historyRevision}
@@ -178,7 +207,7 @@ export function WorkspaceView({
           onImageDrop={onImageDrop}
         />
       </aside>
-      <main aria-label={t("main.label")} className="flex min-h-0 flex-1 flex-col">
+      <main aria-label={t("main.label")} className="relative flex min-h-0 flex-1 flex-col">
         <div className="flex justify-end px-4 pt-3">
           <Button variant="ghost" onClick={() => setShowGallery((open) => !open)}>
             {showGallery ? t("gallery.viewer") : t("gallery.title")}
@@ -231,6 +260,15 @@ export function WorkspaceView({
             />
           )}
         </div>
+        {meshPick !== null ? (
+          <MeshViewPicker
+            key={`${meshPick.primaryPath}:${meshPick.views.map((view) => view.path).join("|")}`}
+            views={meshPick.views}
+            primaryPath={meshPick.primaryPath}
+            onConfirm={onConfirmMesh}
+            onCancel={onCancelMesh}
+          />
+        ) : null}
       </main>
     </div>
   );

@@ -241,6 +241,30 @@ Os modelos medidos do catálogo ficam no topo, como recomendados. O restante é 
 - [x] Export FBX
 - [x] Preservar o arquivo original e salvar o otimizado ao lado
 
+### Entrada do 3D
+
+Hoje o modo 3D encadeia texto, uma imagem e a malha. "Enviar para 3D" manda a imagem da vez sem perguntar. O TripoSR e o Stable Fast 3D, modelos medidos, recebem uma vista. O InstantMesh fundiria vários ângulos, mas não rodou nesta máquina: o ponto de entrada pede um rasterizador da NVIDIA (`docs/pesquisa/3d-modelos.md`).
+
+A geração 3D passa a ter duas origens.
+
+- **Texto.** Gera a quantidade de imagens pedida e para. A malha não começa sozinha.
+- **Imagens.** Aceita mais de uma vista: as recém-geradas, as arrastadas e as abertas do disco.
+
+Os dois caminhos abrem a mesma seleção antes da malha. Dá para marcar o que entra, reordenar e indicar a vista principal. Cancelar volta às imagens e não gera malha. "Enviar para 3D", depois de uma geração 2D, abre essa seleção.
+
+Com o modelo atual, a reconstrução usa a vista principal. As outras imagens vão para a pasta do resultado, junto da malha, e a seleção deixa isso explícito. Quando um modelo multi-vista for medido nesta máquina, a mesma lista vira a entrada dele.
+
+- [x] Duas origens no modo 3D: texto ou imagens
+- [x] Texto gera as imagens pedidas e abre a seleção; a malha espera a confirmação
+- [x] "Enviar para 3D" abre a mesma seleção em vez de iniciar a malha
+- [x] Seleção com uma ou várias imagens, ordem ajustável e uma vista principal
+- [ ] Incluir imagens do disco, arrastadas e as da geração atual
+- [x] Cancelar a seleção não gera malha
+- [ ] O pedido de malha aceita a lista; o TripoSR reconstrói a vista principal
+- [ ] As demais vistas são copiadas para a pasta do resultado
+- [ ] A seleção explica que o modelo atual usa uma vista e guarda as outras
+- [ ] Modelo multi-vista, quando medido nesta máquina, recebe a lista inteira
+
 ---
 
 ## Fase 4 — 1.0, parte 2: fluxos

@@ -167,8 +167,12 @@ describe("PromptPanel", () => {
         onImageDrop={onImageDrop}
       />,
     );
-    expect(screen.getByText("Arraste uma imagem para gerar o 3D")).toBeInTheDocument();
-    const panel = screen.getByText("Arraste uma imagem para gerar o 3D").parentElement;
+    expect(
+      screen.getByText("Arraste uma imagem para escolher as vistas do 3D"),
+    ).toBeInTheDocument();
+    const panel = screen.getByText(
+      "Arraste uma imagem para escolher as vistas do 3D",
+    ).parentElement;
     if (panel === null) {
       throw new Error("painel sem área de soltar");
     }
@@ -212,5 +216,42 @@ describe("PromptPanel", () => {
     expect(onParamsChange).toHaveBeenCalledWith(
       expect.objectContaining({ optimizeMesh: true, targetTriangles: 10_000, textureSize: 1024 }),
     );
+  });
+
+  it("separa texto e imagens no modo 3D", async () => {
+    const user = userEvent.setup();
+    const onMeshOriginChange = vi.fn();
+    const props = {
+      prompt: "",
+      onPromptChange: vi.fn(),
+      negativePrompt: "",
+      onNegativePromptChange: vi.fn(),
+      models: [],
+      modelId: "",
+      onModelChange: vi.fn(),
+      params,
+      onParamsChange: vi.fn(),
+      onOutputModeChange: vi.fn(),
+      generating: false,
+      onGenerate: vi.fn(),
+      onMeshOriginChange,
+    };
+    const { rerender } = render(<PromptPanel {...props} outputMode="2d" />);
+    expect(screen.queryByRole("radio", { name: "Texto" })).not.toBeInTheDocument();
+
+    rerender(<PromptPanel {...props} outputMode="3d" meshOrigin="text" />);
+    expect(screen.getByRole("radio", { name: "Texto" })).toBeChecked();
+    expect(
+      screen.getByText("O texto gera as imagens. A malha espera a seleção."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gerar" })).toBeEnabled();
+    await user.click(screen.getByRole("radio", { name: "Imagens" }));
+    expect(onMeshOriginChange).toHaveBeenCalledWith("images");
+
+    rerender(<PromptPanel {...props} outputMode="3d" meshOrigin="images" />);
+    expect(screen.getByRole("button", { name: "Escolher vistas" })).toBeDisabled();
+
+    rerender(<PromptPanel {...props} outputMode="3d" meshOrigin="images" hasMeshViews />);
+    expect(screen.getByRole("button", { name: "Escolher vistas" })).toBeEnabled();
   });
 });

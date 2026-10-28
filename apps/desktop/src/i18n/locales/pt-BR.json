@@ -49,7 +49,13 @@
     "output": "Saída",
     "output2d": "2D",
     "output3d": "3D",
-    "dropImage": "Arraste uma imagem para gerar o 3D",
+    "dropImage": "Arraste uma imagem para escolher as vistas do 3D",
+    "origin": "Origem",
+    "originText": "Texto",
+    "originImages": "Imagens",
+    "originTextHint": "O texto gera as imagens. A malha espera a seleção.",
+    "originImagesHint": "Usa as imagens já prontas. A malha espera a seleção.",
+    "chooseViews": "Escolher vistas",
     "generate": "Gerar",
     "generating": "Gerando…",
     "cancel": "Cancelar",
@@ -264,6 +270,16 @@
     "polygons_other": "{{count}} polígonos",
     "mosaic": "Mosaico",
     "mosaicPreview": "Textura repetida em mosaico 3 por 3"
+  },
+  "meshPick": {
+    "title": "Vistas para o 3D",
+    "hint": "Marque as imagens, ordene e escolha a vista principal.",
+    "include": "Usar {{name}}",
+    "primary": "Vista principal de {{name}}",
+    "up": "Subir {{name}}",
+    "down": "Descer {{name}}",
+    "confirm": "Gerar malha",
+    "cancel": "Cancelar"
   },
   "gallery": {
     "title": "Galeria",
