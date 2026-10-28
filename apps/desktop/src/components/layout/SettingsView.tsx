@@ -72,27 +72,29 @@ export function SettingsView({
     <div className="flex min-h-0 flex-1 overflow-hidden">
       <nav
         aria-label={t("settings.title")}
-        className="flex w-56 shrink-0 flex-col gap-1 border-r border-zinc-200 p-3 dark:border-zinc-800"
+        className="flex w-56 shrink-0 flex-col border-r border-zinc-200 dark:border-zinc-800"
       >
-        {SETTING_SECTIONS.map((item) => (
-          <button
-            key={item}
-            type="button"
-            aria-current={item === section ? "page" : undefined}
-            onClick={() => onSectionChange(item)}
-            className="rounded-md px-2 py-1.5 text-left text-sm hover:bg-zinc-200 aria-[current=page]:bg-zinc-200 dark:hover:bg-zinc-800 dark:aria-[current=page]:bg-zinc-800"
-          >
-            {t(`settings.sections.${item}`)}
-          </button>
-        ))}
-      </nav>
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold">{t("settings.title")}</h1>
-          <Button variant="ghost" onClick={onBack}>
+        <div className="shrink-0 border-b border-zinc-200 p-3 dark:border-zinc-800">
+          <Button variant="ghost" className="w-full justify-start" onClick={onBack}>
             {t("settings.back")}
           </Button>
         </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
+          {SETTING_SECTIONS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-current={item === section ? "page" : undefined}
+              onClick={() => onSectionChange(item)}
+              className="rounded-md px-2 py-1.5 text-left text-sm hover:bg-zinc-200 aria-[current=page]:bg-zinc-200 dark:hover:bg-zinc-800 dark:aria-[current=page]:bg-zinc-800"
+            >
+              {t(`settings.sections.${item}`)}
+            </button>
+          ))}
+        </div>
+      </nav>
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+        <h1 className="text-lg font-semibold">{t("settings.title")}</h1>
         <h2 className="text-base font-medium">{t(`settings.sections.${section}`)}</h2>
         {section === "general" ? (
           <div className="flex max-w-sm flex-col gap-4 text-sm">

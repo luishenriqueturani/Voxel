@@ -10,6 +10,15 @@ describe("progressFrom", () => {
     });
   });
 
+  it("repassa a fase da verificação", () => {
+    expect(progressFrom({ modelId: "sd15", received: 20, total: 80, phase: "verify" })).toEqual({
+      modelId: "sd15",
+      received: 20,
+      total: 80,
+      phase: "verify",
+    });
+  });
+
   it("ignora um evento incompleto", () => {
     expect(progressFrom({ modelId: "sd15" })).toBeNull();
     expect(progressFrom(null)).toBeNull();

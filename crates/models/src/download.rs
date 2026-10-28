@@ -8,6 +8,13 @@ use sha2::{Digest, Sha256};
 
 use crate::catalog::{Model, ModelError};
 
+/// Fase do arquivo: a transferência e, depois, a leitura do SHA-256.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Transfer {
+    Download,
+    Verify,
+}
+
 /// Pedido já autorizado. O token não aparece na depuração.
 #[derive(Clone, PartialEq, Eq)]
 pub struct DownloadJob {
@@ -62,10 +69,14 @@ pub fn prepare_download(model: &Model, token: Option<&str>) -> Result<DownloadJo
 pub fn fetch(
     job: &DownloadJob,
     destination: &Path,
-    mut on_progress: impl FnMut(u64, u64),
+    mut on_progress: impl FnMut(Transfer, u64, u64),
 ) -> Result<(), ModelError> {
-    if satisfied(destination, job)? {
-        on_progress(job.bytes, job.bytes);
+    if satisfied(destination, job, |read, total| {
+        on_progress(Transfer::Verify, read, total);
+    })? {
+        if job.sha256.is_empty() {
+            on_progress(Transfer::Download, job.bytes, job.bytes);
+        }
         return Ok(());
     }
     if let Some(parent) = destination.parent() {
@@ -76,9 +87,15 @@ pub fn fetch(
     if offset > job.bytes {
         offset = 0;
     }
-    if offset == job.bytes && satisfied(&partial, job)? {
+    if offset == job.bytes
+        && satisfied(&partial, job, |read, total| {
+            on_progress(Transfer::Verify, read, total);
+        })?
+    {
         finish(destination, &partial)?;
-        on_progress(job.bytes, job.bytes);
+        if job.sha256.is_empty() {
+            on_progress(Transfer::Download, job.bytes, job.bytes);
+        }
         return Ok(());
     }
     if offset == job.bytes {
@@ -119,7 +136,7 @@ pub fn fetch(
         file.seek(SeekFrom::Start(0))?;
         0
     };
-    on_progress(received, job.bytes);
+    on_progress(Transfer::Download, received, job.bytes);
     let mut buffer = [0_u8; 8 * 1024];
     loop {
         let read = response.read(&mut buffer)?;
@@ -128,7 +145,7 @@ pub fn fetch(
         }
         file.write_all(&buffer[..read])?;
         received += u64::try_from(read).unwrap_or(0);
-        on_progress(received, job.bytes);
+        on_progress(Transfer::Download, received, job.bytes);
     }
     file.sync_all()?;
     drop(file);
@@ -139,7 +156,11 @@ pub fn fetch(
             expected: job.bytes,
         });
     }
-    if !job.sha256.is_empty() && sha256_file(&partial)? != job.sha256 {
+    if !job.sha256.is_empty()
+        && sha256_file(&partial, |read, total| {
+            on_progress(Transfer::Verify, read, total);
+        })? != job.sha256
+    {
         let _ = std::fs::remove_file(&partial);
         return Err(ModelError::HashMismatch);
     }
@@ -147,14 +168,18 @@ pub fn fetch(
     Ok(())
 }
 
-fn satisfied(path: &Path, job: &DownloadJob) -> Result<bool, ModelError> {
+fn satisfied(
+    path: &Path,
+    job: &DownloadJob,
+    on_progress: impl FnMut(u64, u64),
+) -> Result<bool, ModelError> {
     if !path.is_file() {
         return Ok(false);
     }
     if job.sha256.is_empty() {
         return Ok(std::fs::metadata(path)?.len() == job.bytes);
     }
-    Ok(sha256_file(path)? == job.sha256)
+    Ok(sha256_file(path, on_progress)? == job.sha256)
 }
 
 fn finish(destination: &Path, partial: &Path) -> Result<(), ModelError> {
@@ -171,16 +196,28 @@ fn partial_path(destination: &Path) -> std::path::PathBuf {
     std::path::PathBuf::from(name)
 }
 
-fn sha256_file(path: &Path) -> Result<String, ModelError> {
+fn sha256_file(path: &Path, mut on_progress: impl FnMut(u64, u64)) -> Result<String, ModelError> {
     let mut file = std::fs::File::open(path)?;
+    let total = file.metadata()?.len();
     let mut hasher = Sha256::new();
     let mut buffer = [0_u8; 8 * 1024];
+    let mut read_bytes = 0_u64;
+    let mut reported = 0_u64;
+    on_progress(0, total);
     loop {
         let read = file.read(&mut buffer)?;
         if read == 0 {
             break;
         }
         hasher.update(&buffer[..read]);
+        read_bytes += u64::try_from(read).unwrap_or(0);
+        if read_bytes == total || read_bytes.saturating_sub(reported) >= 1024 * 1024 {
+            on_progress(read_bytes, total);
+            reported = read_bytes;
+        }
+    }
+    if read_bytes != reported {
+        on_progress(read_bytes, total);
     }
     Ok(hex(&hasher.finalize()))
 }
@@ -310,15 +347,18 @@ mod tests {
             authorization: Some("Bearer hf_teste".to_owned()),
         };
         let mut steps = Vec::new();
-        fetch(&job, &destination, |received, total| {
-            steps.push((received, total));
+        fetch(&job, &destination, |phase, received, total| {
+            steps.push((phase, received, total));
         })
         .unwrap();
         assert_eq!(std::fs::read(&destination).unwrap(), body);
         assert!(!partial_for(&destination).exists());
+        let length = body.len() as u64;
+        assert!(steps.contains(&(super::Transfer::Download, length, length)));
+        assert!(steps.contains(&(super::Transfer::Verify, 0, length)));
         assert_eq!(
             *steps.last().unwrap(),
-            (body.len() as u64, body.len() as u64)
+            (super::Transfer::Verify, length, length)
         );
         let headers = seen.lock().unwrap();
         let header = headers[0].to_ascii_lowercase();
@@ -347,7 +387,7 @@ mod tests {
             sha256: "ab".repeat(32),
             authorization: None,
         };
-        let error = fetch(&job, &destination, |_, _| {}).unwrap_err();
+        let error = fetch(&job, &destination, |_, _, _| {}).unwrap_err();
         assert!(matches!(error, ModelError::HashMismatch));
         assert!(!destination.exists());
         assert!(!partial_for(&destination).exists());
@@ -373,7 +413,7 @@ mod tests {
             sha256: String::new(),
             authorization: None,
         };
-        fetch(&job, &destination, |_, _| {}).unwrap();
+        fetch(&job, &destination, |_, _, _| {}).unwrap();
         assert_eq!(std::fs::read(&destination).unwrap(), body);
         let _ = std::fs::remove_dir_all(&dir);
     }

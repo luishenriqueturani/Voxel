@@ -89,40 +89,42 @@ export function HubSearch({
           {searching ? t("models.searching") : t("models.search")}
         </Button>
       </form>
-      {searched && files.length === 0 && !failure ? (
-        <p className="text-zinc-500">{t("models.searchEmpty")}</p>
-      ) : null}
       <HubStatus files={files} progress={progress} failure={failure} />
-      <ul className="flex flex-col gap-3">
-        {files.map((file) => {
-          const id = hubId(file);
-          const blocked = file.gated && !hfTokenConfigured;
-          return (
-            <li key={id} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium">{file.filename}</p>
-                  <p className="text-zinc-500">{file.repo}</p>
-                  <p className="text-zinc-500">{formatBytes(file.bytes)}</p>
-                  <p className="text-zinc-500">{file.license || t("models.licenseUnknown")}</p>
-                  <p>{t("models.unmeasured")}</p>
-                  {blocked ? <p>{t("models.gatedToken")}</p> : null}
+      <div className="max-h-72 overflow-y-auto rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
+        {searched && files.length === 0 && !failure ? (
+          <p className="text-zinc-500">{t("models.searchEmpty")}</p>
+        ) : null}
+        <ul className="flex flex-col gap-3">
+          {files.map((file) => {
+            const id = hubId(file);
+            const blocked = file.gated && !hfTokenConfigured;
+            return (
+              <li key={id} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{file.filename}</p>
+                    <p className="text-zinc-500">{file.repo}</p>
+                    <p className="text-zinc-500">{formatBytes(file.bytes)}</p>
+                    <p className="text-zinc-500">{file.license || t("models.licenseUnknown")}</p>
+                    <p>{t("models.unmeasured")}</p>
+                    {blocked ? <p>{t("models.gatedToken")}</p> : null}
+                  </div>
+                  {progress?.modelId === id ? null : (
+                    <Button
+                      aria-label={`${t("models.download")} ${file.filename}`}
+                      disabled={progress !== null || blocked}
+                      onClick={() => setPending(file)}
+                    >
+                      {t("models.download")}
+                    </Button>
+                  )}
                 </div>
-                {progress?.modelId === id ? null : (
-                  <Button
-                    aria-label={`${t("models.download")} ${file.filename}`}
-                    disabled={progress !== null || blocked}
-                    onClick={() => setPending(file)}
-                  >
-                    {t("models.download")}
-                  </Button>
-                )}
-              </div>
-              {progress?.modelId === id ? <DownloadBar progress={progress} /> : null}
-            </li>
-          );
-        })}
-      </ul>
+                {progress?.modelId === id ? <DownloadBar progress={progress} /> : null}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
       {pending ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <button
@@ -189,7 +191,8 @@ function DownloadBar({ progress }: { progress: DownloadProgress }) {
   const { t } = useTranslation();
   const percent =
     progress.total <= 0 ? 0 : Math.min(100, Math.round((progress.received / progress.total) * 100));
-  const verifying = progress.total > 0 && progress.received >= progress.total;
+  const hashing = progress.phase === "verify" && progress.total > 0;
+  const verifying = !hashing && progress.total > 0 && progress.received >= progress.total;
   return (
     <div className="mt-2">
       <div
@@ -203,14 +206,19 @@ function DownloadBar({ progress }: { progress: DownloadProgress }) {
         <div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${percent}%` }} />
       </div>
       <p className="mt-1 text-zinc-500">
-        {verifying
-          ? t("models.verifying")
-          : progress.total <= 0
-            ? t("models.downloading")
-            : t("models.progress", {
-                received: formatBytes(progress.received),
-                total: formatBytes(progress.total),
-              })}
+        {hashing
+          ? t("models.verifyingProgress", {
+              received: formatBytes(progress.received),
+              total: formatBytes(progress.total),
+            })
+          : verifying
+            ? t("models.verifying")
+            : progress.total <= 0
+              ? t("models.downloading")
+              : t("models.progress", {
+                  received: formatBytes(progress.received),
+                  total: formatBytes(progress.total),
+                })}
       </p>
     </div>
   );

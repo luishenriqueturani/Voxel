@@ -93,6 +93,20 @@ export async function loadRecentPrompts(): Promise<PromptEntry[]> {
   return promptsFrom(await invoke("list_recent_prompts"));
 }
 
+export async function hasOlderPrompts(): Promise<boolean> {
+  if (!isTauri()) {
+    return false;
+  }
+  return (await invoke("has_older_prompts")) === true;
+}
+
+export async function loadOlderPrompts(): Promise<PromptEntry[]> {
+  if (!isTauri()) {
+    return [];
+  }
+  return promptsFrom(await invoke("list_older_prompts"));
+}
+
 export async function setPromptFavorite(entry: PromptEntry, pinned: boolean): Promise<void> {
   if (!isTauri()) {
     return;

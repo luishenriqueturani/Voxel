@@ -98,7 +98,11 @@ type PromptPanelProps = {
   onInstructionChange?: (value: string) => void;
   hasSource?: boolean;
   hasMask?: boolean;
+  referencePath?: string | null;
+  onPickReference?: () => void;
+  onClearReference?: () => void;
   onGenerate: () => void;
+  onEditPreset?: () => void;
   onCancel?: () => void;
   onImageDrop?: (paths: string[]) => void;
 };
@@ -127,6 +131,14 @@ function ignoreInstruction(_value: string) {
 }
 
 function ignoreCancel() {
+  return undefined;
+}
+
+function ignorePreset() {
+  return undefined;
+}
+
+function ignoreReference() {
   return undefined;
 }
 
@@ -162,7 +174,11 @@ export function PromptPanel({
   onInstructionChange = ignoreInstruction,
   hasSource = false,
   hasMask = false,
+  referencePath = null,
+  onPickReference = ignoreReference,
+  onClearReference = ignoreReference,
   onGenerate,
+  onEditPreset = ignorePreset,
   onCancel = ignoreCancel,
   onImageDrop,
 }: PromptPanelProps) {
@@ -187,7 +203,7 @@ export function PromptPanel({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: soltar arquivo não é um controle clicável
     <div
-      className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3"
+      className="flex min-h-0 flex-1 flex-col gap-3 p-3"
       onDragOver={(event) => {
         if (onImageDrop) {
           event.preventDefault();
@@ -195,154 +211,168 @@ export function PromptPanel({
       }}
       onDrop={dropImage}
     >
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        {t("panel.prompt")}
-        <textarea
-          id="prompt"
-          ref={promptRef}
-          value={prompt}
-          onChange={(event) => onPromptChange(event.target.value)}
-          className={`${fieldClass} min-h-28 resize-y`}
-        />
-      </label>
-
-      <details className="text-sm">
-        <summary className="cursor-pointer font-medium">{t("panel.negative")}</summary>
-        <textarea
-          aria-label={t("panel.negative")}
-          value={negativePrompt}
-          onChange={(event) => onNegativePromptChange(event.target.value)}
-          className={`${fieldClass} mt-1 min-h-16 resize-y`}
-        />
-      </details>
-
-      <div className="flex items-end gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium">
-          {t("panel.model")}
-          <select
-            disabled={models.length === 0}
-            aria-label={t("panel.model")}
-            className={fieldClass}
-            value={models.some((model) => model.id === modelId) ? modelId : ""}
-            onChange={(event) => onModelChange(event.target.value)}
-          >
-            {models.length === 0 ? (
-              <option value="">{t("panel.noModel")}</option>
-            ) : (
-              models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))
-            )}
-          </select>
+      <div className="flex shrink-0 flex-col gap-3">
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          {t("panel.prompt")}
+          <textarea
+            id="prompt"
+            ref={promptRef}
+            value={prompt}
+            onChange={(event) => onPromptChange(event.target.value)}
+            className={`${fieldClass} min-h-28 resize-y`}
+          />
         </label>
-        <Popover.Root>
-          <Popover.Trigger asChild>
-            <Button variant="ghost" aria-label={t("panel.modelSettings")} className="px-2">
-              <Settings aria-hidden="true" size={18} />
-            </Button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              side="right"
-              align="start"
-              sideOffset={8}
-              className="z-10 w-64 rounded-md border border-zinc-300 bg-white p-3 shadow-md dark:border-zinc-700 dark:bg-zinc-900"
+
+        <details className="text-sm">
+          <summary className="cursor-pointer font-medium">{t("panel.negative")}</summary>
+          <textarea
+            aria-label={t("panel.negative")}
+            value={negativePrompt}
+            onChange={(event) => onNegativePromptChange(event.target.value)}
+            className={`${fieldClass} mt-1 min-h-16 resize-y`}
+          />
+        </details>
+
+        <div className="flex items-end gap-2">
+          <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium">
+            {t("panel.model")}
+            <select
+              disabled={models.length === 0}
+              aria-label={t("panel.model")}
+              className={fieldClass}
+              value={models.some((model) => model.id === modelId) ? modelId : ""}
+              onChange={(event) => onModelChange(event.target.value)}
             >
-              <ModelSettings params={params} onChange={onParamsChange} />
-              {outputMode === "3d" ? (
-                <MeshOptimizeFields params={params} onChange={onParamsChange} />
-              ) : null}
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
+              {models.length === 0 ? (
+                <option value="">{t("panel.noModel")}</option>
+              ) : (
+                models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <Button
+            variant="ghost"
+            className="px-2"
+            aria-label={t("panel.preset")}
+            disabled={models.length === 0}
+            onClick={onEditPreset}
+          >
+            {t("panel.preset")}
+          </Button>
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <Button variant="ghost" aria-label={t("panel.modelSettings")} className="px-2">
+                <Settings aria-hidden="true" size={18} />
+              </Button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                side="right"
+                align="start"
+                sideOffset={8}
+                className="z-10 w-64 rounded-md border border-zinc-300 bg-white p-3 shadow-md dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                <ModelSettings params={params} onChange={onParamsChange} />
+                {outputMode === "3d" ? (
+                  <MeshOptimizeFields params={params} onChange={onParamsChange} />
+                ) : null}
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        </div>
+
+        <fieldset className="flex gap-4 text-sm">
+          <legend className="mb-1 font-medium">{t("panel.output")}</legend>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name="output"
+              value="2d"
+              checked={outputMode === "2d"}
+              onChange={() => onOutputModeChange("2d")}
+            />
+            {t("panel.output2d")}
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name="output"
+              value="3d"
+              checked={outputMode === "3d"}
+              onChange={() => onOutputModeChange("3d")}
+            />
+            {t("panel.output3d")}
+          </label>
+        </fieldset>
+        {outputMode === "3d" ? (
+          <>
+            <fieldset className="flex gap-4 text-sm">
+              <legend className="mb-1 font-medium">{t("panel.origin")}</legend>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="mesh-origin"
+                  value="text"
+                  checked={meshOrigin === "text"}
+                  onChange={() => onMeshOriginChange("text")}
+                />
+                {t("panel.originText")}
+              </label>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="mesh-origin"
+                  value="images"
+                  checked={meshOrigin === "images"}
+                  onChange={() => onMeshOriginChange("images")}
+                />
+                {t("panel.originImages")}
+              </label>
+            </fieldset>
+            <p className="text-xs text-zinc-500">
+              {meshOrigin === "images" ? t("panel.originImagesHint") : t("panel.originTextHint")}
+            </p>
+            <p className="text-xs text-zinc-500">{t("panel.dropImage")}</p>
+          </>
+        ) : null}
+
+        <EditControls
+          mode={editMode}
+          onModeChange={onEditModeChange}
+          strength={strength}
+          onStrengthChange={onStrengthChange}
+          instruction={instruction}
+          onInstructionChange={onInstructionChange}
+          hasSource={hasSource}
+          hasMask={hasMask}
+          referencePath={referencePath}
+          onPickReference={onPickReference}
+          onClearReference={onClearReference}
+        />
+
+        <Button
+          className="w-full"
+          disabled={
+            !generating &&
+            (locked ||
+              (outputMode === "3d" && meshOrigin === "images"
+                ? !hasMeshViews
+                : !editReady(editMode, hasSource, hasMask, referencePath !== null)))
+          }
+          aria-busy={generating || locked}
+          onClick={generating ? onCancel : onGenerate}
+        >
+          {generating
+            ? t("panel.cancel")
+            : outputMode === "3d" && meshOrigin === "images"
+              ? t("panel.chooseViews")
+              : t("panel.generate")}
+        </Button>
       </div>
-
-      <fieldset className="flex gap-4 text-sm">
-        <legend className="mb-1 font-medium">{t("panel.output")}</legend>
-        <label className="flex items-center gap-1.5">
-          <input
-            type="radio"
-            name="output"
-            value="2d"
-            checked={outputMode === "2d"}
-            onChange={() => onOutputModeChange("2d")}
-          />
-          {t("panel.output2d")}
-        </label>
-        <label className="flex items-center gap-1.5">
-          <input
-            type="radio"
-            name="output"
-            value="3d"
-            checked={outputMode === "3d"}
-            onChange={() => onOutputModeChange("3d")}
-          />
-          {t("panel.output3d")}
-        </label>
-      </fieldset>
-      {outputMode === "3d" ? (
-        <>
-          <fieldset className="flex gap-4 text-sm">
-            <legend className="mb-1 font-medium">{t("panel.origin")}</legend>
-            <label className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                name="mesh-origin"
-                value="text"
-                checked={meshOrigin === "text"}
-                onChange={() => onMeshOriginChange("text")}
-              />
-              {t("panel.originText")}
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                name="mesh-origin"
-                value="images"
-                checked={meshOrigin === "images"}
-                onChange={() => onMeshOriginChange("images")}
-              />
-              {t("panel.originImages")}
-            </label>
-          </fieldset>
-          <p className="text-xs text-zinc-500">
-            {meshOrigin === "images" ? t("panel.originImagesHint") : t("panel.originTextHint")}
-          </p>
-          <p className="text-xs text-zinc-500">{t("panel.dropImage")}</p>
-        </>
-      ) : null}
-
-      <EditControls
-        mode={editMode}
-        onModeChange={onEditModeChange}
-        strength={strength}
-        onStrengthChange={onStrengthChange}
-        instruction={instruction}
-        onInstructionChange={onInstructionChange}
-        hasSource={hasSource}
-        hasMask={hasMask}
-      />
-
-      <Button
-        className="w-full"
-        disabled={
-          !generating &&
-          (locked ||
-            (outputMode === "3d" && meshOrigin === "images"
-              ? !hasMeshViews
-              : !editReady(editMode, hasSource, hasMask)))
-        }
-        aria-busy={generating || locked}
-        onClick={generating ? onCancel : onGenerate}
-      >
-        {generating
-          ? t("panel.cancel")
-          : outputMode === "3d" && meshOrigin === "images"
-            ? t("panel.chooseViews")
-            : t("panel.generate")}
-      </Button>
 
       <RecentPrompts
         key={historyRevision}

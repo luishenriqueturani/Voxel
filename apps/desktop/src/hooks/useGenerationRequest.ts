@@ -16,6 +16,7 @@ import {
   meshViewsOf,
   pickForPath,
 } from "../lib/meshViews";
+import { paramsForRun } from "../lib/modelPreset";
 import { type GalleryImage, generateImage, imageSrc, isCancelled } from "../native/generation";
 import { meshFromImage, meshOptimize } from "../native/mesh";
 import type { PythonIntent } from "../native/pythonEnv";
@@ -213,6 +214,10 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
         return;
       }
       if (outputMode === "3d") {
+        const runParams = paramsForRun(params, modelId);
+        if (runParams === null) {
+          return;
+        }
         generatingRef.current = true;
         setWaitingEnvironment(true);
         setMeshFiles(null);
@@ -226,7 +231,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
             setFrame(null);
             const seed = chosenSeed(params.seed, seedOverride);
             const image = await generateImage(
-              generationRequest(prompt, negativePrompt, modelId, params, seed, blankEdit),
+              generationRequest(prompt, negativePrompt, modelId, runParams, seed, blankEdit),
               (progress) => {
                 setFrame((current) => ({
                   step: progress.step,
@@ -263,6 +268,10 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
       if (!canStartEdit(edit)) {
         return;
       }
+      const runParams = paramsForRun(params, modelId);
+      if (runParams === null) {
+        return;
+      }
       const editing = edit.mode === "vary" || edit.mode === "inpaint";
       holdEdit();
       generatingRef.current = true;
@@ -275,7 +284,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
       setFrame(null);
       const seed = chosenSeed(params.seed, seedOverride);
       void generateImage(
-        generationRequest(prompt, negativePrompt, modelId, params, seed, edit),
+        generationRequest(prompt, negativePrompt, modelId, runParams, seed, edit),
         (progress) => {
           setFrame((current) => ({
             step: progress.step,

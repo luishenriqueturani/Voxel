@@ -16,6 +16,7 @@ import { useMeshDrop } from "./hooks/useMeshDrop";
 import { useModelDownload } from "./hooks/useModelDownload";
 import { usePythonEnvironment } from "./hooks/usePythonEnvironment";
 import { blankEdit } from "./lib/edit";
+import { selectableModels } from "./lib/modelChoice";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
 import { mergeStep, prefersDark, SUMMARY_KEYS } from "./lib/shell";
 import { loadImageBackend, restoreImageBackend, saveImageBackend } from "./native/backend";
@@ -379,9 +380,7 @@ export default function App() {
     setView("settings");
   }
 
-  const imageModels = library
-    .filter((model) => model.installed && model.kind === "image")
-    .map((model) => ({ id: model.id, name: model.name }));
+  const imageModels = selectableModels(library, t("panel.unknownArchitecture"));
   const selected = slides[slideIndex] ?? null;
   const shown = generating && frame?.preview ? imageSrc(frame.preview) : (selected?.src ?? null);
   useAppMenu({

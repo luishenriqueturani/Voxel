@@ -81,16 +81,18 @@ export function ModelsSection({
         </div>
         <section className="flex flex-col gap-3">
           <h3 className="font-medium">{t("models.downloaded")}</h3>
-          {downloaded.length === 0 ? (
-            <p className="text-zinc-500">{t("models.downloadedEmpty")}</p>
-          ) : (
-            <ModelList
-              models={downloaded}
-              progress={progress}
-              onDownload={setPending}
-              onRemove={onRemove}
-            />
-          )}
+          <div className="max-h-72 overflow-y-auto rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
+            {downloaded.length === 0 ? (
+              <p className="text-zinc-500">{t("models.downloadedEmpty")}</p>
+            ) : (
+              <ModelList
+                models={downloaded}
+                progress={progress}
+                onDownload={setPending}
+                onRemove={onRemove}
+              />
+            )}
+          </div>
         </section>
         <label className="flex items-center gap-2">
           <input
@@ -193,15 +195,21 @@ function ModelList({
 function DownloadBar({ progress }: { progress: DownloadProgress }) {
   const { t } = useTranslation();
   const percent = percentOf(progress);
-  const verifying = progress.total > 0 && progress.received >= progress.total;
-  const label = verifying
-    ? t("models.verifying")
-    : progress.total <= 0
-      ? t("models.downloading")
-      : t("models.progress", {
-          received: formatBytes(progress.received),
-          total: formatBytes(progress.total),
-        });
+  const hashing = progress.phase === "verify" && progress.total > 0;
+  const verifying = !hashing && progress.total > 0 && progress.received >= progress.total;
+  const label = hashing
+    ? t("models.verifyingProgress", {
+        received: formatBytes(progress.received),
+        total: formatBytes(progress.total),
+      })
+    : verifying
+      ? t("models.verifying")
+      : progress.total <= 0
+        ? t("models.downloading")
+        : t("models.progress", {
+            received: formatBytes(progress.received),
+            total: formatBytes(progress.total),
+          });
   return (
     <div className="mt-2">
       <div

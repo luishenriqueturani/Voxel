@@ -43,6 +43,40 @@ pub async fn list_recent_prompts(
     .map_err(|error| error.to_string())?
 }
 
+/// Diz se a primeira página deixou prompts de fora.
+///
+/// # Errors
+///
+/// Falha se o banco não puder ser lido.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub async fn has_older_prompts(database: State<'_, Database>) -> Result<bool, String> {
+    let database = database.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        database
+            .has_older_prompts()
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+/// O restante dos prompts, depois da primeira página.
+///
+/// # Errors
+///
+/// Falha se o banco não puder ser lido.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub async fn list_older_prompts(database: State<'_, Database>) -> Result<Vec<PromptEntry>, String> {
+    let database = database.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        database.older_prompts().map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
 /// Fixa ou solta um prompt da lista.
 ///
 /// # Errors

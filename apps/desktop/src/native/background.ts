@@ -1,6 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+import { imagePaths } from "../lib/mesh";
 import { imageSrc } from "./generation";
 
 export const EDIT_EVENT = "edit://image";
@@ -65,6 +66,22 @@ export function openImageForEdit(title: string): Promise<EditedImage | null> {
       return null;
     }
     return editedImage("open_edit_image", { path: selected });
+  });
+}
+
+export function pickReferenceImage(title: string): Promise<string | null> {
+  if (!isTauri()) {
+    return Promise.resolve(null);
+  }
+  return open({
+    title,
+    multiple: false,
+    filters: [{ name: "Imagem", extensions: ["png", "jpg", "jpeg", "webp", "bmp"] }],
+  }).then((selected) => {
+    if (typeof selected !== "string") {
+      return null;
+    }
+    return imagePaths([selected])[0] ?? null;
   });
 }
 

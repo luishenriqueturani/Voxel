@@ -33,7 +33,8 @@ describe("StatusBar no app Tauri", () => {
     );
 
     const bar = screen.getByRole("contentinfo");
-    expect(bar).toHaveTextContent("GPU: RX 7600 (vulkan)");
+    expect(bar).toHaveTextContent("GPU: RX 7600");
+    expect(bar).toHaveTextContent("Imagem: Vulkan");
     expect(bar).toHaveTextContent("VRAM: 1.0/8.0 GiB");
     expect(bar).toHaveTextContent("Uso GPU: 37%");
     expect(bar).toHaveTextContent("CPU: 12%");

@@ -96,7 +96,12 @@ describe("gerenciador de modelos", () => {
         onImport={vi.fn()}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Baixados" })).toBeInTheDocument();
+    const downloadedHeading = screen.getByRole("heading", { name: "Baixados" });
+    expect(downloadedHeading.nextElementSibling).toHaveClass("overflow-y-auto");
+    const search = screen.getByRole("textbox", { name: "Buscar" });
+    const searchFrame = search.closest("form")?.parentElement?.querySelector(".overflow-y-auto");
+    expect(searchFrame).toHaveClass("overflow-y-auto");
+    expect(searchFrame).not.toBe(downloadedHeading.nextElementSibling);
     expect(screen.getByText("qwen.gguf")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remover qwen.gguf" })).toBeInTheDocument();
     expect(screen.queryByText("Enorme")).not.toBeInTheDocument();
@@ -281,5 +286,16 @@ describe("gerenciador de modelos", () => {
     renderSection(vi.fn(), vi.fn(), { modelId: "sd15", received: 100, total: 100 });
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
     expect(screen.getByText("Verificando o arquivo…")).toBeInTheDocument();
+  });
+
+  it("mostra os bytes já lidos durante a verificação", () => {
+    renderSection(vi.fn(), vi.fn(), {
+      modelId: "sd15",
+      received: 20,
+      total: 80,
+      phase: "verify",
+    });
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "25");
+    expect(screen.getByText("Verificando 20 B de 80 B")).toBeInTheDocument();
   });
 });

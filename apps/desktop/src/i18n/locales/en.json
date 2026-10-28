@@ -46,6 +46,8 @@
     "model": "Model",
     "noModel": "No model installed",
     "modelSettings": "Model settings",
+    "preset": "Preset",
+    "unknownArchitecture": "unknown architecture",
     "output": "Output",
     "output2d": "2D",
     "output3d": "3D",
@@ -63,6 +65,12 @@
     "recentEmpty": "No recent prompts",
     "recentSearch": "Search prompts",
     "recentNone": "No prompts found",
+    "recentMore": "Show the rest",
+    "recentImages": "Images",
+    "recentImagesEmpty": "No saved images",
+    "recentNoNegative": "None",
+    "repeat": "Repeat",
+    "close": "Close",
     "pin": "Pin",
     "unpin": "Unpin",
     "resolution": "Resolution",
@@ -104,7 +112,17 @@
       "vary": "How much of the current image the model may change. Low keeps the photo. High recreates almost all of it.",
       "inpaint": "The brush marks the area the model recreates. The rest of the image stays.",
       "tile": "Generates a texture that repeats without a seam at the edges."
-    }
+    },
+    "tip": {
+      "new": "Starts from the text, without the open image.",
+      "vary": "Starts from the current image and changes as much as the strength allows.",
+      "inpaint": "Recreates only the painted area. The rest of the image stays.",
+      "tile": "Generates a texture that repeats without a seam."
+    },
+    "reference": "Reference",
+    "pickReference": "Choose image",
+    "clearReference": "Remove reference",
+    "referenceHint": "Generation starts from this file. Strength says how much of it may change."
   },
   "mask": {
     "label": "Mask",
@@ -121,6 +139,7 @@
   "status": {
     "label": "Status",
     "gpu": "GPU",
+    "imageBackend": "Image",
     "vram": "VRAM",
     "gpuUse": "GPU use",
     "cpu": "CPU",
@@ -179,12 +198,26 @@
       "logs": "Logs"
     }
   },
+  "preset": {
+    "title": "Model preset",
+    "family": "Family",
+    "pending": "Generation waits for this file's family and parameters.",
+    "save": "Save",
+    "saveAndGenerate": "Save and generate",
+    "families": {
+      "sd15": "SD 1.5",
+      "sdxl": "SDXL",
+      "flux": "Flux",
+      "qwen": "Qwen Image"
+    }
+  },
   "models": {
     "showIncompatible": "Show incompatible models",
     "download": "Download",
     "downloading": "Downloading…",
     "progress": "{{received}} of {{total}}",
     "verifying": "Checking the file…",
+    "verifyingProgress": "Checking {{received}} of {{total}}",
     "remove": "Remove",
     "openFolder": "Open models folder",
     "import": "Import model",

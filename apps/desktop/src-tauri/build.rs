@@ -18,6 +18,8 @@ fn main() {
             "open_edit_image",
             "remove_background",
             "list_recent_prompts",
+            "has_older_prompts",
+            "list_older_prompts",
             "list_prompt_images",
             "set_prompt_favorite",
             "list_gallery",

@@ -3,6 +3,15 @@ import { useTranslation } from "react-i18next";
 import type { MeshPaths } from "../../hooks/useGenerationRequest";
 import type { EditMode, EditPayload } from "../../lib/edit";
 import type { MeshOrigin, MeshPick, MeshView } from "../../lib/meshViews";
+import {
+  applyPreset,
+  onPresetRequest,
+  presetFor,
+  queuePreset,
+  savePreset,
+  type ModelPreset,
+} from "../../lib/modelPreset";
+import { pickReferenceImage } from "../../native/background";
 import type { GalleryItem, PromptEntry } from "../../native/history";
 import { pickMeshImages } from "../../native/mesh";
 import { Button } from "../ui/button";
@@ -10,6 +19,7 @@ import { GalleryView } from "./GalleryView";
 import { ImageViewer } from "./ImageViewer";
 import { MaskEditor } from "./MaskEditor";
 import { MeshViewPicker } from "./MeshViewPicker";
+import { ModelPresetDialog } from "./ModelPresetDialog";
 import { type GenerationParams, type OutputMode, PromptPanel } from "./PromptPanel";
 
 type WorkspaceModel = { id: string; name: string };
@@ -145,9 +155,11 @@ export function WorkspaceView({
   const [showGallery, setShowGallery] = useState(false);
   const [editMode, setEditMode] = useState<EditMode>("new");
   const [strength, setStrength] = useState(0.75);
+  const [referencePath, setReferencePath] = useState<string | null>(null);
   const [instruction, setInstruction] = useState("");
   const [maskPng, setMaskPng] = useState<string | null>(null);
   const [mosaic, setMosaic] = useState(false);
+  const [presetMode, setPresetMode] = useState<"edit" | "generate" | null>(null);
   const seenSource = useRef(sourcePath);
   if (seenSource.current !== sourcePath) {
     seenSource.current = sourcePath;
@@ -156,8 +168,15 @@ export function WorkspaceView({
     }
   }
   useEffect(() => {
-    editRef.current = { mode: editMode, strength, sourcePath, maskPng, instruction };
-  }, [editMode, editRef, instruction, maskPng, sourcePath, strength]);
+    editRef.current = {
+      mode: editMode,
+      strength,
+      sourcePath,
+      referencePath,
+      maskPng,
+      instruction,
+    };
+  }, [editMode, editRef, instruction, maskPng, referencePath, sourcePath, strength]);
   useEffect(() => {
     if (editMode === "tile") {
       setMosaic(true);
@@ -179,9 +198,35 @@ export function WorkspaceView({
       setShowGallery(false);
     }
   }, [historyRevision]);
+  useEffect(() => onPresetRequest(() => setPresetMode("generate")), []);
+  function startGenerate() {
+    const fromImages = outputMode === "3d" && meshOrigin === "images";
+    if (!fromImages && presetFor(modelId) === null) {
+      setPresetMode("generate");
+      return;
+    }
+    onGenerate();
+  }
+  function commitPreset(preset: ModelPreset) {
+    savePreset(modelId, preset);
+    onParamsChange(applyPreset(params, preset));
+    const generate = presetMode === "generate";
+    setPresetMode(null);
+    if (generate) {
+      queuePreset(preset);
+      onGenerate();
+    }
+  }
+  const storedPreset = presetFor(modelId);
+  const presetDraft: ModelPreset = storedPreset ?? {
+    family: "sd15",
+    resolution: params.resolution === 768 || params.resolution === 1024 ? params.resolution : 512,
+    steps: params.steps,
+    cfg: params.cfg,
+  };
   return (
     <div className="flex min-h-0 flex-1">
-      <aside className="flex w-80 shrink-0 border-r border-zinc-200 dark:border-zinc-800">
+      <aside className="flex min-h-0 w-80 shrink-0 flex-col border-r border-zinc-200 dark:border-zinc-800">
         <PromptPanel
           prompt={prompt}
           onPromptChange={onPromptChange}
@@ -208,12 +253,22 @@ export function WorkspaceView({
           onInstructionChange={setInstruction}
           hasSource={sourcePath !== null}
           hasMask={maskPng !== null}
+          referencePath={referencePath}
+          onPickReference={() => {
+            void pickReferenceImage(t("edit.pickReference")).then((path) => {
+              if (path !== null) {
+                setReferencePath(path);
+              }
+            });
+          }}
+          onClearReference={() => setReferencePath(null)}
           onHistoryError={onHistoryError}
           onRestore={(entry) => {
             setShowGallery(false);
             onRestoreHistory(entry);
           }}
-          onGenerate={onGenerate}
+          onGenerate={startGenerate}
+          onEditPreset={() => setPresetMode("edit")}
           onCancel={onCancel}
           onImageDrop={onImageDrop}
         />
@@ -291,6 +346,15 @@ export function WorkspaceView({
           />
         ) : null}
       </main>
+      {presetMode !== null ? (
+        <ModelPresetDialog
+          modelName={models.find((model) => model.id === modelId)?.name ?? modelId}
+          initial={presetDraft}
+          pending={presetMode === "generate"}
+          onCancel={() => setPresetMode(null)}
+          onSave={commitPreset}
+        />
+      ) : null}
     </div>
   );
 }

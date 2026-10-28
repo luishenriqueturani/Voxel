@@ -21,6 +21,7 @@ struct DownloadProgress {
     model_id: String,
     received: u64,
     total: u64,
+    phase: &'static str,
 }
 
 /// Diz se o token está gravado, sem revelar o valor.
@@ -97,7 +98,7 @@ pub fn download(
     let destination = paths.data.join("models").join(file_name(model_id)?);
     let id = model_id.to_owned();
     let mut emitted: Option<Instant> = None;
-    fetch(&job, &destination, |received, total| {
+    fetch(&job, &destination, |phase, received, total| {
         let finished = total > 0 && received >= total;
         let recent = emitted.is_some_and(|instant| instant.elapsed() < Duration::from_millis(200));
         if !finished && recent {
@@ -110,6 +111,10 @@ pub fn download(
                 model_id: id.clone(),
                 received,
                 total,
+                phase: match phase {
+                    voxel_models::Transfer::Download => "download",
+                    voxel_models::Transfer::Verify => "verify",
+                },
             },
         );
     })

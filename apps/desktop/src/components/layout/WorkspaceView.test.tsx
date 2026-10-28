@@ -17,7 +17,19 @@ const params: GenerationParams = {
   count: 1,
 };
 
-function View({ shown, sourcePath }: { shown: string | null; sourcePath: string | null }) {
+function View({
+  shown,
+  sourcePath,
+  modelId = "sd15",
+  onGenerate = vi.fn(),
+  onParamsChange = vi.fn(),
+}: {
+  shown: string | null;
+  sourcePath: string | null;
+  modelId?: string;
+  onGenerate?: () => void;
+  onParamsChange?: (params: GenerationParams) => void;
+}) {
   const editRef = useRef<EditPayload>(blankEdit);
   return (
     <WorkspaceView
@@ -25,16 +37,16 @@ function View({ shown, sourcePath }: { shown: string | null; sourcePath: string 
       onPromptChange={vi.fn()}
       negativePrompt=""
       onNegativePromptChange={vi.fn()}
-      models={[]}
-      modelId="sd15"
+      models={[{ id: modelId, name: modelId }]}
+      modelId={modelId}
       onModelChange={vi.fn()}
       params={params}
-      onParamsChange={vi.fn()}
+      onParamsChange={onParamsChange}
       outputMode="2d"
       onOutputModeChange={vi.fn()}
       generating={false}
       locked={false}
-      onGenerate={vi.fn()}
+      onGenerate={onGenerate}
       sourcePath={sourcePath}
       editRef={editRef}
       historyRevision={0}
@@ -87,5 +99,61 @@ describe("WorkspaceView", () => {
     expect(mosaic.querySelectorAll("img")).toHaveLength(9);
     expect(screen.getByRole("button", { name: "Mosaico" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Gerar" })).toBeEnabled();
+  });
+
+  it("pergunta a família antes de gerar um arquivo sem preset", async () => {
+    const user = userEvent.setup();
+    const onGenerate = vi.fn();
+    const onParamsChange = vi.fn();
+    render(
+      <View
+        shown={null}
+        sourcePath={null}
+        modelId="peso.safetensors"
+        onGenerate={onGenerate}
+        onParamsChange={onParamsChange}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Gerar" }));
+    expect(onGenerate).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Preset do modelo" })).toBeInTheDocument();
+    expect(
+      screen.getByText("A geração espera a família e os parâmetros deste arquivo."),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onGenerate).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Gerar" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Família" }), "sdxl");
+    await user.clear(screen.getByRole("textbox", { name: "Passos" }));
+    await user.type(screen.getByRole("textbox", { name: "Passos" }), "28");
+    await user.click(screen.getByRole("button", { name: "Salvar e gerar" }));
+    expect(onParamsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ steps: 28, resolution: 512 }),
+    );
+    expect(onGenerate).toHaveBeenCalledOnce();
+  });
+
+  it("abre o mesmo modal para alterar o preset de um modelo medido", async () => {
+    const user = userEvent.setup();
+    const onGenerate = vi.fn();
+    const onParamsChange = vi.fn();
+    render(
+      <View
+        shown={null}
+        sourcePath={null}
+        onGenerate={onGenerate}
+        onParamsChange={onParamsChange}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Gerar" }));
+    expect(onGenerate).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "Preset" }));
+    expect(screen.getByRole("dialog", { name: "Preset do modelo" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Família" })).toHaveValue("sd15");
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(onGenerate).toHaveBeenCalledOnce();
+    expect(onParamsChange).toHaveBeenCalledWith(expect.objectContaining({ steps: 20, cfg: 7 }));
   });
 });

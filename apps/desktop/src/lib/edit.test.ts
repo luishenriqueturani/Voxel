@@ -54,5 +54,21 @@ describe("generationRequest", () => {
       maskPng: null,
       seed: null,
     });
+
+    const reference = generationRequest("gato", "", "sd15", params, 3, {
+      mode: "new",
+      strength: 0.35,
+      sourcePath: "/aberta.png",
+      referencePath: "/tmp/foto.png",
+      maskPng: null,
+      instruction: "não usar",
+    });
+    expect(reference).toMatchObject({
+      prompt: "gato",
+      mode: "vary",
+      strength: 0.35,
+      sourcePath: "/tmp/foto.png",
+      maskPng: null,
+    });
   });
 });

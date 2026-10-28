@@ -6,6 +6,7 @@ export type EditPayload = {
   mode: EditMode;
   strength: number;
   sourcePath: string | null;
+  referencePath?: string | null;
   maskPng: string | null;
   instruction: string;
 };
@@ -20,7 +21,7 @@ export const blankEdit: EditPayload = {
 
 export function canStartEdit(edit: EditPayload): boolean {
   if (edit.mode === "vary") {
-    return edit.sourcePath !== null;
+    return edit.sourcePath !== null || (edit.referencePath ?? null) !== null;
   }
   if (edit.mode === "inpaint") {
     return edit.sourcePath !== null && edit.maskPng !== null;
@@ -66,7 +67,7 @@ export function generationRequest(
   seed: number | null,
   edit: EditPayload,
 ): GenerationRequest {
-  const edits = edit.mode === "vary" || edit.mode === "inpaint";
+  const image = requestImage(edit);
   return {
     prompt: promptForEdit(prompt, edit),
     negativePrompt: negativePrompt === "" ? null : negativePrompt,
@@ -77,9 +78,26 @@ export function generationRequest(
     cfg: params.cfg,
     seed,
     count: params.count,
-    mode: edit.mode,
+    mode: image.mode,
     strength: edit.strength,
-    sourcePath: edits ? edit.sourcePath : null,
+    sourcePath: image.sourcePath,
     maskPng: edit.mode === "inpaint" ? edit.maskPng : null,
   };
+}
+
+function requestImage(edit: EditPayload): { mode: EditMode; sourcePath: string | null } {
+  if (edit.mode === "tile") {
+    return { mode: "tile", sourcePath: null };
+  }
+  if (edit.mode === "inpaint") {
+    return { mode: "inpaint", sourcePath: edit.sourcePath };
+  }
+  const reference = edit.referencePath ?? null;
+  if (reference !== null) {
+    return { mode: "vary", sourcePath: reference };
+  }
+  if (edit.mode === "vary") {
+    return { mode: "vary", sourcePath: edit.sourcePath };
+  }
+  return { mode: "new", sourcePath: null };
 }

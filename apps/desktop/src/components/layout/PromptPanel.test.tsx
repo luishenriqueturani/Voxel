@@ -52,6 +52,19 @@ describe("frameSize", () => {
 });
 
 describe("PromptPanel", () => {
+  it("mantém o prompt e gerar fora da rolagem dos recentes", () => {
+    renderPanel();
+    const generate = screen.getByRole("button", { name: "Gerar" });
+    const prompt = screen.getByRole("textbox", { name: "Prompt" });
+    const search = screen.getByRole("searchbox", { name: "Buscar prompts" });
+    expect(generate.closest(".overflow-y-auto")).toBeNull();
+    expect(prompt.closest(".overflow-y-auto")).toBeNull();
+    expect(search.closest(".overflow-y-auto")).toBeNull();
+    const empty = screen.getByText("Nenhum prompt recente");
+    expect(empty.parentElement).toHaveClass("overflow-y-auto");
+    expect(empty.parentElement?.contains(generate)).toBe(false);
+  });
+
   it("deixa o prompt crescer na vertical", () => {
     renderPanel();
     const prompt = screen.getByRole("textbox", { name: "Prompt" });

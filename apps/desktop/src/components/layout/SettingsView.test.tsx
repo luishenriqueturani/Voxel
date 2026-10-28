@@ -32,6 +32,13 @@ describe("configurações de hardware", () => {
       />,
     );
 
+    const back = screen.getByRole("button", { name: "Voltar" });
+    const nav = screen.getByRole("navigation", { name: "Configurações" });
+    expect(nav).toContainElement(back);
+    expect(back.closest(".overflow-y-auto")).toBeNull();
+    expect(screen.getByRole("button", { name: "Hardware" }).closest(".overflow-y-auto")).toBe(
+      nav.querySelector(".overflow-y-auto"),
+    );
     expect(screen.getByText("Recomendado pelo setup: Vulkan")).toBeInTheDocument();
     await user.selectOptions(screen.getByRole("combobox", { name: "Backend de imagem" }), "cpu");
     expect(onImageBackendChange).toHaveBeenCalledWith("cpu");

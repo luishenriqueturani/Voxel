@@ -41,4 +41,45 @@ describe("EditControls", () => {
     expect(editReady("inpaint", true, true)).toBe(true);
     expect(editReady("tile", false, false)).toBe(true);
   });
+
+  it("descreve cada modo e usa a intensidade da referência", async () => {
+    const user = userEvent.setup();
+    const onPickReference = vi.fn();
+    const onClearReference = vi.fn();
+    const props = {
+      onModeChange: vi.fn(),
+      strength: 0.75,
+      onStrengthChange: vi.fn(),
+      hasSource: false,
+      hasMask: false,
+      onPickReference,
+      onClearReference,
+    };
+    const { rerender } = render(<EditControls {...props} mode="new" referencePath={null} />);
+
+    expect(screen.getByRole("radio", { name: "Nova" })).toHaveAccessibleDescription(
+      /sem usar a imagem aberta/,
+    );
+    expect(screen.getByRole("radio", { name: "Variar" })).toHaveAccessibleDescription(
+      /imagem atual/,
+    );
+    expect(screen.getByRole("radio", { name: "Pintar" })).toHaveAccessibleDescription(
+      /área pintada/,
+    );
+    expect(screen.getByRole("radio", { name: "Textura" })).toHaveAccessibleDescription(
+      /sem emenda/,
+    );
+    expect(document.getElementById("edit-tip-vary")).toHaveClass("group-hover:visible");
+    expect(document.getElementById("edit-tip-vary")).toHaveClass("group-focus-within:visible");
+    await user.click(screen.getByRole("button", { name: "Escolher imagem" }));
+    expect(onPickReference).toHaveBeenCalledOnce();
+
+    rerender(<EditControls {...props} mode="new" referencePath="/tmp/gato.png" />);
+    expect(screen.getByRole("slider", { name: "Intensidade" })).toBeInTheDocument();
+    expect(screen.getByText("gato.png")).toBeInTheDocument();
+    expect(screen.getByText(/parte deste arquivo/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Tirar referência" }));
+    expect(onClearReference).toHaveBeenCalledOnce();
+    expect(editReady("vary", false, false, true)).toBe(true);
+  });
 });

@@ -269,17 +269,17 @@ Com o modelo atual, a reconstrução usa a vista principal. As outras imagens v�
 
 Uma semana de uso. O Voltar das configurações está no cabeçalho do conteúdo e some quando a página rola; no monitor largo esse canto fica longe da mão, que descansa na esquerda. A lista de recentes troca o prompt em edição no clique e a consulta para em 30. O seletor só lista arquivo reconhecido como imagem. O SHA-256 depois do download lê o arquivo inteiro sem contar o progresso.
 
-- [ ] Botão Voltar fixo no topo do menu de configurações, em todas as categorias e fora da rolagem
-- [ ] Imagem de referência no painel: escolher um arquivo do disco e gerar a partir dele, com a força que a edição já usa
-- [ ] Descrição curta ao passar o mouse ou focar cada opção de edição (Nova, Variar, Pintar, Textura). Variar é a que parte da imagem atual
-- [ ] A coluna da esquerda rola só a lista de prompts recentes; prompt, modelo e Gerar permanecem na tela
-- [ ] Botão no fim da lista para trazer o restante dos prompts, na própria lista
-- [ ] Clique num recente abre um modal com o prompt, o negativo, os parâmetros e as imagens salvas. Repetir aplica no painel. Fechar deixa intacto o texto que está sendo escrito
-- [ ] Barra de status nomeia o backend da geração de imagem: Vulkan, ROCm, CUDA ou CPU
-- [ ] Na tela de modelos, a lista de baixados e a pesquisa rolam cada uma no seu quadro
-- [ ] Progresso da verificação de integridade, em bytes lidos sobre o tamanho do arquivo
-- [ ] Todo modelo instalado aparece no seletor, com arquitetura desconhecida ou não
-- [ ] Sem preset para o arquivo, um modal pergunta a família e os parâmetros antes de gerar. Os modelos já medidos continuam saindo configurados, e o mesmo modal altera esse preset
+- [x] Botão Voltar fixo no topo do menu de configurações, em todas as categorias e fora da rolagem
+- [x] Imagem de referência no painel: escolher um arquivo do disco e gerar a partir dele, com a força que a edição já usa
+- [x] Descrição curta ao passar o mouse ou focar cada opção de edição (Nova, Variar, Pintar, Textura). Variar é a que parte da imagem atual
+- [x] A coluna da esquerda rola só a lista de prompts recentes; prompt, modelo e Gerar permanecem na tela
+- [x] Botão no fim da lista para trazer o restante dos prompts, na própria lista
+- [x] Clique num recente abre um modal com o prompt, o negativo, os parâmetros e as imagens salvas. Repetir aplica no painel. Fechar deixa intacto o texto que está sendo escrito
+- [x] Barra de status nomeia o backend da geração de imagem: Vulkan, ROCm, CUDA ou CPU
+- [x] Na tela de modelos, a lista de baixados e a pesquisa rolam cada uma no seu quadro
+- [x] Progresso da verificação de integridade, em bytes lidos sobre o tamanho do arquivo
+- [x] Todo modelo instalado aparece no seletor, com arquitetura desconhecida ou não
+- [x] Sem preset para o arquivo, um modal pergunta a família e os parâmetros antes de gerar. Os modelos já medidos continuam saindo configurados, e o mesmo modal altera esse preset
 
 ---
 

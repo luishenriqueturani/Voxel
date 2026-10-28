@@ -53,7 +53,7 @@ impl Database {
     /// Falha se a leitura do banco falhar.
     pub fn recent_prompts(&self) -> Result<Vec<PromptEntry>, DbError> {
         let mut listed = self.favorites()?;
-        for entry in self.latest_prompts()? {
+        for entry in self.latest_prompts(RECENT_LIMIT)? {
             let already = listed
                 .iter()
                 .any(|item| item.pinned && same_prompt(item, &entry) && item.seed == entry.seed);
@@ -62,6 +62,25 @@ impl Database {
             }
         }
         Ok(listed)
+    }
+
+    /// Há prompts únicos além da primeira página.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn has_older_prompts(&self) -> Result<bool, DbError> {
+        Ok(self.latest_prompts(RECENT_LIMIT + 1)?.len() > page_len())
+    }
+
+    /// Prompts que ficaram de fora da primeira página, do mais novo ao mais antigo.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn older_prompts(&self) -> Result<Vec<PromptEntry>, DbError> {
+        let latest = self.latest_prompts(-1)?;
+        Ok(latest.into_iter().skip(page_len()).collect())
     }
 
     /// Fixa ou solta o prompt. A estrela guarda a seed daquele momento.
@@ -175,7 +194,7 @@ impl Database {
         Ok(rows)
     }
 
-    fn latest_prompts(&self) -> Result<Vec<PromptEntry>, DbError> {
+    fn latest_prompts(&self, limit: i64) -> Result<Vec<PromptEntry>, DbError> {
         let connection = self.lock()?;
         let mut statement = connection.prepare(
             "SELECT prompt, COALESCE(negative_prompt, ''), model_id, steps, width, height, cfg, seed
@@ -188,10 +207,14 @@ impl Database {
              LIMIT ?1",
         )?;
         let rows = statement
-            .query_map([RECENT_LIMIT], |row| map_prompt(row, false))?
+            .query_map([limit], |row| map_prompt(row, false))?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(rows)
     }
+}
+
+fn page_len() -> usize {
+    usize::try_from(RECENT_LIMIT).unwrap_or(0)
 }
 
 fn map_prompt(row: &rusqlite::Row<'_>, pinned: bool) -> rusqlite::Result<PromptEntry> {
@@ -325,6 +348,9 @@ mod tests {
         let recent = database.recent_prompts().unwrap();
         assert!(recent.iter().any(|item| item.prompt == "p0" && item.pinned));
         assert!(!recent.iter().any(|item| item.prompt == "p1"));
+        assert!(database.has_older_prompts().unwrap());
+        let older = database.older_prompts().unwrap();
+        assert!(older.iter().any(|item| item.prompt == "p1"));
 
         database.set_favorite(&entry("p0", 0), false).unwrap();
         let after = database.recent_prompts().unwrap();

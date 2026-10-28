@@ -8,6 +8,7 @@ export type DownloadProgress = {
   modelId: string;
   received: number;
   total: number;
+  phase?: "download" | "verify";
 };
 
 export type ListedReason = {
@@ -64,10 +65,13 @@ export function progressFrom(value: unknown): DownloadProgress | null {
   ) {
     return null;
   }
+  const phase =
+    progress.phase === "download" || progress.phase === "verify" ? progress.phase : undefined;
   return {
     modelId: progress.modelId,
     received: progress.received,
     total: progress.total,
+    ...(phase === undefined ? {} : { phase }),
   };
 }
 

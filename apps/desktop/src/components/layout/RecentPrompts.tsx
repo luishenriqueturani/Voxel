@@ -1,9 +1,16 @@
 import { Star } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { paramsFromHistory } from "../../lib/historyParams";
-import { loadRecentPrompts, type PromptEntry, setPromptFavorite } from "../../native/history";
+import {
+  hasOlderPrompts,
+  loadOlderPrompts,
+  loadRecentPrompts,
+  type PromptEntry,
+  setPromptFavorite,
+} from "../../native/history";
 import type { GenerationParams } from "./PromptPanel";
+import { RecentPromptDialog } from "./RecentPromptDialog";
 
 type RecentPromptsProps = {
   count: number;
@@ -30,32 +37,49 @@ export function RecentPrompts({
   const { t } = useTranslation();
   const [entries, setEntries] = useState<PromptEntry[]>([]);
   const [query, setQuery] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [selected, setSelected] = useState<PromptEntry | null>(null);
+  const expanded = useRef(false);
+
+  const load = useCallback(async (showAll: boolean) => {
+    const page = await loadRecentPrompts();
+    if (!showAll) {
+      setEntries(page);
+      setHasMore(await hasOlderPrompts());
+      return;
+    }
+    setEntries(mergeEntries(page, await loadOlderPrompts()));
+    setHasMore(false);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    void loadRecentPrompts()
-      .then((loaded) => {
-        if (!cancelled) {
-          setEntries(loaded);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          onError(error);
-        }
-      });
+    void load(expanded.current).catch((error: unknown) => {
+      if (!cancelled) {
+        onError(error);
+      }
+    });
     return () => {
       cancelled = true;
     };
-  }, [onError]);
+  }, [load, onError]);
 
   async function toggle(entry: PromptEntry) {
     const pinned = !entry.pinned;
     try {
       await setPromptFavorite(entry, pinned);
-      const loaded = await loadRecentPrompts();
-      setEntries(loaded);
+      await load(expanded.current);
     } catch (error) {
+      onError(error);
+    }
+  }
+
+  async function showRest() {
+    expanded.current = true;
+    try {
+      await load(true);
+    } catch (error) {
+      expanded.current = false;
       onError(error);
     }
   }
@@ -90,39 +114,84 @@ export function RecentPrompts({
         onChange={(event) => setQuery(event.target.value)}
         className={fieldClass}
       />
-      {visible.length === 0 ? (
-        <p className="text-sm text-zinc-500">
-          {needle === "" ? t("panel.recentEmpty") : t("panel.recentNone")}
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-1">
-          {visible.map((entry) => (
-            <li key={entryKey(entry)} className="flex items-start gap-1">
-              <button
-                type="button"
-                title={entry.prompt}
-                className="min-w-0 flex-1 truncate text-left text-sm"
-                onClick={() => apply(entry)}
-              >
-                {entry.prompt}
-              </button>
-              <button
-                type="button"
-                aria-pressed={entry.pinned}
-                aria-label={entry.pinned ? t("panel.unpin") : t("panel.pin")}
-                className="shrink-0 rounded-md p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-                onClick={() => {
-                  void toggle(entry);
-                }}
-              >
-                <Star aria-hidden="true" size={14} fill={entry.pinned ? "currentColor" : "none"} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {visible.length === 0 ? (
+          <p className="text-sm text-zinc-500">
+            {needle === "" ? t("panel.recentEmpty") : t("panel.recentNone")}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {visible.map((entry) => (
+              <li key={entryKey(entry)} className="flex items-start gap-1">
+                <button
+                  type="button"
+                  title={entry.prompt}
+                  className="min-w-0 flex-1 truncate text-left text-sm"
+                  onClick={() => setSelected(entry)}
+                >
+                  {entry.prompt}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={entry.pinned}
+                  aria-label={entry.pinned ? t("panel.unpin") : t("panel.pin")}
+                  className="shrink-0 rounded-md p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  onClick={() => {
+                    void toggle(entry);
+                  }}
+                >
+                  <Star
+                    aria-hidden="true"
+                    size={14}
+                    fill={entry.pinned ? "currentColor" : "none"}
+                  />
+                </button>
+              </li>
+            ))}
+            {hasMore ? (
+              <li>
+                <button
+                  type="button"
+                  className="text-sm underline-offset-2 hover:underline"
+                  onClick={() => void showRest()}
+                >
+                  {t("panel.recentMore")}
+                </button>
+              </li>
+            ) : null}
+          </ul>
+        )}
+        {visible.length === 0 && hasMore ? (
+          <button
+            type="button"
+            className="text-sm underline-offset-2 hover:underline"
+            onClick={() => void showRest()}
+          >
+            {t("panel.recentMore")}
+          </button>
+        ) : null}
+      </div>
+      {selected ? (
+        <RecentPromptDialog
+          entry={selected}
+          onClose={() => setSelected(null)}
+          onRepeat={() => {
+            apply(selected);
+            setSelected(null);
+          }}
+          onError={onError}
+        />
+      ) : null}
     </section>
   );
+}
+
+function mergeEntries(
+  current: readonly PromptEntry[],
+  extra: readonly PromptEntry[],
+): PromptEntry[] {
+  const seen = new Set(current.map(entryKey));
+  return [...current, ...extra.filter((entry) => !seen.has(entryKey(entry)))];
 }
 
 function entryKey(entry: PromptEntry): string {
