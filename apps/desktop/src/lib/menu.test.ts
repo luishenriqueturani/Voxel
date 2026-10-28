@@ -37,6 +37,7 @@ describe("actionForMenu", () => {
     expect(actionForMenu("file.export")).toBe("export-image");
     expect(actionForMenu("edit.copy")).toBe("copy-image");
     expect(actionForMenu("generate.regenerate")).toBe("regenerate");
+    expect(actionForMenu("flows.templates")).toBe("templates");
   });
 
   it("ignora itens ainda sem função", () => {

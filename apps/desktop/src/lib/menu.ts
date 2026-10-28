@@ -15,7 +15,8 @@ export type MenuEffect =
   | "models"
   | "import-model"
   | "open-models-folder"
-  | "diagnostics";
+  | "diagnostics"
+  | "templates";
 
 export function actionForMenu(id: string): MenuEffect | null {
   switch (id) {
@@ -53,6 +54,8 @@ export function actionForMenu(id: string): MenuEffect | null {
       return "import-model";
     case "models.openFolder":
       return "open-models-folder";
+    case "flows.templates":
+      return "templates";
     default:
       return null;
   }

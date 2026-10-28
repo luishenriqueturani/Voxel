@@ -10,7 +10,7 @@ import type { ProfileCatalog, SetupStep } from "../native/setup";
 import { resetSetup } from "../native/setup";
 import { useNativeMenu } from "./useNativeMenu";
 
-type AppView = "workspace" | "settings" | "welcome";
+type AppView = "workspace" | "settings" | "welcome" | "templates";
 
 type AppMenuInput = {
   setView: (view: AppView) => void;
@@ -102,6 +102,8 @@ export function useAppMenu(input: AppMenuInput): void {
             void loadModels().then(input.setLibrary);
           }
         });
+      } else if (action === "templates") {
+        input.setView("templates");
       } else if (action === "open-models-folder") {
         void modelsDirectory().then((path) => {
           if (path !== null) {

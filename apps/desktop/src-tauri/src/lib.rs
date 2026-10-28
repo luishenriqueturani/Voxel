@@ -13,6 +13,7 @@ mod probe;
 mod python_env;
 mod setup;
 mod status;
+mod templates;
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -106,7 +107,13 @@ pub fn run() {
             python_env::await_python_environment,
             python_env::reinstall_python_environment,
             python_env::remove_python_environment,
-            mesh::mesh_from_image
+            mesh::mesh_from_image,
+            templates::list_templates,
+            templates::create_template,
+            templates::update_template,
+            templates::duplicate_template,
+            templates::rename_template,
+            templates::delete_template
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");

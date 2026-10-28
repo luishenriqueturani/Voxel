@@ -287,9 +287,9 @@ Uma semana de uso. O Voltar das configurações está no cabeçalho do conteúdo
 
 ### Templates (§5.2)
 
-- [ ] Modelo de dados do template: texto base com `{prompt}`, negativo, modelos 2D/3D, parâmetros, pós-processamento
-- [ ] Biblioteca de templates: criar, duplicar, renomear, excluir (Fluxos → Gerenciar templates)
-- [ ] Montagem do prompt final a partir do template + item
+- [x] Modelo de dados do template: texto base com `{prompt}`, negativo, modelos 2D/3D, parâmetros, pós-processamento
+- [x] Biblioteca de templates: criar, duplicar, renomear, excluir (Fluxos → Gerenciar templates)
+- [x] Montagem do prompt final a partir do template + item
 
 ### Editor de fluxos (§5.3, §5.4)
 

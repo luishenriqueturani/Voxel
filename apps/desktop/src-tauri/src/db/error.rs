@@ -5,6 +5,8 @@ pub enum DbError {
     LockPoisoned,
     Gap { expected: i64, found: i64 },
     NewerThanApp { version: i64 },
+    Missing,
+    Invalid(&'static str),
 }
 
 impl std::fmt::Display for DbError {
@@ -25,6 +27,8 @@ impl std::fmt::Display for DbError {
                     "o banco está na versão {version}, mais nova que este app"
                 )
             }
+            Self::Missing => write!(formatter, "registro ausente"),
+            Self::Invalid(message) => write!(formatter, "{message}"),
         }
     }
 }

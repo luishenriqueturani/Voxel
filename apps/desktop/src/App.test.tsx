@@ -88,6 +88,9 @@ describe("App", () => {
 
     await act(() => onAction("edit.preferences"));
     expect(screen.getByRole("combobox", { name: "Idioma" })).toBeInTheDocument();
+
+    await act(() => onAction("flows.templates"));
+    expect(screen.getByRole("heading", { name: "Gerenciar templates" })).toBeInTheDocument();
   });
 
   it("abre as configurações, troca o idioma e o tema, e volta", async () => {

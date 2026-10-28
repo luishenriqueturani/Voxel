@@ -5,6 +5,7 @@ import { PowerNotice } from "./components/layout/PowerNotice";
 import type { GenerationParams, OutputMode } from "./components/layout/PromptPanel";
 import { type SettingSection, SettingsView } from "./components/layout/SettingsView";
 import { StatusBar } from "./components/layout/StatusBar";
+import { TemplatesView } from "./components/layout/TemplatesView";
 import { WelcomeView } from "./components/layout/WelcomeView";
 import { WorkspaceView } from "./components/layout/WorkspaceView";
 import { useAppMenu } from "./hooks/useAppMenu";
@@ -51,7 +52,7 @@ import {
 import { loadMachineStatus, type MachineStatus } from "./native/status";
 import { loadHfTokenStatus, saveHfToken } from "./native/token";
 
-type View = "workspace" | "settings" | "welcome";
+type View = "workspace" | "settings" | "welcome" | "templates";
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -509,6 +510,8 @@ export default function App() {
             }
           }}
         />
+      ) : view === "templates" ? (
+        <TemplatesView onBack={() => setView("workspace")} />
       ) : (
         <SettingsView
           section={section}

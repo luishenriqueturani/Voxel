@@ -211,6 +211,27 @@
       "qwen": "Qwen Image"
     }
   },
+  "templates": {
+    "title": "Gerenciar templates",
+    "create": "Criar",
+    "duplicate": "Duplicar",
+    "rename": "Renomear",
+    "delete": "Excluir",
+    "save": "Salvar",
+    "empty": "Nenhum template",
+    "name": "Nome",
+    "body": "Texto base",
+    "bodyHint": "Use {prompt} onde entra o texto do item.",
+    "negative": "Prompt negativo",
+    "noNegative": "Nenhum",
+    "model2d": "Modelo 2D",
+    "model3d": "Modelo 3D",
+    "postprocess": "Pós-processamento 3D",
+    "sample": "Item de exemplo",
+    "final": "Prompt final",
+    "newName": "Novo template",
+    "copyName": "{{name}} cópia"
+  },
   "models": {
     "showIncompatible": "Mostrar modelos incompatíveis",
     "download": "Baixar",

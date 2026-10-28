@@ -40,6 +40,12 @@ fn main() {
             "reinstall_python_environment",
             "remove_python_environment",
             "mesh_from_image",
+            "list_templates",
+            "create_template",
+            "update_template",
+            "duplicate_template",
+            "rename_template",
+            "delete_template",
         ]),
     ))
     .expect("falha no build do Tauri");

@@ -4,11 +4,13 @@ mod history;
 mod migrate;
 mod settings;
 mod setup_store;
+mod templates;
 
 pub use error::DbError;
 pub use generations::GenerationRecord;
 pub use history::{GalleryRow, PromptEntry, PromptImage};
 pub use settings::{SettingsUpdate, UserSettings};
+pub use templates::{PromptTemplate, TemplateDraft};
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
