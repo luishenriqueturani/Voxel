@@ -148,29 +148,18 @@ export function RecentPrompts({
                 </button>
               </li>
             ))}
-            {hasMore ? (
-              <li>
-                <button
-                  type="button"
-                  className="text-sm underline-offset-2 hover:underline"
-                  onClick={() => void showRest()}
-                >
-                  {t("panel.recentMore")}
-                </button>
-              </li>
-            ) : null}
           </ul>
         )}
-        {visible.length === 0 && hasMore ? (
-          <button
-            type="button"
-            className="text-sm underline-offset-2 hover:underline"
-            onClick={() => void showRest()}
-          >
-            {t("panel.recentMore")}
-          </button>
-        ) : null}
       </div>
+      {hasMore ? (
+        <button
+          type="button"
+          className="shrink-0 text-left text-sm underline-offset-2 hover:underline"
+          onClick={() => void showRest()}
+        >
+          {t("panel.recentMore")}
+        </button>
+      ) : null}
       {selected ? (
         <RecentPromptDialog
           entry={selected}

@@ -15,11 +15,20 @@ export type GenerationProgress = {
   seed?: number | null;
 };
 
+export type ImageVersion = {
+  src: string;
+  path: string;
+  seed: number | null;
+  transparent?: boolean;
+};
+
 export type GalleryImage = {
   src: string;
   path: string;
   seed: number | null;
   transparent?: boolean;
+  versions?: ImageVersion[];
+  versionIndex?: number;
 };
 
 type SavedFile = {

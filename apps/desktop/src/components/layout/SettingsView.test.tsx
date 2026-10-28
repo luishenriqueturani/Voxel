@@ -21,7 +21,6 @@ describe("configurações de hardware", () => {
         onHfTokenSave={vi.fn()}
         onHfTokenClear={vi.fn()}
         models={[]}
-        onDownload={vi.fn()}
         onRemove={vi.fn()}
         onOpenFolder={vi.fn()}
         onImport={vi.fn()}
@@ -64,7 +63,6 @@ describe("token do Hugging Face", () => {
         onHfTokenSave={onHfTokenSave}
         onHfTokenClear={onHfTokenClear}
         models={[]}
-        onDownload={vi.fn()}
         onRemove={vi.fn()}
         onOpenFolder={vi.fn()}
         onImport={vi.fn()}
@@ -77,7 +75,7 @@ describe("token do Hugging Face", () => {
 
     expect(screen.getByText("Token salvo neste computador.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Modelos" }).parentElement).toHaveClass(
-      "overflow-y-auto",
+      "overflow-hidden",
     );
     await user.type(screen.getByLabelText("Token do Hugging Face"), "hf_teste");
     await user.click(screen.getByRole("button", { name: "Salvar token" }));

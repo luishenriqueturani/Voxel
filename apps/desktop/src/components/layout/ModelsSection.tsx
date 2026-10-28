@@ -10,6 +10,7 @@ type ModelsSectionProps = {
   onHfTokenClear: () => void;
   models: ListedModel[];
   progress?: DownloadProgress | null;
+  queuedIds?: readonly string[];
   onDownload: (id: string) => void;
   onRemove: (filename: string) => void;
   onOpenFolder: () => void;
@@ -24,6 +25,7 @@ export function ModelsSection({
   onHfTokenClear,
   models,
   progress = null,
+  queuedIds = [],
   onDownload,
   onRemove,
   onOpenFolder,
@@ -41,8 +43,8 @@ export function ModelsSection({
   const downloaded = models.filter((model) => !model.catalog);
 
   return (
-    <div className="grid grid-cols-[minmax(0,36rem)_minmax(0,1fr)] items-start gap-8 text-sm">
-      <div className="flex min-w-0 flex-col gap-4">
+    <div className="grid min-h-0 flex-1 grid-cols-2 items-stretch gap-8 text-sm">
+      <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto">
         <label className="flex max-w-sm flex-col gap-1">
           {t("settings.token")}
           <input
@@ -81,18 +83,17 @@ export function ModelsSection({
         </div>
         <section className="flex flex-col gap-3">
           <h3 className="font-medium">{t("models.downloaded")}</h3>
-          <div className="max-h-72 overflow-y-auto rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
-            {downloaded.length === 0 ? (
-              <p className="text-zinc-500">{t("models.downloadedEmpty")}</p>
-            ) : (
-              <ModelList
-                models={downloaded}
-                progress={progress}
-                onDownload={setPending}
-                onRemove={onRemove}
-              />
-            )}
-          </div>
+          {downloaded.length === 0 ? (
+            <p className="text-zinc-500">{t("models.downloadedEmpty")}</p>
+          ) : (
+            <ModelList
+              models={downloaded}
+              progress={progress}
+              queuedIds={queuedIds}
+              onDownload={setPending}
+              onRemove={onRemove}
+            />
+          )}
         </section>
         <label className="flex items-center gap-2">
           <input
@@ -107,6 +108,7 @@ export function ModelsSection({
           <ModelList
             models={recommended}
             progress={progress}
+            queuedIds={queuedIds}
             onDownload={setPending}
             onRemove={onRemove}
           />
@@ -122,11 +124,12 @@ export function ModelsSection({
           />
         ) : null}
       </div>
-      <div className="min-w-0 border-l border-zinc-200 pl-8 dark:border-zinc-800">
+      <div className="flex min-h-0 min-w-0 flex-col border-l border-zinc-200 pl-8 dark:border-zinc-800">
         <HubSearch
           hfTokenConfigured={hfTokenConfigured}
           progress={progress}
           onSearch={onSearchHub}
+          queuedIds={queuedIds}
           onDownload={onDownloadHub}
         />
       </div>
@@ -137,11 +140,13 @@ export function ModelsSection({
 function ModelList({
   models,
   progress,
+  queuedIds,
   onDownload,
   onRemove,
 }: {
   models: ListedModel[];
   progress: DownloadProgress | null;
+  queuedIds: readonly string[];
   onDownload: (model: ListedModel) => void;
   onRemove: (filename: string) => void;
 }) {
@@ -151,7 +156,7 @@ function ModelList({
       {models.map((model) => (
         <li key={model.id} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0 flex-1 break-words">
               <p className="font-medium">{model.name}</p>
               <p className="text-zinc-500">
                 {t(`models.seals.${model.compatibility}`)}
@@ -166,13 +171,16 @@ function ModelList({
             </div>
             <div className="flex gap-2">
               {model.catalog && !model.installed && progress?.modelId !== model.id ? (
-                <Button
-                  aria-label={`${t("models.download")} ${model.name}`}
-                  disabled={progress !== null}
-                  onClick={() => onDownload(model)}
-                >
-                  {t("models.download")}
-                </Button>
+                queuedIds.includes(model.id) ? (
+                  <p className="text-zinc-500">{t("models.queued")}</p>
+                ) : (
+                  <Button
+                    aria-label={`${t("models.download")} ${model.name}`}
+                    onClick={() => onDownload(model)}
+                  >
+                    {t("models.download")}
+                  </Button>
+                )
               ) : null}
               {model.installed ? (
                 <Button

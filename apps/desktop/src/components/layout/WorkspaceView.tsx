@@ -5,13 +5,14 @@ import type { EditMode, EditPayload } from "../../lib/edit";
 import type { MeshOrigin, MeshPick, MeshView } from "../../lib/meshViews";
 import {
   applyPreset,
+  type ModelPreset,
   onPresetRequest,
   presetFor,
   queuePreset,
   savePreset,
-  type ModelPreset,
 } from "../../lib/modelPreset";
 import { pickReferenceImage } from "../../native/background";
+import type { ImageVersion } from "../../native/generation";
 import type { GalleryItem, PromptEntry } from "../../native/history";
 import { pickMeshImages } from "../../native/mesh";
 import { Button } from "../ui/button";
@@ -94,6 +95,9 @@ type WorkspaceViewProps = {
   meshFiles?: MeshPaths | null;
   canUndoEdit?: boolean;
   onUndoEdit?: () => void;
+  versions?: ImageVersion[];
+  versionIndex?: number;
+  onSelectVersion?: (index: number) => void;
 };
 
 export function WorkspaceView({
@@ -150,6 +154,9 @@ export function WorkspaceView({
   meshFiles = null,
   canUndoEdit = false,
   onUndoEdit,
+  versions,
+  versionIndex = 0,
+  onSelectVersion,
 }: WorkspaceViewProps) {
   const { t } = useTranslation();
   const [showGallery, setShowGallery] = useState(false);
@@ -323,6 +330,9 @@ export function WorkspaceView({
               meshFiles={meshFiles}
               canUndo={canUndoEdit}
               onUndo={onUndoEdit}
+              versions={versions}
+              versionIndex={versionIndex}
+              onSelectVersion={onSelectVersion}
             />
           )}
         </div>

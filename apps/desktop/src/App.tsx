@@ -8,13 +8,13 @@ import { StatusBar } from "./components/layout/StatusBar";
 import { TemplatesView } from "./components/layout/TemplatesView";
 import { WelcomeView } from "./components/layout/WelcomeView";
 import { WorkspaceView } from "./components/layout/WorkspaceView";
+import { DownloadProvider } from "./downloads/DownloadProvider";
 import { useAppMenu } from "./hooks/useAppMenu";
 import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { useGenerationRequest } from "./hooks/useGenerationRequest";
 import { useImageEdit } from "./hooks/useImageEdit";
 import { useMeshDrop } from "./hooks/useMeshDrop";
-import { useModelDownload } from "./hooks/useModelDownload";
 import { usePythonEnvironment } from "./hooks/usePythonEnvironment";
 import { blankEdit } from "./lib/edit";
 import { selectableModels } from "./lib/modelChoice";
@@ -154,8 +154,6 @@ export default function App() {
     });
   }, []);
 
-  const { modelProgress, downloadCatalogModel } = useModelDownload(setLibrary, reportFailure);
-
   const {
     removing,
     openImage,
@@ -168,6 +166,7 @@ export default function App() {
     discardEdit,
     restoreEdit,
     undoEdit,
+    selectVersion,
   } = useImageEdit({
     slides,
     setSlides,
@@ -412,185 +411,188 @@ export default function App() {
     SUMMARY_KEYS.find((key) => key === notice?.summaryKey) ?? "error.summary.unknown";
 
   return (
-    <div className="flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      {powerGpu !== null ? (
-        <PowerNotice gpu={powerGpu} onDismiss={() => setPowerGpu(null)} />
-      ) : null}
-      {view === "welcome" ? (
-        <WelcomeView
-          steps={setupSteps}
-          catalog={catalog}
-          backend={setupBackend}
-          confirming={confirming}
-          image={preview}
-          outcome={confirmOutcome}
-          detail={confirmDetail}
-          onConfirm={(choices) => void onConfirm(choices)}
-          onContinue={() => setView("workspace")}
-        />
-      ) : view === "workspace" ? (
-        <WorkspaceView
-          prompt={prompt}
-          onPromptChange={setPrompt}
-          negativePrompt={negativePrompt}
-          onNegativePromptChange={setNegativePrompt}
-          models={imageModels}
-          modelId={modelId}
-          onModelChange={setModelId}
-          params={params}
-          onParamsChange={setParams}
-          outputMode={outputMode}
-          onOutputModeChange={(mode) => {
-            setOutputMode(mode);
-            if (mode === "3d") {
-              void python.note("panel");
-            }
-          }}
-          meshOrigin={meshOrigin}
-          onMeshOriginChange={setMeshOrigin}
-          hasMeshViews={slides.length > 0}
-          meshPick={meshPick}
-          onConfirmMesh={confirmMesh}
-          onCancelMesh={cancelMesh}
-          onAddMeshPaths={addMeshPaths}
-          onAddCurrentViews={addCurrentViews}
-          canAddCurrent={canAddCurrent}
-          generating={generating}
-          locked={removing || waitingEnvironment || meshPick !== null}
-          onGenerate={() => requestGeneration()}
-          onImageDrop={addMeshPaths}
-          meshFiles={meshFiles}
-          onCancel={() => {
-            void cancelGeneration();
-          }}
-          sourcePath={selected?.path ?? null}
-          editRef={editRef}
-          historyRevision={historyRevision}
-          gallerySignal={gallerySignal}
-          viewerSignal={viewerSignal}
-          onHistoryError={reportFailure}
-          onRestoreHistory={openHistory}
-          onOpenGeneration={openGeneration}
-          shown={shown}
-          step={generating ? (frame?.step ?? 0) : 0}
-          total={generating ? (frame?.total ?? 0) : 0}
-          canSave={selected !== null && !generating && !removing}
-          canRegenerate={selected?.seed != null && !generating && !removing}
-          canRemove={selected !== null && !generating && !removing}
-          removing={removing}
-          transparent={!generating && selected?.transparent === true}
-          index={slideIndex}
-          count={generating ? 0 : slides.length}
-          onPrevious={() => setSlideIndex((current) => Math.max(0, current - 1))}
-          onNext={() => setSlideIndex((current) => Math.min(slides.length - 1, current + 1))}
-          onSave={() => {
-            if (selected) {
-              void saveGeneratedImage(selected.path).catch(reportFailure);
-            }
-          }}
-          onCopy={() => {
-            if (shown) {
-              void copyPreview(shown).catch(reportFailure);
-            }
-          }}
-          onRegenerate={() => {
-            if (selected?.seed == null) {
-              return;
-            }
-            const seed = selected.seed;
-            setParams((current) => ({ ...current, seed: String(seed) }));
-            requestGeneration(seed);
-          }}
-          canUndoEdit={canUndoEdit}
-          onUndoEdit={undoEdit}
-          onRemoveBackground={removeBackground}
-          onSendTo3d={() => {
-            if (selected?.path) {
-              sendImage(selected.path);
-            }
-          }}
-        />
-      ) : view === "templates" ? (
-        <TemplatesView onBack={() => setView("workspace")} />
-      ) : (
-        <SettingsView
-          section={section}
-          onSectionChange={setSection}
-          theme={theme}
-          onThemeChange={setTheme}
-          onLanguageChange={(language) => void onLanguageChange(language)}
-          imageBackend={imageBackend}
-          recommendedBackend={recommendedBackend}
-          onImageBackendChange={(backend) => {
-            setImageBackend(backend);
-            void saveImageBackend(backend);
-          }}
-          hfTokenConfigured={hfTokenConfigured}
-          onHfTokenSave={(token) => {
-            void saveHfToken(token).then(setHfTokenConfigured);
-          }}
-          onHfTokenClear={() => {
-            void saveHfToken("").then(setHfTokenConfigured);
-          }}
-          models={library}
-          modelProgress={modelProgress}
-          onDownload={downloadCatalogModel}
-          onRemove={(filename) => {
-            void removeModel(filename).then(() => loadModels().then(setLibrary));
-          }}
-          onOpenFolder={() => {
-            void modelsDirectory().then((path) => {
-              if (path !== null) {
-                void openLocalPath(path);
+    <DownloadProvider onLibrary={setLibrary} onError={reportFailure}>
+      <div className="flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+        {powerGpu !== null ? (
+          <PowerNotice gpu={powerGpu} onDismiss={() => setPowerGpu(null)} />
+        ) : null}
+        {view === "welcome" ? (
+          <WelcomeView
+            steps={setupSteps}
+            catalog={catalog}
+            backend={setupBackend}
+            confirming={confirming}
+            image={preview}
+            outcome={confirmOutcome}
+            detail={confirmDetail}
+            onConfirm={(choices) => void onConfirm(choices)}
+            onContinue={() => setView("workspace")}
+          />
+        ) : view === "workspace" ? (
+          <WorkspaceView
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            negativePrompt={negativePrompt}
+            onNegativePromptChange={setNegativePrompt}
+            models={imageModels}
+            modelId={modelId}
+            onModelChange={setModelId}
+            params={params}
+            onParamsChange={setParams}
+            outputMode={outputMode}
+            onOutputModeChange={(mode) => {
+              setOutputMode(mode);
+              if (mode === "3d") {
+                void python.note("panel");
               }
-            });
-          }}
-          onImport={() => {
-            void importLocalModel().then((imported) => {
-              if (imported) {
-                void loadModels().then(setLibrary);
+            }}
+            meshOrigin={meshOrigin}
+            onMeshOriginChange={setMeshOrigin}
+            hasMeshViews={slides.length > 0}
+            meshPick={meshPick}
+            onConfirmMesh={confirmMesh}
+            onCancelMesh={cancelMesh}
+            onAddMeshPaths={addMeshPaths}
+            onAddCurrentViews={addCurrentViews}
+            canAddCurrent={canAddCurrent}
+            generating={generating}
+            locked={removing || waitingEnvironment || meshPick !== null}
+            onGenerate={() => requestGeneration()}
+            onImageDrop={addMeshPaths}
+            meshFiles={meshFiles}
+            onCancel={() => {
+              void cancelGeneration();
+            }}
+            sourcePath={selected?.path ?? null}
+            editRef={editRef}
+            historyRevision={historyRevision}
+            gallerySignal={gallerySignal}
+            viewerSignal={viewerSignal}
+            onHistoryError={reportFailure}
+            onRestoreHistory={openHistory}
+            onOpenGeneration={openGeneration}
+            shown={shown}
+            step={generating ? (frame?.step ?? 0) : 0}
+            total={generating ? (frame?.total ?? 0) : 0}
+            canSave={selected !== null && !generating && !removing}
+            canRegenerate={selected?.seed != null && !generating && !removing}
+            canRemove={selected !== null && !generating && !removing}
+            removing={removing}
+            transparent={!generating && selected?.transparent === true}
+            index={slideIndex}
+            count={generating ? 0 : slides.length}
+            onPrevious={() => setSlideIndex((current) => Math.max(0, current - 1))}
+            onNext={() => setSlideIndex((current) => Math.min(slides.length - 1, current + 1))}
+            onSave={() => {
+              if (selected) {
+                void saveGeneratedImage(selected.path).catch(reportFailure);
               }
-            });
-          }}
-          onBack={() => setView("workspace")}
-          environment={python.progress ?? null}
-          onReinstallEnvironment={() => {
-            void python.reinstall();
-          }}
-          onRemoveEnvironment={() => {
-            void python.remove().catch(reportFailure);
-          }}
-        />
-      )}
-      <StatusBar
-        status={machine}
-        environment={python.progress}
-        onOpenSettings={() => setView("settings")}
-      />
-      {notice !== null ? (
-        <ErrorModal
-          summary={t(summaryKey)}
-          log={notice.log}
-          copied={copied}
-          onCopy={() => {
-            void copyLog();
-          }}
-          onOpenLog={() => {
-            void openLocalPath(notice.path);
-          }}
-          onOpenDiagnosis={openDiagnosis}
-          onRestoreRecommended={() => {
-            void restoreImageBackend().then((choice) => {
-              if (choice !== null) {
-                setImageBackend(choice.current);
-                setRecommendedBackend(choice.recommended);
+            }}
+            onCopy={() => {
+              if (shown) {
+                void copyPreview(shown).catch(reportFailure);
               }
-              setNotice(null);
-            });
-          }}
-          onClose={() => setNotice(null)}
+            }}
+            onRegenerate={() => {
+              if (selected?.seed == null) {
+                return;
+              }
+              const seed = selected.seed;
+              setParams((current) => ({ ...current, seed: String(seed) }));
+              requestGeneration(seed);
+            }}
+            canUndoEdit={canUndoEdit}
+            onUndoEdit={undoEdit}
+            versions={generating ? undefined : selected?.versions}
+            versionIndex={selected?.versionIndex ?? 0}
+            onSelectVersion={selectVersion}
+            onRemoveBackground={removeBackground}
+            onSendTo3d={() => {
+              if (selected?.path) {
+                sendImage(selected.path);
+              }
+            }}
+          />
+        ) : view === "templates" ? (
+          <TemplatesView onBack={() => setView("workspace")} />
+        ) : (
+          <SettingsView
+            section={section}
+            onSectionChange={setSection}
+            theme={theme}
+            onThemeChange={setTheme}
+            onLanguageChange={(language) => void onLanguageChange(language)}
+            imageBackend={imageBackend}
+            recommendedBackend={recommendedBackend}
+            onImageBackendChange={(backend) => {
+              setImageBackend(backend);
+              void saveImageBackend(backend);
+            }}
+            hfTokenConfigured={hfTokenConfigured}
+            onHfTokenSave={(token) => {
+              void saveHfToken(token).then(setHfTokenConfigured);
+            }}
+            onHfTokenClear={() => {
+              void saveHfToken("").then(setHfTokenConfigured);
+            }}
+            models={library}
+            onRemove={(filename) => {
+              void removeModel(filename).then(() => loadModels().then(setLibrary));
+            }}
+            onOpenFolder={() => {
+              void modelsDirectory().then((path) => {
+                if (path !== null) {
+                  void openLocalPath(path);
+                }
+              });
+            }}
+            onImport={() => {
+              void importLocalModel().then((imported) => {
+                if (imported) {
+                  void loadModels().then(setLibrary);
+                }
+              });
+            }}
+            onBack={() => setView("workspace")}
+            environment={python.progress ?? null}
+            onReinstallEnvironment={() => {
+              void python.reinstall();
+            }}
+            onRemoveEnvironment={() => {
+              void python.remove().catch(reportFailure);
+            }}
+          />
+        )}
+        <StatusBar
+          status={machine}
+          environment={python.progress}
+          onOpenSettings={() => setView("settings")}
         />
-      ) : null}
-    </div>
+        {notice !== null ? (
+          <ErrorModal
+            summary={t(summaryKey)}
+            log={notice.log}
+            copied={copied}
+            onCopy={() => {
+              void copyLog();
+            }}
+            onOpenLog={() => {
+              void openLocalPath(notice.path);
+            }}
+            onOpenDiagnosis={openDiagnosis}
+            onRestoreRecommended={() => {
+              void restoreImageBackend().then((choice) => {
+                if (choice !== null) {
+                  setImageBackend(choice.current);
+                  setRecommendedBackend(choice.recommended);
+                }
+                setNotice(null);
+              });
+            }}
+            onClose={() => setNotice(null)}
+          />
+        ) : null}
+      </div>
+    </DownloadProvider>
   );
 }

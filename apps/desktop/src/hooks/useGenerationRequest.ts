@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { GenerationParams, OutputMode } from "../components/layout/PromptPanel";
 import { blankEdit, canStartEdit, type EditPayload, generationRequest } from "../lib/edit";
+import { applyEditResult } from "../lib/imageVersions";
 import {
   type MeshOrigin,
   type MeshPick,
@@ -273,6 +274,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
         return;
       }
       const editing = edit.mode === "vary" || edit.mode === "inpaint";
+      const sourceIndex = slideIndex;
       holdEdit();
       generatingRef.current = true;
       setGenerating(true);
@@ -292,6 +294,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
             preview: progress.preview ?? current?.preview ?? null,
           }));
           if (
+            !editing &&
             progress.ready &&
             progress.preview &&
             progress.path &&
@@ -318,9 +321,12 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
           }
           if (editing) {
             commitEdit();
+            setSlides((current) => applyEditResult(current, sourceIndex, image.images).slides);
+            setSlideIndex(sourceIndex);
+          } else {
+            setSlides(image.images);
+            setSlideIndex(image.images.length - 1);
           }
-          setSlides(image.images);
-          setSlideIndex(image.images.length - 1);
           setHistoryRevision((current) => current + 1);
         })
         .catch((error: unknown) => {

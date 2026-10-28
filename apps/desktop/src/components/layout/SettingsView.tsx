@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
+import { queuedDownloadIds, useDownloadQueue } from "../../downloads/DownloadProvider";
 import type { Theme } from "../../lib/preferences";
-import type { DownloadProgress, ListedModel } from "../../native/models";
+import type { ListedModel } from "../../native/models";
 import type { PythonProgress } from "../../native/pythonEnv";
 import { Button } from "../ui/button";
 import { EnvironmentSection } from "./EnvironmentSection";
@@ -30,8 +31,6 @@ type SettingsViewProps = {
   onHfTokenSave: (token: string) => void;
   onHfTokenClear: () => void;
   models: ListedModel[];
-  modelProgress?: DownloadProgress | null;
-  onDownload: (id: string) => void;
   onRemove: (filename: string) => void;
   onOpenFolder: () => void;
   onImport: () => void;
@@ -56,8 +55,6 @@ export function SettingsView({
   onHfTokenSave,
   onHfTokenClear,
   models,
-  modelProgress = null,
-  onDownload,
   onRemove,
   onOpenFolder,
   onImport,
@@ -67,6 +64,7 @@ export function SettingsView({
   onRemoveEnvironment,
 }: SettingsViewProps) {
   const { t, i18n } = useTranslation();
+  const downloads = useDownloadQueue();
 
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -93,7 +91,9 @@ export function SettingsView({
           ))}
         </div>
       </nav>
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+      <section
+        className={`flex min-h-0 min-w-0 flex-1 flex-col gap-4 p-6 ${section === "models" ? "overflow-hidden" : "overflow-y-auto"}`}
+      >
         <h1 className="text-lg font-semibold">{t("settings.title")}</h1>
         <h2 className="text-base font-medium">{t(`settings.sections.${section}`)}</h2>
         {section === "general" ? (
@@ -159,8 +159,13 @@ export function SettingsView({
             onHfTokenSave={onHfTokenSave}
             onHfTokenClear={onHfTokenClear}
             models={models}
-            progress={modelProgress}
-            onDownload={onDownload}
+            progress={downloads.progress}
+            queuedIds={queuedDownloadIds(downloads.waiting)}
+            onDownload={(id) => {
+              const model = models.find((item) => item.id === id);
+              downloads.enqueueCatalog(id, model?.name ?? id);
+            }}
+            onDownloadHub={downloads.enqueueHub}
             onRemove={onRemove}
             onOpenFolder={onOpenFolder}
             onImport={onImport}

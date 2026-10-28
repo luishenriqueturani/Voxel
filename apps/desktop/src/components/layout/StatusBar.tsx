@@ -1,5 +1,6 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
+import { useDownloadQueue } from "../../downloads/DownloadProvider";
 import { environmentLabel } from "../../lib/pythonStatus";
 import type { PythonProgress } from "../../native/pythonEnv";
 import type { MachineStatus } from "../../native/status";
@@ -27,7 +28,9 @@ function gib(bytes: number): string {
 
 export function StatusBar({ status, environment, onOpenSettings }: StatusBarProps) {
   const { t } = useTranslation();
+  const downloads = useDownloadQueue();
   const unknown = t("status.unknown");
+  const download = downloadLabel(downloads, t);
   const memory = (used: number | null, total: number | null) =>
     used === null || total === null
       ? unknown
@@ -79,15 +82,50 @@ export function StatusBar({ status, environment, onOpenSettings }: StatusBarProp
       <span>
         {t("status.environment")}: {environmentLabel(environment, t)}
       </span>
-      {isTauri() ? null : (
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          className="ml-auto underline-offset-2 hover:underline"
-        >
-          {t("status.preferences")}
-        </button>
+      {download === null && isTauri() ? null : (
+        <div className="ml-auto flex min-w-0 items-center gap-3">
+          {download === null ? null : (
+            <span className="truncate" title={download} aria-live="polite">
+              {download}
+            </span>
+          )}
+          {isTauri() ? null : (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="underline-offset-2 hover:underline"
+            >
+              {t("status.preferences")}
+            </button>
+          )}
+        </div>
       )}
     </footer>
   );
+}
+
+function downloadLabel(
+  downloads: ReturnType<typeof useDownloadQueue>,
+  t: (key: string, values?: Record<string, unknown>) => string,
+): string | null {
+  const active = downloads.active;
+  if (active === null) {
+    return null;
+  }
+  const progress = downloads.progress;
+  const verifying =
+    progress?.phase === "verify" ||
+    (progress !== null && progress.total > 0 && progress.received >= progress.total);
+  const percent =
+    progress !== null && progress.total > 0
+      ? ` ${Math.min(100, Math.round((progress.received / progress.total) * 100))}%`
+      : "";
+  const waiting =
+    downloads.waiting.length > 0
+      ? ` · ${t("status.downloadWaiting", { count: downloads.waiting.length })}`
+      : "";
+  const name = verifying
+    ? t("status.downloadVerify", { name: active.label })
+    : t("status.download", { name: active.label });
+  return `${name}${percent}${waiting}`;
 }

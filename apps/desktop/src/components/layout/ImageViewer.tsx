@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type PointerEvent as ReactPointerEvent, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MeshPaths } from "../../hooks/useGenerationRequest";
+import type { ImageVersion } from "../../native/generation";
 import { meshUrl } from "../../native/mesh";
 import { Button } from "../ui/button";
 import { MeshViewer } from "./MeshViewer";
@@ -33,6 +34,10 @@ type ImageViewerProps = {
   onUndo?: () => void;
   mosaic?: boolean;
   onToggleMosaic?: () => void;
+  versions?: ImageVersion[];
+  versionIndex?: number;
+  onSelectVersion?: (index: number) => void;
+  viewOnly?: boolean;
 };
 
 type Pan = { x: number; y: number };
@@ -71,6 +76,10 @@ export function ImageViewer({
   onUndo,
   mosaic = false,
   onToggleMosaic,
+  versions = [],
+  versionIndex = 0,
+  onSelectVersion,
+  viewOnly = false,
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -86,6 +95,7 @@ export function ImageViewer({
   const [triangles, setTriangles] = useState<number | null>(null);
   const [meshGeneration, setMeshGeneration] = useState(meshFiles?.glb ?? "");
   const [shownSrc, setShownSrc] = useState(src);
+  const [comparing, setComparing] = useState(false);
   const percent = Math.round(zoom * 100);
   zoomRef.current = zoom;
   panRef.current = pan;
@@ -94,6 +104,7 @@ export function ImageViewer({
     setShownSrc(src);
     setZoom(MIN_ZOOM);
     setPan({ x: 0, y: 0 });
+    setComparing(false);
   }
 
   const onWheel = useCallback((event: WheelEvent) => {
@@ -164,6 +175,8 @@ export function ImageViewer({
     setTriangles(null);
   }
   const viewingMesh = meshFiles !== null && showMesh;
+  const previousVersion = versionIndex > 0 ? versions[versionIndex - 1] : undefined;
+  const compareSrc = comparing && previousVersion ? previousVersion.src : null;
   const meshAddress = viewingMesh ? meshUrl(shownMesh) : null;
 
   return (
@@ -197,13 +210,42 @@ export function ImageViewer({
               }
             }}
           >
-            <img
-              alt={t("generation.preview")}
-              draggable={false}
-              className="pointer-events-none absolute inset-0 h-full w-full object-contain select-none"
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
-              src={src}
-            />
+            {compareSrc ? (
+              <div className="absolute inset-0 grid grid-cols-2">
+                <figure className="relative min-h-0 min-w-0">
+                  <figcaption className="absolute top-2 left-2 z-10 rounded bg-black/60 px-2 py-1 text-xs text-white">
+                    {t("viewer.comparePrevious")}
+                  </figcaption>
+                  <img
+                    alt={t("viewer.comparePrevious")}
+                    draggable={false}
+                    className="pointer-events-none h-full w-full object-contain select-none"
+                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+                    src={compareSrc}
+                  />
+                </figure>
+                <figure className="relative min-h-0 min-w-0 border-l border-zinc-700">
+                  <figcaption className="absolute top-2 left-2 z-10 rounded bg-black/60 px-2 py-1 text-xs text-white">
+                    {t("viewer.compareCurrent")}
+                  </figcaption>
+                  <img
+                    alt={t("viewer.compareCurrent")}
+                    draggable={false}
+                    className="pointer-events-none h-full w-full object-contain select-none"
+                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+                    src={src}
+                  />
+                </figure>
+              </div>
+            ) : (
+              <img
+                alt={t("generation.preview")}
+                draggable={false}
+                className="pointer-events-none absolute inset-0 h-full w-full object-contain select-none"
+                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+                src={src}
+              />
+            )}
           </div>
         ) : (
           <p className="text-sm text-zinc-500">{t("main.empty")}</p>
@@ -233,6 +275,42 @@ export function ImageViewer({
                 onClick={onNext}
               >
                 <ChevronRight aria-hidden="true" size={16} />
+              </Button>
+            </div>
+          ) : null}
+          {versions.length > 1 ? (
+            <div className="flex flex-col gap-1">
+              <span className="text-sm text-zinc-500">
+                {t("viewer.version", { current: versionIndex + 1, total: versions.length })}
+              </span>
+              <div className="flex items-center justify-between gap-1">
+                <Button
+                  variant="ghost"
+                  className="px-2"
+                  aria-label={t("viewer.previousVersion")}
+                  disabled={versionIndex <= 0}
+                  onClick={() => onSelectVersion?.(versionIndex - 1)}
+                >
+                  <ChevronLeft aria-hidden="true" size={16} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="px-2"
+                  aria-label={t("viewer.nextVersion")}
+                  disabled={versionIndex >= versions.length - 1}
+                  onClick={() => onSelectVersion?.(versionIndex + 1)}
+                >
+                  <ChevronRight aria-hidden="true" size={16} />
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                className="w-full"
+                aria-pressed={comparing}
+                disabled={previousVersion === undefined}
+                onClick={() => setComparing((current) => !current)}
+              >
+                {t("viewer.compare")}
               </Button>
             </div>
           ) : null}
@@ -279,7 +357,7 @@ export function ImageViewer({
               {viewingMesh ? t("viewer.showImage") : t("viewer.showMesh")}
             </Button>
           ) : null}
-          {onToggleMosaic ? (
+          {!viewOnly && onToggleMosaic ? (
             <Button
               variant="ghost"
               className="w-full"
@@ -289,20 +367,22 @@ export function ImageViewer({
               {t("viewer.mosaic")}
             </Button>
           ) : null}
-          {onUndo ? (
+          {!viewOnly && onUndo ? (
             <Button variant="ghost" className="w-full" disabled={!canUndo} onClick={onUndo}>
               {t("viewer.undo")}
             </Button>
           ) : null}
-          <Button
-            variant="ghost"
-            className="w-full whitespace-normal"
-            disabled={!canRemove || removing}
-            onClick={onRemoveBackground}
-          >
-            {removing ? t("viewer.removing") : t("viewer.removeBackground")}
-          </Button>
-          {onSendTo3d ? (
+          {viewOnly ? null : (
+            <Button
+              variant="ghost"
+              className="w-full whitespace-normal"
+              disabled={!canRemove || removing}
+              onClick={onRemoveBackground}
+            >
+              {removing ? t("viewer.removing") : t("viewer.removeBackground")}
+            </Button>
+          )}
+          {!viewOnly && onSendTo3d ? (
             <Button variant="ghost" className="w-full whitespace-normal" onClick={onSendTo3d}>
               {t("viewer.sendTo3d")}
             </Button>
@@ -342,14 +422,16 @@ export function ImageViewer({
           <Button variant="ghost" className="w-full" disabled={src === null} onClick={onCopy}>
             {t("viewer.copy")}
           </Button>
-          <Button
-            variant="ghost"
-            className="w-full whitespace-normal"
-            disabled={!canRegenerate}
-            onClick={onRegenerate}
-          >
-            {t("viewer.regenerate")}
-          </Button>
+          {viewOnly ? null : (
+            <Button
+              variant="ghost"
+              className="w-full whitespace-normal"
+              disabled={!canRegenerate}
+              onClick={onRegenerate}
+            >
+              {t("viewer.regenerate")}
+            </Button>
+          )}
         </aside>
       ) : null}
     </div>

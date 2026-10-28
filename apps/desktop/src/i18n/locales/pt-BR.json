@@ -158,7 +158,10 @@
     "preferences": "Preferências",
     "gib": "{{used}}/{{total}} GiB",
     "percent": "{{value}}%",
-    "celsius": "{{value}} °C"
+    "celsius": "{{value}} °C",
+    "download": "Baixando {{name}}",
+    "downloadVerify": "Verificando {{name}}",
+    "downloadWaiting": "{{count}} na fila"
   },
   "settings": {
     "title": "Configurações",
@@ -235,6 +238,7 @@
   "models": {
     "showIncompatible": "Mostrar modelos incompatíveis",
     "download": "Baixar",
+    "queued": "Na fila",
     "downloading": "Baixando…",
     "progress": "{{received}} de {{total}}",
     "verifying": "Verificando o arquivo…",
@@ -324,7 +328,13 @@
     "polygons_one": "{{count}} polígono",
     "polygons_other": "{{count}} polígonos",
     "mosaic": "Mosaico",
-    "mosaicPreview": "Textura repetida em mosaico 3 por 3"
+    "mosaicPreview": "Textura repetida em mosaico 3 por 3",
+    "version": "Versão {{current}} de {{total}}",
+    "previousVersion": "Versão anterior",
+    "nextVersion": "Versão seguinte",
+    "compare": "Comparar",
+    "comparePrevious": "Anterior",
+    "compareCurrent": "Esta"
   },
   "meshPick": {
     "title": "Vistas para o 3D",

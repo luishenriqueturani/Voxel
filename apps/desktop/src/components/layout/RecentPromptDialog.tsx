@@ -1,8 +1,10 @@
 import { convertFileSrc, isTauri } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { copyPreview, saveGeneratedImage } from "../../native/generation";
 import { loadPromptImages, type PromptEntry, type PromptImage } from "../../native/history";
 import { Button } from "../ui/button";
+import { ImageViewer } from "./ImageViewer";
 
 type RecentPromptDialogProps = {
   entry: PromptEntry;
@@ -11,9 +13,14 @@ type RecentPromptDialogProps = {
   onError: (error: unknown) => void;
 };
 
+function ignore() {
+  return undefined;
+}
+
 export function RecentPromptDialog({ entry, onClose, onRepeat, onError }: RecentPromptDialogProps) {
   const { t } = useTranslation();
   const [images, setImages] = useState<PromptImage[]>([]);
+  const [index, setIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +28,7 @@ export function RecentPromptDialog({ entry, onClose, onRepeat, onError }: Recent
       .then((loaded) => {
         if (!cancelled) {
           setImages(loaded);
+          setIndex(0);
         }
       })
       .catch((error: unknown) => {
@@ -43,11 +51,13 @@ export function RecentPromptDialog({ entry, onClose, onRepeat, onError }: Recent
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  const current = images[index] ?? null;
+  const src = current === null ? null : viewerSrc(current.path);
   const negative =
     entry.negativePrompt.trim() === "" ? t("panel.recentNoNegative") : entry.negativePrompt;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-50 flex p-4">
       <button
         type="button"
         aria-label={t("panel.close")}
@@ -58,63 +68,76 @@ export function RecentPromptDialog({ entry, onClose, onRepeat, onError }: Recent
         role="dialog"
         aria-modal="true"
         aria-labelledby="recent-prompt-title"
-        className="relative z-10 flex max-h-full w-full max-w-lg flex-col gap-3 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-950"
+        className="relative z-10 flex h-full w-full min-h-0 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950"
       >
-        <h2 id="recent-prompt-title" className="text-base font-medium">
-          {entry.prompt}
-        </h2>
-        <p>
-          {t("panel.negative")}: {negative}
-        </p>
-        <p>
-          {t("panel.model")}: {entry.modelId}
-        </p>
-        <p>
-          {t("panel.steps")}: {entry.steps}
-        </p>
-        <p>{t("panel.size", { width: entry.width, height: entry.height })}</p>
-        <p>
-          {t("panel.cfg")}: {entry.cfg}
-        </p>
-        <p>
-          {t("panel.seed")}: {entry.seed}
-        </p>
-        <h3 className="text-sm font-medium">{t("panel.recentImages")}</h3>
-        {images.length === 0 ? (
-          <p className="text-sm text-zinc-500">{t("panel.recentImagesEmpty")}</p>
-        ) : (
-          <ul className="flex flex-wrap gap-2">
-            {images.map((image) => {
-              const name = fileName(image.path);
-              const src = imageSrc(image.path);
-              return (
-                <li key={`${image.path}:${image.seed}`}>
-                  {src ? (
-                    <img alt={name} src={src} className="h-20 w-20 rounded object-cover" />
-                  ) : (
-                    <span>{name}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <div className="flex gap-2">
-          <Button onClick={onRepeat}>{t("panel.repeat")}</Button>
-          <Button variant="ghost" onClick={onClose}>
-            {t("panel.close")}
-          </Button>
+        <div className="flex w-80 shrink-0 flex-col gap-3 overflow-y-auto border-r border-zinc-200 p-4 dark:border-zinc-800">
+          <h2 id="recent-prompt-title" className="text-base font-medium">
+            {entry.prompt}
+          </h2>
+          <p>
+            {t("panel.negative")}: {negative}
+          </p>
+          <p>
+            {t("panel.model")}: {entry.modelId}
+          </p>
+          <p>
+            {t("panel.steps")}: {entry.steps}
+          </p>
+          <p>{t("panel.size", { width: entry.width, height: entry.height })}</p>
+          <p>
+            {t("panel.cfg")}: {entry.cfg}
+          </p>
+          <p>
+            {t("panel.seed")}: {entry.seed}
+          </p>
+          <h3 className="text-sm font-medium">{t("panel.recentImages")}</h3>
+          {current === null ? (
+            <p className="text-sm text-zinc-500">{t("panel.recentImagesEmpty")}</p>
+          ) : (
+            <p>{fileName(current.path)}</p>
+          )}
+          <div className="mt-auto flex gap-2">
+            <Button onClick={onRepeat}>{t("panel.repeat")}</Button>
+            <Button variant="ghost" onClick={onClose}>
+              {t("panel.close")}
+            </Button>
+          </div>
+        </div>
+        <div className="min-h-0 min-w-0 flex-1 p-4" data-testid="recent-viewer">
+          <ImageViewer
+            src={src}
+            step={0}
+            total={0}
+            canSave={current !== null}
+            canRegenerate={false}
+            index={index}
+            count={images.length}
+            onPrevious={() => setIndex((currentIndex) => Math.max(0, currentIndex - 1))}
+            onNext={() => setIndex((currentIndex) => Math.min(images.length - 1, currentIndex + 1))}
+            onSave={() => {
+              if (current) {
+                void saveGeneratedImage(current.path).catch(onError);
+              }
+            }}
+            onCopy={() => {
+              if (src) {
+                void copyPreview(src).catch(onError);
+              }
+            }}
+            onRegenerate={ignore}
+            viewOnly
+          />
         </div>
       </section>
     </div>
   );
 }
 
-function imageSrc(path: string): string | null {
-  if (!isTauri()) {
-    return null;
+function viewerSrc(path: string): string {
+  if (isTauri()) {
+    return convertFileSrc(path);
   }
-  return convertFileSrc(path);
+  return path;
 }
 
 function fileName(path: string): string {

@@ -129,41 +129,6 @@ export async function downloadHubModel(file: HubFile): Promise<void> {
   });
 }
 
-type ActiveListener = (id: string | null) => void;
-
-let activeDownloadId: string | null = null;
-const activeListeners = new Set<ActiveListener>();
-
-function notifyActive(id: string | null): void {
-  for (const listener of activeListeners) {
-    listener(id);
-  }
-}
-
-export function claimDownload(id: string): boolean {
-  if (activeDownloadId !== null) {
-    return false;
-  }
-  activeDownloadId = id;
-  notifyActive(id);
-  return true;
-}
-
-export function releaseDownload(id: string): void {
-  if (activeDownloadId !== id) {
-    return;
-  }
-  activeDownloadId = null;
-  notifyActive(null);
-}
-
-export function subscribeActiveDownload(listener: ActiveListener): () => void {
-  activeListeners.add(listener);
-  return () => {
-    activeListeners.delete(listener);
-  };
-}
-
 export async function downloadModel(modelId: string, confirmed: boolean): Promise<void> {
   if (!isTauri()) {
     return;

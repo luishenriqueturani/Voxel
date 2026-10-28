@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  claimDownload,
   type DownloadProgress,
   downloadHubModel,
   type HubFile,
-  releaseDownload,
   searchHubModels,
 } from "../../native/models";
 import { Button } from "../ui/button";
@@ -13,6 +11,7 @@ import { Button } from "../ui/button";
 type HubSearchProps = {
   hfTokenConfigured: boolean;
   progress?: DownloadProgress | null;
+  queuedIds?: readonly string[];
   onSearch?: (query: string) => Promise<HubFile[]>;
   onDownload?: (file: HubFile) => Promise<void> | void;
 };
@@ -20,6 +19,7 @@ type HubSearchProps = {
 export function HubSearch({
   hfTokenConfigured,
   progress = null,
+  queuedIds = [],
   onSearch = searchHubModels,
   onDownload = downloadHubModel,
 }: HubSearchProps) {
@@ -51,24 +51,17 @@ export function HubSearch({
   }
 
   async function confirm(file: HubFile) {
-    const id = hubId(file);
-    if (!claimDownload(id)) {
-      return;
-    }
     setPending(null);
     setFailure("");
     try {
       await onDownload(file);
-      window.dispatchEvent(new Event("voxel-models"));
     } catch (error: unknown) {
       setFailure(error instanceof Error ? error.message : String(error));
-    } finally {
-      releaseDownload(id);
     }
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <form
         className="flex items-end gap-2"
         onSubmit={(event) => {
@@ -90,7 +83,7 @@ export function HubSearch({
         </Button>
       </form>
       <HubStatus files={files} progress={progress} failure={failure} />
-      <div className="max-h-72 overflow-y-auto rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
         {searched && files.length === 0 && !failure ? (
           <p className="text-zinc-500">{t("models.searchEmpty")}</p>
         ) : null}
@@ -101,7 +94,7 @@ export function HubSearch({
             return (
               <li key={id} className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0 flex-1 break-words">
                     <p className="font-medium">{file.filename}</p>
                     <p className="text-zinc-500">{file.repo}</p>
                     <p className="text-zinc-500">{formatBytes(file.bytes)}</p>
@@ -109,10 +102,12 @@ export function HubSearch({
                     <p>{t("models.unmeasured")}</p>
                     {blocked ? <p>{t("models.gatedToken")}</p> : null}
                   </div>
-                  {progress?.modelId === id ? null : (
+                  {progress?.modelId === id ? null : queuedIds.includes(id) ? (
+                    <p className="text-zinc-500">{t("models.queued")}</p>
+                  ) : (
                     <Button
                       aria-label={`${t("models.download")} ${file.filename}`}
-                      disabled={progress !== null || blocked}
+                      disabled={blocked}
                       onClick={() => setPending(file)}
                     >
                       {t("models.download")}
@@ -147,9 +142,7 @@ export function HubSearch({
               <Button variant="ghost" onClick={() => setPending(null)}>
                 {t("models.cancel")}
               </Button>
-              <Button disabled={progress !== null} onClick={() => confirm(pending)}>
-                {t("models.confirmDownload")}
-              </Button>
+              <Button onClick={() => confirm(pending)}>{t("models.confirmDownload")}</Button>
             </div>
           </div>
         </div>

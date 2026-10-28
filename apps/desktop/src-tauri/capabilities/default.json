@@ -24,6 +24,8 @@
     "allow-open-edit-image",
     "allow-remove-background",
     "allow-list-recent-prompts",
+    "allow-has-older-prompts",
+    "allow-list-older-prompts",
     "allow-list-prompt-images",
     "allow-set-prompt-favorite",
     "allow-list-gallery",
@@ -44,6 +46,12 @@
     "allow-reinstall-python-environment",
     "allow-remove-python-environment",
     "allow-mesh-from-image",
+    "allow-list-templates",
+    "allow-create-template",
+    "allow-update-template",
+    "allow-duplicate-template",
+    "allow-rename-template",
+    "allow-delete-template",
     "dialog:allow-open",
     "dialog:allow-save"
   ]

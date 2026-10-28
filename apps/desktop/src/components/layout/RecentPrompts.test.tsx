@@ -81,6 +81,11 @@ describe("RecentPrompts", () => {
     expect(within(dialog).getByText("CFG: 7")).toBeInTheDocument();
     expect(within(dialog).getByText("Seed: 9")).toBeInTheDocument();
     expect(await within(dialog).findByText("gato.png")).toBeInTheDocument();
+    expect(within(dialog).getByTestId("recent-viewer")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Remover fundo" })).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Regerar com a mesma seed" }),
+    ).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "Fechar" }));
     expect(applied.onPromptChange).not.toHaveBeenCalled();
@@ -112,8 +117,11 @@ describe("RecentPrompts", () => {
     renderList();
     const user = userEvent.setup();
     const more = await screen.findByRole("button", { name: "Ver o restante" });
-    expect(more.closest("ul")).not.toBeNull();
-    expect(more.closest(".overflow-y-auto")).not.toBeNull();
+    expect(more.closest("ul")).toBeNull();
+    expect(more.closest(".overflow-y-auto")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "um gato" }).closest(".overflow-y-auto"),
+    ).not.toBeNull();
     await user.click(more);
     expect(await screen.findByRole("button", { name: "um cão" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ver o restante" })).not.toBeInTheDocument();

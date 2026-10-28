@@ -212,4 +212,46 @@ describe("ImageViewer", () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it("compara a versão anterior e esconde a edição quando é só exibição", async () => {
+    const user = userEvent.setup();
+    const onSelectVersion = vi.fn();
+    render(
+      <ImageViewer
+        src="data:image/png;base64,nova"
+        step={0}
+        total={0}
+        canSave
+        canRegenerate
+        canRemove
+        versions={[
+          { src: "data:image/png;base64,antiga", path: "/antiga.png", seed: 1 },
+          { src: "data:image/png;base64,nova", path: "/nova.png", seed: 2 },
+        ]}
+        versionIndex={1}
+        onSelectVersion={onSelectVersion}
+        onRemoveBackground={vi.fn()}
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        viewOnly
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Remover fundo" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Regerar com a mesma seed" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Versão 2 de 2")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Comparar" }));
+    expect(screen.getByRole("img", { name: "Anterior" })).toHaveAttribute(
+      "src",
+      "data:image/png;base64,antiga",
+    );
+    expect(screen.getByRole("img", { name: "Esta" })).toHaveAttribute(
+      "src",
+      "data:image/png;base64,nova",
+    );
+    await user.click(screen.getByRole("button", { name: "Versão anterior" }));
+    expect(onSelectVersion).toHaveBeenCalledWith(0);
+  });
 });

@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { DownloadContext } from "../../downloads/DownloadProvider";
 import { StatusBar } from "./StatusBar";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -41,5 +42,23 @@ describe("StatusBar no app Tauri", () => {
     expect(bar).toHaveTextContent("RAM: 8.0/32.0 GiB");
     expect(bar).toHaveTextContent("Temp. CPU: 54 °C");
     expect(bar).toHaveTextContent("Temp. GPU: 48 °C");
+  });
+
+  it("mostra o download ativo à direita, com o restante da fila", () => {
+    render(
+      <DownloadContext.Provider
+        value={{
+          active: { id: "sd15", label: "Stable Diffusion 1.5", kind: "catalog" },
+          waiting: [{ id: "qwen", label: "Qwen", kind: "catalog" }],
+          progress: { modelId: "sd15", received: 40, total: 100, phase: "download" },
+          enqueueCatalog: () => undefined,
+          enqueueHub: () => undefined,
+        }}
+      >
+        <StatusBar status={null} onOpenSettings={() => undefined} />
+      </DownloadContext.Provider>,
+    );
+    const label = screen.getByText("Baixando Stable Diffusion 1.5 40% · 1 na fila");
+    expect(label.parentElement).toHaveClass("ml-auto");
   });
 });

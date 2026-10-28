@@ -97,11 +97,14 @@ describe("gerenciador de modelos", () => {
       />,
     );
     const downloadedHeading = screen.getByRole("heading", { name: "Baixados" });
-    expect(downloadedHeading.nextElementSibling).toHaveClass("overflow-y-auto");
+    const downloadedColumn = downloadedHeading.closest(".overflow-y-auto");
+    expect(downloadedColumn).not.toBeNull();
+    expect(downloadedHeading.parentElement).not.toHaveClass("max-h-72");
     const search = screen.getByRole("textbox", { name: "Buscar" });
     const searchFrame = search.closest("form")?.parentElement?.querySelector(".overflow-y-auto");
-    expect(searchFrame).toHaveClass("overflow-y-auto");
-    expect(searchFrame).not.toBe(downloadedHeading.nextElementSibling);
+    expect(searchFrame).toHaveClass("flex-1");
+    expect(searchFrame).not.toHaveClass("max-h-72");
+    expect(searchFrame).not.toBe(downloadedColumn);
     expect(screen.getByText("qwen.gguf")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remover qwen.gguf" })).toBeInTheDocument();
     expect(screen.queryByText("Enorme")).not.toBeInTheDocument();
@@ -158,11 +161,14 @@ describe("gerenciador de modelos", () => {
     expect(onImport).toHaveBeenCalled();
   });
 
-  it("mostra o quanto já foi baixado e trava os outros downloads", () => {
+  it("mostra o quanto já foi baixado e deixa enfileirar outro", async () => {
+    const user = userEvent.setup();
     renderSection(vi.fn(), vi.fn(), { modelId: "sd15", received: 40, total: 100 });
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "40");
     expect(screen.getByText("40 B de 100 B")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Baixar Stable Diffusion 1.5" })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "Mostrar modelos incompatíveis" }));
+    expect(screen.getByRole("button", { name: "Baixar Enorme" })).toBeEnabled();
   });
 
   it("mostra os recomendados e deixa a busca fora do filtro", async () => {

@@ -1,4 +1,5 @@
 import { type Dispatch, type SetStateAction, useCallback, useRef, useState } from "react";
+import { applyEditResult, showVersion } from "../lib/imageVersions";
 import { popSlides, pushSlides } from "../lib/slideHistory";
 import { loadImageFile, openImageForEdit, removeImageBackground } from "../native/background";
 import type { GalleryImage } from "../native/generation";
@@ -36,6 +37,7 @@ export function useImageEdit({
   discardEdit: () => void;
   restoreEdit: () => void;
   undoEdit: () => void;
+  selectVersion: (index: number) => void;
 } {
   const [removing, setRemoving] = useState(false);
   const [editHistory, setEditHistory] = useState<GalleryImage[][]>([]);
@@ -69,6 +71,17 @@ export function useImageEdit({
     setSlides(snapshot);
     setSlideIndex(Math.max(0, snapshot.length - 1));
   }, [setSlideIndex, setSlides]);
+
+  const selectVersion = useCallback(
+    (index: number) => {
+      setSlides((current) =>
+        current.map((slide, position) =>
+          position === slideIndex ? showVersion(slide, index) : slide,
+        ),
+      );
+    },
+    [setSlides, slideIndex],
+  );
 
   const undoEdit = useCallback(() => {
     const restored = popSlides(editHistory);
@@ -118,12 +131,16 @@ export function useImageEdit({
         if (snapshot !== null) {
           setEditHistory((current) => pushSlides(current, snapshot));
         }
-        setSlides((existing) =>
-          existing.map((slide, position) =>
-            position === index
-              ? { ...slide, src: image.src, path: image.path, transparent: true }
-              : slide,
-          ),
+        setSlides(
+          (existing) =>
+            applyEditResult(existing, index, [
+              {
+                src: image.src,
+                path: image.path,
+                seed: existing[index]?.seed ?? null,
+                transparent: true,
+              },
+            ]).slides,
         );
       })
       .catch((error: unknown) => {
@@ -211,5 +228,6 @@ export function useImageEdit({
     discardEdit,
     restoreEdit,
     undoEdit,
+    selectVersion,
   };
 }
