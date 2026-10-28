@@ -183,9 +183,9 @@ pub fn image_args(
     device: &str,
     job: &ImageJob,
 ) -> Vec<String> {
-    let mut args = vec![
-        "-m".to_owned(),
-        model.display().to_string(),
+    let mut args = Vec::new();
+    crate::layout::extend_model(&mut args, model);
+    args.extend([
         "-p".to_owned(),
         job.prompt.clone(),
         "-o".to_owned(),
@@ -209,12 +209,12 @@ pub fn image_args(
         "--sampling-method".to_owned(),
         "euler_a".to_owned(),
         "--backend".to_owned(),
-        device.to_owned(),
+        crate::layout::runtime_backend(model, device),
         "--tensor-type-rules".to_owned(),
         r"^vae\.=f16".to_owned(),
         "--auto-fit".to_owned(),
         "on".to_owned(),
-    ];
+    ]);
     if let Some(negative) = &job.negative_prompt {
         args.push("-n".to_owned());
         args.push(negative.clone());
@@ -254,20 +254,23 @@ pub fn decode_args(
     device: &str,
     fallback: DecodeFallback,
 ) -> Vec<String> {
-    let mut args = vec![
-        "-m".to_owned(),
-        model.display().to_string(),
+    let mut args = Vec::new();
+    crate::layout::extend_model(&mut args, model);
+    args.extend([
         "-o".to_owned(),
         output.display().to_string(),
         "--backend".to_owned(),
-        if fallback.cpu {
-            format!("vae=cpu,{device}")
-        } else {
-            device.to_owned()
-        },
+        crate::layout::runtime_backend(
+            model,
+            &if fallback.cpu {
+                format!("vae=cpu,{device}")
+            } else {
+                device.to_owned()
+            },
+        ),
         "--tensor-type-rules".to_owned(),
         format!("^vae\\.={}", fallback.vae),
-    ];
+    ]);
     if fallback.tiling {
         args.push("--vae-tiling".to_owned());
     }

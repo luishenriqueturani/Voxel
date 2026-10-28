@@ -7,6 +7,8 @@ use voxel_models::{
     inspect_file,
 };
 
+use super::package_store;
+
 /// Modelo do catálogo ou importado, com o selo desta máquina.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -116,37 +118,8 @@ pub fn list_models(dir: &Path, facts: &MachineFacts) -> Result<Vec<ListedModel>,
             architecture,
         }));
     }
+    append_packages(dir, facts, &mut listed)?;
     Ok(listed)
-}
-
-/// Lê a arquitetura do arquivo já gravado e estima o selo pelo tamanho.
-///
-/// # Errors
-///
-/// Falha se o nome sair da pasta ou se o cabeçalho não for reconhecido.
-pub fn describe_downloaded(
-    dir: &Path,
-    filename: &str,
-    license: &str,
-    facts: &MachineFacts,
-) -> Result<ListedModel, String> {
-    let path = file_in_dir(dir, filename)?;
-    if !path.is_file() {
-        return Err("arquivo ausente".to_owned());
-    }
-    let info = inspect_file(&path).map_err(|error| error.to_string())?;
-    Ok(describe(Entry {
-        id: filename,
-        name: filename,
-        license,
-        bytes: info.bytes,
-        filename,
-        installed: true,
-        catalog: false,
-        seal: estimate_by_size(info.bytes, facts.vram_bytes),
-        kind: import_kind(Some(info.architecture.as_str())),
-        architecture: Some(info.architecture),
-    }))
 }
 
 /// Copia um `.safetensors` ou `.gguf` para a pasta de modelos.
@@ -194,6 +167,9 @@ pub fn import_model(
 ///
 /// Falha se o nome sair da pasta ou se a remoção falhar.
 pub fn remove_model(dir: &Path, filename: &str) -> Result<(), String> {
+    if filename.contains('/') || filename.contains('\\') {
+        return package_store::remove_stored_package(dir, filename);
+    }
     let path = file_in_dir(dir, filename)?;
     if path.is_file() {
         std::fs::remove_file(&path).map_err(|error| error.to_string())?;
@@ -314,6 +290,43 @@ fn view_reason(reason: Reason) -> ListedReason {
     }
 }
 
+fn append_packages(
+    dir: &Path,
+    facts: &MachineFacts,
+    listed: &mut Vec<ListedModel>,
+) -> Result<(), String> {
+    for stored in package_store::stored_packages(dir)? {
+        let path = package_store::safe_relative(dir, &stored.open)?;
+        let (architecture, kind) = package_kind(&path);
+        listed.push(describe(Entry {
+            id: &stored.open,
+            name: &stored.name,
+            license: &stored.license,
+            bytes: stored.bytes,
+            filename: &stored.open,
+            installed: true,
+            catalog: false,
+            seal: estimate_by_size(stored.bytes, facts.vram_bytes),
+            architecture,
+            kind,
+        }));
+    }
+    Ok(())
+}
+
+fn package_kind(path: &Path) -> (Option<String>, &'static str) {
+    if !path.is_file() {
+        return (None, "image");
+    }
+    match inspect_file(path) {
+        Ok(info) => {
+            let kind = import_kind(Some(info.architecture.as_str()));
+            (Some(info.architecture), kind)
+        }
+        Err(_) => (None, "image"),
+    }
+}
+
 fn is_weight(path: &Path) -> bool {
     matches!(
         path.extension()
@@ -345,7 +358,7 @@ fn partial_path(destination: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::{describe_downloaded, import_kind, import_model, list_models, remove_model};
+    use super::{import_kind, import_model, list_models, remove_model};
     use voxel_models::MachineFacts;
 
     fn facts(vram: u64) -> MachineFacts {
@@ -383,14 +396,8 @@ mod tests {
             Some("stable-diffusion-v1")
         );
         assert_eq!(imported.compatibility, "compatible");
-        let described =
-            describe_downloaded(&models, "local.safetensors", "mit", &facts(10_000_000)).unwrap();
-        assert_eq!(described.license, "mit");
-        assert!(!described.catalog);
-        assert_eq!(
-            described.architecture.as_deref(),
-            Some("stable-diffusion-v1")
-        );
+        assert_eq!(imported.license, "");
+        assert!(!imported.catalog);
         assert!(import_model(&models, &source, &facts(10_000_000)).is_err());
         let small = list_models(&models, &facts(1)).unwrap();
         let local = small

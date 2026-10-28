@@ -1,10 +1,11 @@
-import type { DownloadProgress, HubFile } from "../native/models";
+import type { DownloadProgress, HubPackage, HubPart } from "../native/models";
 
 export type DownloadJob = {
   id: string;
   label: string;
   kind: "catalog" | "hub";
-  file?: HubFile;
+  file?: HubPart;
+  hubPackage?: HubPackage;
 };
 
 export type DownloadSnapshot = {
@@ -19,7 +20,7 @@ export const emptyDownloadSnapshot: DownloadSnapshot = {
   progress: null,
 };
 
-export function hubDownloadId(file: HubFile): string {
+export function hubDownloadId(file: HubPart): string {
   return `${file.repo}/${file.filename}`;
 }
 

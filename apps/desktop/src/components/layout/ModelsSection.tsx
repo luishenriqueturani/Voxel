@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { DownloadProgress, HubFile, ListedModel, ListedReason } from "../../native/models";
+import type { DownloadProgress, HubPackage, ListedModel, ListedReason } from "../../native/models";
 import { Button } from "../ui/button";
 import { HubSearch } from "./HubSearch";
 
@@ -15,8 +15,8 @@ type ModelsSectionProps = {
   onRemove: (filename: string) => void;
   onOpenFolder: () => void;
   onImport: () => void;
-  onSearchHub?: (query: string) => Promise<HubFile[]>;
-  onDownloadHub?: (file: HubFile) => Promise<void> | void;
+  onSearchHub?: (query: string) => Promise<HubPackage[]>;
+  onDownloadHub?: (pkg: HubPackage) => Promise<void> | void;
 };
 
 export function ModelsSection({

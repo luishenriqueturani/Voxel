@@ -68,6 +68,7 @@ export type GenerationRequest = {
   strength?: number;
   sourcePath?: string | null;
   maskPng?: string | null;
+  backend?: string;
 };
 
 export type GenerationDefaults = {

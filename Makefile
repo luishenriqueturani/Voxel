@@ -11,6 +11,7 @@ RUST_COVERAGE_IGNORE := apps/desktop/src-tauri/src/(main|lib)\.rs$$
 SDCPP_SRC := workers/sdcpp/stable-diffusion.cpp
 SDCPP_BUILD := workers/sdcpp/build/vulkan
 SDCPP_COMMIT := b13a482
+SDCPP_PATCH := workers/sdcpp/moss-hf-llm.patch
 SDCPP_PREFIX := workers/sdcpp/build/prefix
 SDCPP_HEADERS := workers/sdcpp/build/vulkan-headers/include
 
@@ -64,6 +65,9 @@ build-sdcpp:
 	@if [ "$$(git -C $(SDCPP_SRC) rev-parse --short=7 HEAD)" != "$(SDCPP_COMMIT)" ]; then \
 		git -C $(SDCPP_SRC) fetch --depth 1 origin $(SDCPP_COMMIT); \
 		git -C $(SDCPP_SRC) checkout --detach $(SDCPP_COMMIT); \
+	fi
+	@if ! grep -q hf_language $(SDCPP_SRC)/src/name_conversion.cpp; then \
+		patch -d $(SDCPP_SRC) -p1 --batch --input="$(CURDIR)/$(SDCPP_PATCH)"; \
 	fi
 	@if [ ! -f $(SDCPP_BUILD)/CMakeCache.txt ]; then \
 		test -d $(SDCPP_HEADERS); \

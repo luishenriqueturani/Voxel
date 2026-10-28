@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { blankEdit, type EditPayload } from "../../lib/edit";
 import type { GenerationParams } from "./PromptPanel";
 import { WorkspaceView } from "./WorkspaceView";
@@ -17,18 +17,26 @@ const params: GenerationParams = {
   count: 1,
 };
 
+afterEach(() => {
+  localStorage.removeItem("voxel.modelPresets");
+});
+
 function View({
   shown,
   sourcePath,
   modelId = "sd15",
+  imageBackend = "vulkan",
   onGenerate = vi.fn(),
   onParamsChange = vi.fn(),
+  onImageBackendChange = vi.fn(),
 }: {
   shown: string | null;
   sourcePath: string | null;
   modelId?: string;
+  imageBackend?: string;
   onGenerate?: () => void;
   onParamsChange?: (params: GenerationParams) => void;
+  onImageBackendChange?: (backend: string) => void;
 }) {
   const editRef = useRef<EditPayload>(blankEdit);
   return (
@@ -42,6 +50,8 @@ function View({
       onModelChange={vi.fn()}
       params={params}
       onParamsChange={onParamsChange}
+      imageBackend={imageBackend}
+      onImageBackendChange={onImageBackendChange}
       outputMode="2d"
       onOutputModeChange={vi.fn()}
       generating={false}
@@ -105,6 +115,7 @@ describe("WorkspaceView", () => {
     const user = userEvent.setup();
     const onGenerate = vi.fn();
     const onParamsChange = vi.fn();
+    const onImageBackendChange = vi.fn();
     render(
       <View
         shown={null}
@@ -112,27 +123,29 @@ describe("WorkspaceView", () => {
         modelId="peso.safetensors"
         onGenerate={onGenerate}
         onParamsChange={onParamsChange}
+        onImageBackendChange={onImageBackendChange}
       />,
     );
     await user.click(screen.getByRole("button", { name: "Gerar" }));
     expect(onGenerate).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog", { name: "Preset do modelo" })).toBeInTheDocument();
     expect(
-      screen.getByText("A geração espera a família e os parâmetros deste arquivo."),
+      screen.getByText("A geração espera a família e o backend deste arquivo."),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Resolução" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Passos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "CFG" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onGenerate).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Gerar" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "Família" }), "sdxl");
-    await user.clear(screen.getByRole("textbox", { name: "Passos" }));
-    await user.type(screen.getByRole("textbox", { name: "Passos" }), "28");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Backend de imagem" }), "rocm");
     await user.click(screen.getByRole("button", { name: "Salvar e gerar" }));
-    expect(onParamsChange).toHaveBeenCalledWith(
-      expect.objectContaining({ steps: 28, resolution: 512 }),
-    );
+    expect(onParamsChange).not.toHaveBeenCalled();
     expect(onGenerate).toHaveBeenCalledOnce();
+    expect(onImageBackendChange).toHaveBeenCalledWith("rocm");
   });
 
   it("abre o mesmo modal para alterar o preset de um modelo medido", async () => {
@@ -154,6 +167,6 @@ describe("WorkspaceView", () => {
     expect(screen.getByRole("combobox", { name: "Família" })).toHaveValue("sd15");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     expect(onGenerate).toHaveBeenCalledOnce();
-    expect(onParamsChange).toHaveBeenCalledWith(expect.objectContaining({ steps: 20, cfg: 7 }));
+    expect(onParamsChange).not.toHaveBeenCalled();
   });
 });

@@ -34,6 +34,7 @@ type ImageViewerProps = {
   onUndo?: () => void;
   mosaic?: boolean;
   onToggleMosaic?: () => void;
+  generating?: boolean;
   versions?: ImageVersion[];
   versionIndex?: number;
   onSelectVersion?: (index: number) => void;
@@ -41,6 +42,15 @@ type ImageViewerProps = {
 };
 
 type Pan = { x: number; y: number };
+
+function Preparing() {
+  const { t } = useTranslation();
+  return (
+    <p className="absolute bottom-3 left-3 z-10 max-w-sm rounded bg-black/70 px-3 py-2 text-sm text-white">
+      {t("generation.preparing")}
+    </p>
+  );
+}
 
 function fileName(path: string): string {
   const parts = path.split(/[/\\]/);
@@ -76,6 +86,7 @@ export function ImageViewer({
   onUndo,
   mosaic = false,
   onToggleMosaic,
+  generating = false,
   versions = [],
   versionIndex = 0,
   onSelectVersion,
@@ -246,9 +257,12 @@ export function ImageViewer({
                 src={src}
               />
             )}
+            {generating && total === 0 ? <Preparing /> : null}
           </div>
         ) : (
-          <p className="text-sm text-zinc-500">{t("main.empty")}</p>
+          <p className="text-sm text-zinc-500">
+            {generating ? t("generation.preparing") : t("main.empty")}
+          </p>
         )}
       </div>
       {src || viewingMesh ? (

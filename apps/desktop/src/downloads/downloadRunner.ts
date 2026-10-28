@@ -2,7 +2,7 @@ import {
   type DownloadProgress,
   downloadHubModel,
   downloadModel,
-  type HubFile,
+  type HubPackage,
   type ListedModel,
   listenToDownloadProgress,
   loadModels,
@@ -52,8 +52,16 @@ export function enqueueCatalogDownload(id: string, label: string): void {
   push({ id, label, kind: "catalog" });
 }
 
-export function enqueueHubDownload(file: HubFile): void {
-  push({ id: hubDownloadId(file), label: file.filename, kind: "hub", file });
+export function enqueueHubDownload(pkg: HubPackage): void {
+  for (const part of pkg.parts) {
+    push({
+      id: hubDownloadId(part),
+      label: part.filename,
+      kind: "hub",
+      file: part,
+      hubPackage: pkg,
+    });
+  }
 }
 
 export function resetDownloadQueueForTests(): void {
@@ -82,8 +90,8 @@ async function pump(): Promise<void> {
   }
   running = true;
   try {
-    if (job.kind === "hub" && job.file) {
-      await downloadHubModel(job.file);
+    if (job.kind === "hub" && job.file && job.hubPackage) {
+      await downloadHubModel(job.file, job.hubPackage);
     } else {
       await downloadModel(job.id, true);
     }

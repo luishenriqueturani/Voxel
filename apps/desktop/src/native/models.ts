@@ -89,43 +89,85 @@ export function listenToDownloadProgress(
   });
 }
 
-export type HubFile = {
+export type HubPart = {
   repo: string;
   filename: string;
   bytes: number;
   sha256: string;
-  license: string;
-  gated: boolean;
+  role: string;
+  shardIndex: number | null;
+  shardCount: number | null;
 };
 
-function isHubFile(value: unknown): value is HubFile {
+export type HubPackage = {
+  repo: string;
+  name: string;
+  folder: string;
+  license: string;
+  gated: boolean;
+  opener: string;
+  directory: boolean;
+  marker: string;
+  parts: HubPart[];
+};
+
+function isHubPart(value: unknown): value is HubPart {
   if (typeof value !== "object" || value === null) {
     return false;
   }
-  const file = value as HubFile;
+  const part = value as HubPart;
   return (
-    typeof file.repo === "string" &&
-    typeof file.filename === "string" &&
-    typeof file.bytes === "number" &&
-    typeof file.license === "string" &&
-    typeof file.gated === "boolean"
+    typeof part.repo === "string" &&
+    typeof part.filename === "string" &&
+    typeof part.bytes === "number" &&
+    typeof part.sha256 === "string" &&
+    typeof part.role === "string" &&
+    (part.shardIndex === null || typeof part.shardIndex === "number") &&
+    (part.shardCount === null || typeof part.shardCount === "number")
   );
 }
 
-export async function searchHubModels(query: string): Promise<HubFile[]> {
+function isHubPackage(value: unknown): value is HubPackage {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const pkg = value as HubPackage;
+  return (
+    typeof pkg.repo === "string" &&
+    typeof pkg.name === "string" &&
+    typeof pkg.folder === "string" &&
+    typeof pkg.license === "string" &&
+    typeof pkg.gated === "boolean" &&
+    typeof pkg.opener === "string" &&
+    typeof pkg.directory === "boolean" &&
+    typeof pkg.marker === "string" &&
+    Array.isArray(pkg.parts) &&
+    pkg.parts.every(isHubPart)
+  );
+}
+
+export async function searchHubModels(query: string): Promise<HubPackage[]> {
   if (!isTauri()) {
     return [];
   }
   const value = await invoke("search_hub_models", { query });
-  return Array.isArray(value) ? value.filter(isHubFile) : [];
+  return Array.isArray(value) ? value.filter(isHubPackage) : [];
 }
 
-export async function downloadHubModel(file: HubFile): Promise<void> {
+export async function downloadHubModel(part: HubPart, pkg: HubPackage): Promise<void> {
   if (!isTauri()) {
     return;
   }
   await invoke("download_hub_model", {
-    choice: { repo: file.repo, filename: file.filename },
+    choice: {
+      repo: part.repo,
+      filename: part.filename,
+      packageName: pkg.name,
+      opener: pkg.opener,
+      directory: pkg.directory,
+      marker: pkg.marker,
+      parts: pkg.parts.map((item) => item.filename),
+    },
   });
 }
 

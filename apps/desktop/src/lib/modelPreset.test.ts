@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GenerationParams } from "../components/layout/PromptPanel";
 import {
+  explicitBackend,
   onPresetRequest,
   paramsForRun,
   presetFor,
@@ -23,6 +24,7 @@ const params: GenerationParams = {
 afterEach(() => {
   takeQueuedPreset();
   onPresetRequest(() => undefined)();
+  localStorage.removeItem("voxel.modelPresets");
 });
 
 describe("preset do modelo", () => {
@@ -36,16 +38,27 @@ describe("preset do modelo", () => {
     stop();
   });
 
-  it("grava a família e aplica o preset enfileirado nesta geração", () => {
-    savePreset("peso.safetensors", { family: "flux", resolution: 1024, steps: 30, cfg: 3.5 });
-    queuePreset({ family: "flux", resolution: 1024, steps: 30, cfg: 3.5 });
-    expect(paramsForRun(params, "peso.safetensors")).toMatchObject({
+  it("grava a família e mantém resolução, passos e CFG do painel", () => {
+    savePreset("peso.safetensors", {
+      family: "flux",
       resolution: 1024,
-      width: 1024,
-      height: 1024,
       steps: 30,
       cfg: 3.5,
+      backend: "rocm",
     });
+    queuePreset({ family: "flux", resolution: 1024, steps: 30, cfg: 3.5, backend: "rocm" });
+    expect(explicitBackend("peso.safetensors")).toBe("rocm");
     expect(paramsForRun(params, "peso.safetensors")).toEqual(params);
+  });
+
+  it("aceita um preset antigo sem backend e não o trata como escolha", () => {
+    localStorage.setItem(
+      "voxel.modelPresets",
+      JSON.stringify({
+        "peso.safetensors": { family: "qwen", resolution: 1024, steps: 40, cfg: 4 },
+      }),
+    );
+    expect(presetFor("peso.safetensors")?.family).toBe("qwen");
+    expect(explicitBackend("peso.safetensors")).toBeNull();
   });
 });

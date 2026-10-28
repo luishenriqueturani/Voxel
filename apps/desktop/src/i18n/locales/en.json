@@ -204,7 +204,7 @@
   "preset": {
     "title": "Model preset",
     "family": "Family",
-    "pending": "Generation waits for this file's family and parameters.",
+    "pending": "Generation waits for this file's family and backend.",
     "save": "Save",
     "saveAndGenerate": "Save and generate",
     "families": {
@@ -260,10 +260,23 @@
     "search": "Search",
     "searchPlaceholder": "Name on Hugging Face",
     "searching": "Searching…",
-    "searchEmpty": "No files found.",
+    "searchEmpty": "No models found.",
+    "partLine": "{{role}} · {{size}}",
+    "partShard": "{{role}} · part {{index}} of {{total}} · {{size}}",
     "unmeasured": "Not measured",
     "unmeasuredWarning": "This model was not measured on this computer. Compatibility is estimated after the download, from the file size.",
     "gatedToken": "Restricted repository. Save a Hugging Face token before downloading.",
+    "roles": {
+      "text_encoder": "text encoder",
+      "text_encoder_2": "text encoder 2",
+      "transformer": "transformer",
+      "unet": "unet",
+      "vae": "VAE",
+      "tokenizer": "tokenizer",
+      "tokenizer_2": "tokenizer 2",
+      "index": "index",
+      "file": "file"
+    },
     "seals": {
       "compatible": "Compatible",
       "caveat": "With caveats",
@@ -299,7 +312,8 @@
   },
   "generation": {
     "preview": "Generation preview",
-    "step": "Step {{step}} of {{total}}"
+    "step": "Step {{step}} of {{total}}",
+    "preparing": "Preparing the prompt. The image starts at the first step."
   },
   "viewer": {
     "zoomIn": "Zoom in",

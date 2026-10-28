@@ -66,6 +66,7 @@ export function generationRequest(
   params: FrameParams,
   seed: number | null,
   edit: EditPayload,
+  backend?: string,
 ): GenerationRequest {
   const image = requestImage(edit);
   return {
@@ -82,6 +83,7 @@ export function generationRequest(
     strength: edit.strength,
     sourcePath: image.sourcePath,
     maskPng: edit.mode === "inpaint" ? edit.maskPng : null,
+    ...(backend === undefined || backend === "" ? {} : { backend }),
   };
 }
 

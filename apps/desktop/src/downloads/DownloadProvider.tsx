@@ -1,5 +1,5 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
-import type { HubFile, ListedModel } from "../native/models";
+import type { HubPackage, ListedModel } from "../native/models";
 import {
   enqueueCatalogDownload,
   enqueueHubDownload,
@@ -11,7 +11,7 @@ import type { DownloadJob, DownloadSnapshot } from "./queueState";
 
 export type DownloadApi = DownloadSnapshot & {
   enqueueCatalog: (id: string, label: string) => void;
-  enqueueHub: (file: HubFile) => void;
+  enqueueHub: (pkg: HubPackage) => void;
 };
 
 const idle: DownloadApi = {

@@ -17,7 +17,7 @@ import {
   meshViewsOf,
   pickForPath,
 } from "../lib/meshViews";
-import { paramsForRun } from "../lib/modelPreset";
+import { explicitBackend, paramsForRun } from "../lib/modelPreset";
 import { type GalleryImage, generateImage, imageSrc, isCancelled } from "../native/generation";
 import { meshFromImage, meshOptimize } from "../native/mesh";
 import type { PythonIntent } from "../native/pythonEnv";
@@ -59,6 +59,7 @@ type GenerationRequestOptions = {
   prepareEnvironment: () => Promise<void>;
   noteIntent: (reason: PythonIntent) => Promise<void>;
   setWaitingEnvironment: (value: boolean) => void;
+  onImageBackend?: (backend: string) => void;
   slides: GalleryImage[];
   slideIndex: number;
 };
@@ -76,6 +77,18 @@ type GenerationActions = {
   addCurrentViews: () => void;
   canAddCurrent: boolean;
 };
+
+function backendFor(
+  modelId: string,
+  onImageBackend?: (backend: string) => void,
+): string | undefined {
+  const backend = explicitBackend(modelId);
+  if (backend === null) {
+    return undefined;
+  }
+  onImageBackend?.(backend);
+  return backend;
+}
 
 function chosenSeed(typed: string, override?: number): number | null {
   if (override !== undefined) {
@@ -117,6 +130,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
     prepareEnvironment,
     noteIntent,
     setWaitingEnvironment,
+    onImageBackend,
     slides,
     slideIndex,
   } = options;
@@ -219,6 +233,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
         if (runParams === null) {
           return;
         }
+        const backend = backendFor(modelId, onImageBackend);
         generatingRef.current = true;
         setWaitingEnvironment(true);
         setMeshFiles(null);
@@ -232,7 +247,15 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
             setFrame(null);
             const seed = chosenSeed(params.seed, seedOverride);
             const image = await generateImage(
-              generationRequest(prompt, negativePrompt, modelId, runParams, seed, blankEdit),
+              generationRequest(
+                prompt,
+                negativePrompt,
+                modelId,
+                runParams,
+                seed,
+                blankEdit,
+                backend,
+              ),
               (progress) => {
                 setFrame((current) => ({
                   step: progress.step,
@@ -273,6 +296,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
       if (runParams === null) {
         return;
       }
+      const backend = backendFor(modelId, onImageBackend);
       const editing = edit.mode === "vary" || edit.mode === "inpaint";
       const sourceIndex = slideIndex;
       holdEdit();
@@ -286,7 +310,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
       setFrame(null);
       const seed = chosenSeed(params.seed, seedOverride);
       void generateImage(
-        generationRequest(prompt, negativePrompt, modelId, runParams, seed, edit),
+        generationRequest(prompt, negativePrompt, modelId, runParams, seed, edit, backend),
         (progress) => {
           setFrame((current) => ({
             step: progress.step,
@@ -349,6 +373,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
       generatingRef,
       holdEdit,
       modelId,
+      onImageBackend,
       negativePrompt,
       params,
       prompt,

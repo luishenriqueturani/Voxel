@@ -9,9 +9,10 @@ use serde::Serialize;
 
 use crate::catalog::ModelError;
 use crate::download::DownloadJob;
+use crate::package::{HubPackage, packages_within};
 
 const SEARCH_LIMIT: usize = 5;
-const FILE_LIMIT: usize = 20;
+const PACKAGE_LIMIT: usize = 20;
 
 /// Um `.safetensors` ou `.gguf` publicado no Hub.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -25,12 +26,12 @@ pub struct HubFile {
     pub gated: bool,
 }
 
-/// Procura repositórios e devolve só os pesos com tamanho conhecido.
+/// Procura repositórios e devolve pacotes inteiros, sem cortar uma parte no meio.
 ///
 /// # Errors
 ///
 /// Falha se a busca estiver vazia ou se a rede recusar o primeiro pedido.
-pub fn search(query: &str, token: Option<&str>) -> Result<Vec<HubFile>, ModelError> {
+pub fn search(query: &str, token: Option<&str>) -> Result<Vec<HubPackage>, ModelError> {
     search_with("https://huggingface.co", query, token)
 }
 
@@ -43,7 +44,7 @@ pub fn search_with(
     api: &str,
     query: &str,
     token: Option<&str>,
-) -> Result<Vec<HubFile>, ModelError> {
+) -> Result<Vec<HubPackage>, ModelError> {
     let query = query.trim();
     if query.is_empty() || query.len() > 80 {
         return Err(ModelError::Invalid("busca vazia ou longa".to_owned()));
@@ -57,8 +58,11 @@ pub fn search_with(
         ),
         token,
     )?;
-    let mut files = Vec::new();
+    let mut packages = Vec::new();
     for repo in parse_repo_ids(&list)?.into_iter().take(SEARCH_LIMIT) {
+        if packages.len() >= PACKAGE_LIMIT {
+            break;
+        }
         if !valid_repo(&repo) {
             continue;
         }
@@ -69,16 +73,13 @@ pub fn search_with(
         ) else {
             continue;
         };
-        let Ok(mut found) = parse_repo(&detail) else {
+        let Ok(found) = parse_repo(&detail) else {
             continue;
         };
-        files.append(&mut found);
-        if files.len() >= FILE_LIMIT {
-            files.truncate(FILE_LIMIT);
-            break;
-        }
+        let room = PACKAGE_LIMIT - packages.len();
+        packages.extend(packages_within(&found, room));
     }
-    Ok(files)
+    Ok(packages)
 }
 
 /// Relê o repositório e devolve o arquivo pedido, com o tamanho e o hash do Hub.
@@ -200,12 +201,13 @@ fn valid_repo(repo: &str) -> bool {
 }
 
 fn valid_filename(filename: &str) -> bool {
-    let extension = std::path::Path::new(filename)
-        .extension()
-        .is_some_and(|ext| {
-            ext.eq_ignore_ascii_case("safetensors") || ext.eq_ignore_ascii_case("gguf")
-        });
-    if !extension {
+    let base = filename.rsplit('/').next().unwrap_or(filename);
+    let weight = std::path::Path::new(base).extension().is_some_and(|ext| {
+        ext.eq_ignore_ascii_case("safetensors") || ext.eq_ignore_ascii_case("gguf")
+    });
+    let index = base == "model_index.json" || base.ends_with(".safetensors.index.json");
+    let tokenizer = base == "tokenizer.json";
+    if !weight && !index && !tokenizer {
         return false;
     }
     let parts = filename.split('/').collect::<Vec<_>>();
@@ -372,6 +374,26 @@ mod tests {
     }
 
     #[test]
+    fn o_indice_do_diffusers_entra_na_lista() {
+        let body = r#"{
+            "id": "acme/gato",
+            "siblings": [
+                { "rfilename": "merged/model_index.json", "size": 20 },
+                { "rfilename": "merged/vae/diffusion_pytorch_model.safetensors.index.json", "size": 30 },
+                { "rfilename": "README.md", "size": 10 }
+            ]
+        }"#;
+        let files = parse_repo(body).unwrap();
+        assert_eq!(files.len(), 2);
+        assert_eq!(files[0].filename, "merged/model_index.json");
+        assert!(files[0].sha256.is_empty());
+        assert_eq!(
+            files[1].filename,
+            "merged/vae/diffusion_pytorch_model.safetensors.index.json"
+        );
+    }
+
+    #[test]
     fn repositorio_restrito_sem_token_nao_abre_a_rede() {
         let file = parse_repo(DETAIL).unwrap().remove(0);
         assert_eq!(
@@ -418,13 +440,15 @@ mod tests {
                 let _ = std::io::Write::write_all(&mut stream, body.as_bytes());
             }
         });
-        let files = search_with(
+        let packages = search_with(
             &format!("http://127.0.0.1:{port}"),
             "gato",
             Some("hf_teste"),
         )
         .unwrap();
-        assert_eq!(files.len(), 2);
+        assert_eq!(packages.len(), 2);
+        assert_eq!(packages[0].parts[0].filename, "peso.safetensors");
+        assert_eq!(packages[1].parts[0].filename, "v2/outro.gguf");
         let again = find_file(
             &format!("http://127.0.0.1:{port}"),
             "acme/gato",

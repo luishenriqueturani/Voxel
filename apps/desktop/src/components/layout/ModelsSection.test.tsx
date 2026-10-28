@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { DownloadProgress, ListedModel } from "../../native/models";
+import type { DownloadProgress, HubPackage, ListedModel } from "../../native/models";
 import { ModelsSection } from "./ModelsSection";
 
 const compatible: ListedModel = {
@@ -49,6 +49,34 @@ const imported: ListedModel = {
   architecture: "stable-diffusion-v1",
   kind: "image",
 };
+
+function lone(
+  repo: string,
+  filename: string,
+  extra: { license?: string; bytes?: number; sha256?: string; gated?: boolean } = {},
+): HubPackage {
+  return {
+    repo,
+    name: filename,
+    folder: "",
+    license: extra.license ?? "mit",
+    gated: extra.gated ?? false,
+    opener: filename,
+    directory: false,
+    marker: "",
+    parts: [
+      {
+        repo,
+        filename,
+        bytes: extra.bytes ?? 2048,
+        sha256: extra.sha256 ?? "aa",
+        role: "file",
+        shardIndex: null,
+        shardCount: null,
+      },
+    ],
+  };
+}
 
 function renderSection(
   onDownload = vi.fn(),
@@ -174,23 +202,9 @@ describe("gerenciador de modelos", () => {
   it("mostra os recomendados e deixa a busca fora do filtro", async () => {
     const user = userEvent.setup();
     const onDownloadHub = vi.fn();
-    const files = [
-      {
-        repo: "lab/gato",
-        filename: "peso.safetensors",
-        bytes: 2048,
-        sha256: "aa",
-        license: "mit",
-        gated: false,
-      },
-      {
-        repo: "lab/gato",
-        filename: "v2/outro.gguf",
-        bytes: 4096,
-        sha256: "",
-        license: "apache-2.0",
-        gated: false,
-      },
+    const files: HubPackage[] = [
+      lone("lab/gato", "peso.safetensors", { license: "mit", bytes: 2048, sha256: "aa" }),
+      lone("lab/gato", "v2/outro.gguf", { license: "apache-2.0", bytes: 4096, sha256: "" }),
     ];
     render(
       <ModelsSection
@@ -224,6 +238,66 @@ describe("gerenciador de modelos", () => {
     expect(onDownloadHub).toHaveBeenCalledWith(files[0]);
   });
 
+  it("mostra as partes de um pacote e baixa todas de uma vez", async () => {
+    const user = userEvent.setup();
+    const onDownloadHub = vi.fn();
+    const pkg: HubPackage = {
+      repo: "lab/gato",
+      name: "gato · merged-model",
+      folder: "merged-model",
+      license: "mit",
+      gated: false,
+      opener: "merged-model",
+      directory: true,
+      marker: "voxel-package.json",
+      parts: [
+        {
+          repo: "lab/gato",
+          filename: "merged-model/text_encoder/model-00002-of-00004.safetensors",
+          bytes: 5 * 1024 * 1024,
+          sha256: "aa",
+          role: "text_encoder",
+          shardIndex: 2,
+          shardCount: 4,
+        },
+        {
+          repo: "lab/gato",
+          filename: "merged-model/vae/diffusion_pytorch_model.safetensors",
+          bytes: 1024,
+          sha256: "",
+          role: "vae",
+          shardIndex: null,
+          shardCount: null,
+        },
+      ],
+    };
+    render(
+      <ModelsSection
+        hfTokenConfigured={false}
+        onHfTokenSave={vi.fn()}
+        onHfTokenClear={vi.fn()}
+        models={[]}
+        onDownload={vi.fn()}
+        onRemove={vi.fn()}
+        onOpenFolder={vi.fn()}
+        onImport={vi.fn()}
+        onSearchHub={vi.fn().mockResolvedValue([pkg])}
+        onDownloadHub={onDownloadHub}
+      />,
+    );
+    await user.type(screen.getByRole("textbox", { name: "Buscar" }), "gato");
+    await user.click(screen.getByRole("button", { name: "Buscar" }));
+    expect(await screen.findByText("gato · merged-model")).toBeInTheDocument();
+    expect(screen.getByText("merged-model")).toBeInTheDocument();
+    expect(screen.getByText("text encoder · parte 2 de 4 · 5 MiB")).toBeInTheDocument();
+    expect(screen.getByText("VAE · 1024 B")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Baixar/ })).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Baixar gato · merged-model" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar download" }));
+    expect(onDownloadHub).toHaveBeenCalledTimes(1);
+    expect(onDownloadHub).toHaveBeenCalledWith(pkg);
+  });
+
   it("mantém o progresso do arquivo visível enquanto a lista rola", async () => {
     const user = userEvent.setup();
     render(
@@ -237,16 +311,11 @@ describe("gerenciador de modelos", () => {
         onRemove={vi.fn()}
         onOpenFolder={vi.fn()}
         onImport={vi.fn()}
-        onSearchHub={vi.fn().mockResolvedValue([
-          {
-            repo: "lab/gato",
-            filename: "peso.safetensors",
-            bytes: 2048,
-            sha256: "aa",
-            license: "mit",
-            gated: false,
-          },
-        ])}
+        onSearchHub={vi
+          .fn()
+          .mockResolvedValue([
+            lone("lab/gato", "peso.safetensors", { bytes: 2048, sha256: "aa", license: "mit" }),
+          ])}
         onDownloadHub={vi.fn()}
       />,
     );
@@ -270,14 +339,12 @@ describe("gerenciador de modelos", () => {
         onOpenFolder={vi.fn()}
         onImport={vi.fn()}
         onSearchHub={vi.fn().mockResolvedValue([
-          {
-            repo: "lab/fechado",
-            filename: "fechado.safetensors",
+          lone("lab/fechado", "fechado.safetensors", {
             bytes: 10,
             sha256: "",
             license: "other",
             gated: true,
-          },
+          }),
         ])}
         onDownloadHub={vi.fn()}
       />,

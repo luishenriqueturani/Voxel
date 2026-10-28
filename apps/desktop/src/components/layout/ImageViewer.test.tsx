@@ -254,4 +254,52 @@ describe("ImageViewer", () => {
     await user.click(screen.getByRole("button", { name: "Versão anterior" }));
     expect(onSelectVersion).toHaveBeenCalledWith(0);
   });
+
+  it("avisa que o prompt está sendo preparado antes do primeiro passo", () => {
+    const { rerender } = render(
+      <ImageViewer
+        src={null}
+        step={0}
+        total={0}
+        generating
+        canSave={false}
+        canRegenerate={false}
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Preparando o prompt/)).toBeInTheDocument();
+
+    rerender(
+      <ImageViewer
+        src="data:image/png;base64,aaaa"
+        step={0}
+        total={0}
+        generating
+        canSave={false}
+        canRegenerate={false}
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Preparando o prompt/)).toBeInTheDocument();
+
+    rerender(
+      <ImageViewer
+        src="data:image/png;base64,aaaa"
+        step={2}
+        total={20}
+        generating
+        canSave={false}
+        canRegenerate={false}
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/Preparando o prompt/)).not.toBeInTheDocument();
+    expect(screen.getByText("Passo 2 de 20")).toBeInTheDocument();
+  });
 });

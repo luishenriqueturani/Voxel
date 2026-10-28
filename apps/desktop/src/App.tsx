@@ -213,6 +213,7 @@ export default function App() {
     prepareEnvironment: python.wait,
     noteIntent: python.note,
     setWaitingEnvironment,
+    onImageBackend: chooseImageBackend,
     slides,
     slideIndex,
   });
@@ -355,6 +356,10 @@ export default function App() {
     }
   }
 
+  function chooseImageBackend(backend: string) {
+    setImageBackend(backend);
+    void saveImageBackend(backend);
+  }
   async function onLanguageChange(language: "pt-BR" | "en") {
     localStorage.setItem(LANGUAGE_KEY, language);
     await i18n.changeLanguage(language);
@@ -439,6 +444,8 @@ export default function App() {
             onModelChange={setModelId}
             params={params}
             onParamsChange={setParams}
+            imageBackend={imageBackend}
+            onImageBackendChange={chooseImageBackend}
             outputMode={outputMode}
             onOutputModeChange={(mode) => {
               setOutputMode(mode);
@@ -460,9 +467,7 @@ export default function App() {
             onGenerate={() => requestGeneration()}
             onImageDrop={addMeshPaths}
             meshFiles={meshFiles}
-            onCancel={() => {
-              void cancelGeneration();
-            }}
+            onCancel={() => void cancelGeneration()}
             sourcePath={selected?.path ?? null}
             editRef={editRef}
             historyRevision={historyRevision}
@@ -524,10 +529,7 @@ export default function App() {
             onLanguageChange={(language) => void onLanguageChange(language)}
             imageBackend={imageBackend}
             recommendedBackend={recommendedBackend}
-            onImageBackendChange={(backend) => {
-              setImageBackend(backend);
-              void saveImageBackend(backend);
-            }}
+            onImageBackendChange={chooseImageBackend}
             hfTokenConfigured={hfTokenConfigured}
             onHfTokenSave={(token) => {
               void saveHfToken(token).then(setHfTokenConfigured);

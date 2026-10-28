@@ -113,11 +113,24 @@ async fn health() -> Json<Health> {
 
 async fn load_model(State(state): State<AppState>, Json(body): Json<LoadModelRequest>) -> Response {
     let path = PathBuf::from(body.model_path);
-    if !path.is_file() {
+    if !model_present(&path) {
         return reject(StatusCode::BAD_REQUEST, "modelo ausente");
     }
     *state.model.lock().unwrap_or_else(PoisonError::into_inner) = Some(path);
     Json(Ack { accepted: true }).into_response()
+}
+
+fn model_present(path: &std::path::Path) -> bool {
+    if path.is_file() {
+        return true;
+    }
+    path.is_dir()
+        && (path.join("model_index.json").is_file()
+            || path.join("voxel-package.json").is_file()
+            || path
+                .join("unet")
+                .join("diffusion_pytorch_model.safetensors")
+                .is_file())
 }
 
 async fn unload_model(State(state): State<AppState>) -> Json<Ack> {
@@ -425,5 +438,20 @@ mod tests {
         note_cancel(&mut cancelled, Some(&current), "job-2");
         assert!(current.cancel.load(Ordering::Relaxed));
         assert!(!cancelled.contains("job-2"));
+    }
+
+    #[test]
+    fn a_pasta_com_model_index_e_um_modelo() {
+        let root = std::env::temp_dir().join(format!("voxel-pkg-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let package = root.join("merged-model");
+        std::fs::create_dir_all(&package).unwrap();
+        assert!(!model_present(&package));
+        std::fs::write(package.join("model_index.json"), "{}").unwrap();
+        assert!(model_present(&package));
+        let file = root.join("peso.safetensors");
+        std::fs::write(&file, "peso").unwrap();
+        assert!(model_present(&file));
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

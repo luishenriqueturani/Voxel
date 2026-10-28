@@ -1,6 +1,12 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MODEL_FAMILIES, type ModelFamily, type ModelPreset } from "../../lib/modelPreset";
+import {
+  IMAGE_BACKENDS,
+  type ImageBackendId,
+  MODEL_FAMILIES,
+  type ModelFamily,
+  type ModelPreset,
+} from "../../lib/modelPreset";
 import { Button } from "../ui/button";
 
 type ModelPresetDialogProps = {
@@ -24,9 +30,7 @@ export function ModelPresetDialog({
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLElement>(null);
   const [family, setFamily] = useState<ModelFamily>(initial.family);
-  const [resolution, setResolution] = useState(initial.resolution);
-  const [steps, setSteps] = useState(String(initial.steps));
-  const [cfg, setCfg] = useState(String(initial.cfg));
+  const [backend, setBackend] = useState<ImageBackendId>(initial.backend);
 
   useEffect(() => {
     dialogRef.current?.focus();
@@ -44,15 +48,13 @@ export function ModelPresetDialog({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const parsedSteps = Number(steps);
-    const parsedCfg = Number(cfg);
-    if (!Number.isFinite(parsedSteps) || parsedSteps < 1) {
-      return;
-    }
-    if (!Number.isFinite(parsedCfg) || parsedCfg <= 0) {
-      return;
-    }
-    onSave({ family, resolution, steps: parsedSteps, cfg: parsedCfg });
+    onSave({
+      family,
+      backend,
+      resolution: initial.resolution,
+      steps: initial.steps,
+      cfg: initial.cfg,
+    });
   }
 
   return (
@@ -95,37 +97,19 @@ export function ModelPresetDialog({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("panel.resolution")}
+            {t("settings.backend")}
             <select
-              aria-label={t("panel.resolution")}
+              aria-label={t("settings.backend")}
               className={fieldClass}
-              value={String(resolution)}
-              onChange={(event) => setResolution(Number(event.target.value))}
+              value={backend}
+              onChange={(event) => setBackend(event.target.value as ImageBackendId)}
             >
-              <option value="512">512</option>
-              <option value="768">768</option>
-              <option value="1024">1024</option>
+              {IMAGE_BACKENDS.map((item) => (
+                <option key={item} value={item}>
+                  {t(`setup.backends.${item}`)}
+                </option>
+              ))}
             </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("panel.steps")}
-            <input
-              aria-label={t("panel.steps")}
-              className={fieldClass}
-              inputMode="numeric"
-              value={steps}
-              onChange={(event) => setSteps(event.target.value)}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            {t("panel.cfg")}
-            <input
-              aria-label={t("panel.cfg")}
-              className={fieldClass}
-              inputMode="decimal"
-              value={cfg}
-              onChange={(event) => setCfg(event.target.value)}
-            />
           </label>
           <div className="flex gap-2">
             <Button type="submit">

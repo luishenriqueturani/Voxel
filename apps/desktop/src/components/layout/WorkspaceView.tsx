@@ -4,7 +4,8 @@ import type { MeshPaths } from "../../hooks/useGenerationRequest";
 import type { EditMode, EditPayload } from "../../lib/edit";
 import type { MeshOrigin, MeshPick, MeshView } from "../../lib/meshViews";
 import {
-  applyPreset,
+  explicitBackend,
+  isImageBackend,
   type ModelPreset,
   onPresetRequest,
   presetFor,
@@ -51,6 +52,8 @@ type WorkspaceViewProps = {
   onModelChange: (id: string) => void;
   params: GenerationParams;
   onParamsChange: (params: GenerationParams) => void;
+  imageBackend?: string;
+  onImageBackendChange?: (backend: string) => void;
   outputMode: OutputMode;
   onOutputModeChange: (mode: OutputMode) => void;
   meshOrigin?: MeshOrigin;
@@ -110,6 +113,8 @@ export function WorkspaceView({
   onModelChange,
   params,
   onParamsChange,
+  imageBackend = "vulkan",
+  onImageBackendChange,
   outputMode,
   onOutputModeChange,
   meshOrigin = "text",
@@ -216,7 +221,7 @@ export function WorkspaceView({
   }
   function commitPreset(preset: ModelPreset) {
     savePreset(modelId, preset);
-    onParamsChange(applyPreset(params, preset));
+    onImageBackendChange?.(preset.backend);
     const generate = presetMode === "generate";
     setPresetMode(null);
     if (generate) {
@@ -225,11 +230,15 @@ export function WorkspaceView({
     }
   }
   const storedPreset = presetFor(modelId);
-  const presetDraft: ModelPreset = storedPreset ?? {
-    family: "sd15",
-    resolution: params.resolution === 768 || params.resolution === 1024 ? params.resolution : 512,
-    steps: params.steps,
-    cfg: params.cfg,
+  const currentBackend = isImageBackend(imageBackend) ? imageBackend : "vulkan";
+  const presetDraft: ModelPreset = {
+    family: storedPreset?.family ?? "sd15",
+    resolution:
+      storedPreset?.resolution ??
+      (params.resolution === 768 || params.resolution === 1024 ? params.resolution : 512),
+    steps: storedPreset?.steps ?? params.steps,
+    cfg: storedPreset?.cfg ?? params.cfg,
+    backend: explicitBackend(modelId) ?? currentBackend,
   };
   return (
     <div className="flex min-h-0 flex-1">
@@ -313,6 +322,7 @@ export function WorkspaceView({
               onToggleMosaic={() => setMosaic((open) => !open)}
               step={step}
               total={total}
+              generating={generating}
               canSave={canSave}
               canRegenerate={canRegenerate}
               canRemove={canRemove}

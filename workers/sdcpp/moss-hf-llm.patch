@@ -1,0 +1,16 @@
+diff --git a/src/name_conversion.cpp b/src/name_conversion.cpp
+index 6a519ba..bb03268 100644
+--- a/src/name_conversion.cpp
++++ b/src/name_conversion.cpp
+@@ -1697,6 +1697,11 @@ std::string convert_tensor_name(std::string name, SDVersion version) {
+ 
+     if (version == VERSION_MOSS_IMAGE) {
+         const std::string te_prefix = "text_encoders.llm.";
++        // Diffusers stores Qwen3.5 under language_model.*. The runner reads model.*.
++        const std::string hf_language = te_prefix + "language_model.";
++        if (starts_with(name, hf_language)) {
++            name = te_prefix + "model." + name.substr(hf_language.size());
++        }
+         if (starts_with(name, te_prefix + "blk.")) {
+             static const std::vector<std::pair<std::string, std::string>> qwen35_name_map = {
+                 {"attn_post_norm.", "post_attention_layernorm."},

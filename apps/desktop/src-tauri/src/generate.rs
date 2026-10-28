@@ -51,6 +51,8 @@ pub struct GenerateRequest {
     pub source_path: Option<String>,
     #[serde(default)]
     pub mask_png: Option<String>,
+    #[serde(default)]
+    pub backend: String,
 }
 
 fn default_strength() -> f64 {
@@ -169,9 +171,14 @@ pub fn generate(
         return Err("cancelado".to_owned());
     }
     let choice = backend_choice(database)?;
+    let backend = if BACKENDS.contains(&request.backend.as_str()) {
+        request.backend.as_str()
+    } else {
+        choice.current.as_str()
+    };
     let bins = discover();
     let model = resolve_model(paths, &request.model_id, &bins)?;
-    let cli = binary_for(&bins, &choice.current).ok_or("sd-cli ausente")?;
+    let cli = binary_for(&bins, backend).ok_or("sd-cli ausente")?;
     let limits = limits_of(request);
     let cli_path = cli.display().to_string();
     let worker = WorkerProcess::spawn_with(
@@ -179,7 +186,7 @@ pub fn generate(
         "ok",
         &[
             ("VOXEL_SD_CLI", cli_path.as_str()),
-            ("VOXEL_IMAGE_BACKEND", choice.current.as_str()),
+            ("VOXEL_IMAGE_BACKEND", backend),
         ],
         // Saúde e carga do modelo. A imagem em si espera bem mais, senão 1024 px cai no meio.
         Duration::from_mins(3),
@@ -210,14 +217,7 @@ pub fn generate(
         let image_seed = seed.saturating_add(i64::from(index));
         let started = Instant::now();
         render_one(app, &worker, request, &limits, &output, image_seed, index)?;
-        let metadata = metadata_for(
-            request,
-            &choice.current,
-            &limits,
-            image_seed,
-            &file,
-            started,
-        );
+        let metadata = metadata_for(request, backend, &limits, image_seed, &file, started);
         output::embed_metadata(&output, &metadata)?;
         database
             .record_generation(&record_of(&metadata, &output))
@@ -423,11 +423,7 @@ fn resolve_model(paths: &AppPaths, model_id: &str, bins: &SdBinaries) -> Result<
     {
         return Ok(path.clone());
     }
-    let imported = folder.join(model_id);
-    if imported.is_file() {
-        return Ok(imported);
-    }
-    Err("modelo ausente".to_owned())
+    crate::models::package_store::resolve_installed(&folder, model_id)
 }
 
 fn output_root() -> PathBuf {
@@ -566,6 +562,7 @@ mod tests {
             strength: 0.75,
             source_path: None,
             mask_png: None,
+            backend: String::new(),
         };
         let wide = super::limits_of(&request);
         assert_eq!((wide.width, wide.height), (1024, 576));
