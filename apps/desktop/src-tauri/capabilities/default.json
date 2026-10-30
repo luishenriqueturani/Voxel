@@ -52,6 +52,7 @@
     "allow-duplicate-template",
     "allow-rename-template",
     "allow-delete-template",
+    "allow-record-debug",
     "dialog:allow-open",
     "dialog:allow-save"
   ]

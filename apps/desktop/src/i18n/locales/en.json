@@ -63,6 +63,7 @@
     "cancel": "Cancel",
     "recent": "Recent prompts",
     "recentEmpty": "No recent prompts",
+    "recentRunning": "Generating…",
     "recentSearch": "Search prompts",
     "recentNone": "No prompts found",
     "recentMore": "Show the rest",
@@ -264,11 +265,15 @@
     "partLine": "{{role}} · {{size}}",
     "partShard": "{{role}} · part {{index}} of {{total}} · {{size}}",
     "unmeasured": "Not measured",
+    "extrasIncluded": "This file only holds the transformer. The download includes the VAE and text encoders from the same repository.",
+    "extrasBorrowed": "This file only holds the Flux.1 transformer. It uses the VAE, CLIP-L and T5 from another complete Flux.1 installed in Voxel.",
+    "extrasLora": "This file is a LoRA. If Qwen Image 2.1 is already installed, Voxel uses that base model automatically.",
     "unmeasuredWarning": "This model was not measured on this computer. Compatibility is estimated after the download, from the file size.",
     "gatedToken": "Restricted repository. Save a Hugging Face token before downloading.",
     "roles": {
       "text_encoder": "text encoder",
       "text_encoder_2": "text encoder 2",
+      "text_encoders": "LLM",
       "transformer": "transformer",
       "unet": "unet",
       "vae": "VAE",
@@ -313,6 +318,7 @@
   "generation": {
     "preview": "Generation preview",
     "step": "Step {{step}} of {{total}}",
+    "image": "Image {{image}} of {{images}}",
     "preparing": "Preparing the prompt. The image starts at the first step."
   },
   "viewer": {

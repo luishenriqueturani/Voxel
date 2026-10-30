@@ -172,6 +172,9 @@ function PackageCard({
           </ul>
           <p className="text-zinc-500">{pkg.license || t("models.licenseUnknown")}</p>
           <p>{t("models.unmeasured")}</p>
+          {pkg.extras === "included" ? <p>{t("models.extrasIncluded")}</p> : null}
+          {pkg.extras === "borrowed" ? <p>{t("models.extrasBorrowed")}</p> : null}
+          {pkg.extras === "lora" ? <p>{t("models.extrasLora")}</p> : null}
           {blocked ? <p>{t("models.gatedToken")}</p> : null}
         </div>
         {active ? null : queued ? (

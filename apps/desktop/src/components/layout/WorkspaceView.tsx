@@ -72,6 +72,7 @@ type WorkspaceViewProps = {
   sourcePath: string | null;
   editRef: { current: EditPayload };
   historyRevision: number;
+  pendingPrompt?: string | null;
   gallerySignal: number;
   viewerSignal: number;
   onHistoryError: (error: unknown) => void;
@@ -80,6 +81,8 @@ type WorkspaceViewProps = {
   shown: string | null;
   step: number;
   total: number;
+  image?: number;
+  images?: number;
   canSave: boolean;
   canRegenerate: boolean;
   canRemove: boolean;
@@ -133,6 +136,7 @@ export function WorkspaceView({
   sourcePath,
   editRef,
   historyRevision,
+  pendingPrompt = null,
   gallerySignal,
   viewerSignal,
   onHistoryError,
@@ -141,6 +145,8 @@ export function WorkspaceView({
   shown,
   step,
   total,
+  image = 0,
+  images = 0,
   canSave,
   canRegenerate,
   canRemove,
@@ -261,6 +267,7 @@ export function WorkspaceView({
           generating={generating}
           locked={locked}
           historyRevision={historyRevision}
+          pendingPrompt={pendingPrompt}
           editMode={editMode}
           onEditModeChange={setEditMode}
           strength={strength}
@@ -321,6 +328,8 @@ export function WorkspaceView({
               mosaic={mosaic && !generating}
               onToggleMosaic={() => setMosaic((open) => !open)}
               step={step}
+              image={image}
+              images={images}
               total={total}
               generating={generating}
               canSave={canSave}

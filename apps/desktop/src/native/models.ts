@@ -109,6 +109,7 @@ export type HubPackage = {
   directory: boolean;
   marker: string;
   parts: HubPart[];
+  extras?: string;
 };
 
 function isHubPart(value: unknown): value is HubPart {

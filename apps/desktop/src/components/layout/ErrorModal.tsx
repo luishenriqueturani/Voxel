@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { recordDebug } from "../../native/debugReport";
 import { Button } from "../ui/button";
 
 type ErrorModalProps = {
@@ -28,7 +29,8 @@ export function ErrorModal({
 
   useEffect(() => {
     dialogRef.current?.focus();
-  }, []);
+    void recordDebug(summary, log);
+  }, [log, summary]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

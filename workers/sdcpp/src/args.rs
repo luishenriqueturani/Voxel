@@ -185,9 +185,10 @@ pub fn image_args(
 ) -> Vec<String> {
     let mut args = Vec::new();
     crate::layout::extend_model(&mut args, model);
+    crate::layout::extend_lora(&mut args, model);
     args.extend([
         "-p".to_owned(),
-        job.prompt.clone(),
+        crate::layout::prompt_with_lora(model, &job.prompt),
         "-o".to_owned(),
         output.display().to_string(),
         "--preview".to_owned(),
@@ -211,10 +212,11 @@ pub fn image_args(
         "--backend".to_owned(),
         crate::layout::runtime_backend(model, device),
         "--tensor-type-rules".to_owned(),
-        r"^vae\.=f16".to_owned(),
+        crate::layout::tensor_type_rules(model, device).to_owned(),
         "--auto-fit".to_owned(),
         "on".to_owned(),
     ]);
+    crate::layout::extend_runtime_flags(&mut args, model);
     if let Some(negative) = &job.negative_prompt {
         args.push("-n".to_owned());
         args.push(negative.clone());

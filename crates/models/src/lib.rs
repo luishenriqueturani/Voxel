@@ -1,6 +1,7 @@
 //! Catálogo versionado, download retomável e selo de compatibilidade.
 
 mod catalog;
+mod companions;
 mod download;
 mod hub;
 mod import;

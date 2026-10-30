@@ -1,5 +1,6 @@
 mod args;
 mod layout;
+mod peft;
 mod run;
 mod server;
 

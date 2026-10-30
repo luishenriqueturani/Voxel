@@ -15,6 +15,8 @@ type ImageViewerProps = {
   src: string | null;
   step: number;
   total: number;
+  image?: number;
+  images?: number;
   canSave: boolean;
   canRegenerate: boolean;
   canRemove?: boolean;
@@ -67,6 +69,8 @@ export function ImageViewer({
   src,
   step,
   total,
+  image = 0,
+  images = 0,
   canSave,
   canRegenerate,
   canRemove = false,
@@ -257,12 +261,18 @@ export function ImageViewer({
                 src={src}
               />
             )}
+            {generating && images > 1 ? (
+              <p className="absolute top-3 left-3 z-10 rounded bg-black/70 px-3 py-1 text-sm text-white">
+                {t("generation.image", { image, images })}
+              </p>
+            ) : null}
             {generating && total === 0 ? <Preparing /> : null}
           </div>
         ) : (
-          <p className="text-sm text-zinc-500">
-            {generating ? t("generation.preparing") : t("main.empty")}
-          </p>
+          <div className="flex flex-col items-center gap-1 text-sm text-zinc-500">
+            {generating && images > 1 ? <p>{t("generation.image", { image, images })}</p> : null}
+            <p>{generating ? t("generation.preparing") : t("main.empty")}</p>
+          </div>
         )}
       </div>
       {src || viewingMesh ? (
@@ -327,6 +337,9 @@ export function ImageViewer({
                 {t("viewer.compare")}
               </Button>
             </div>
+          ) : null}
+          {generating && images > 1 ? (
+            <p className="text-sm text-zinc-500">{t("generation.image", { image, images })}</p>
           ) : null}
           {total > 0 ? (
             <p className="text-sm text-zinc-500">{t("generation.step", { step, total })}</p>

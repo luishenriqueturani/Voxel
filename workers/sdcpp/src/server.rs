@@ -116,6 +116,21 @@ async fn load_model(State(state): State<AppState>, Json(body): Json<LoadModelReq
     if !model_present(&path) {
         return reject(StatusCode::BAD_REQUEST, "modelo ausente");
     }
+    if crate::layout::is_lora(&path) && crate::layout::find_qwen_base(&path).is_none() {
+        return reject(
+            StatusCode::BAD_REQUEST,
+            "este arquivo é um LoRA. Ele não gera sozinho: precisa do Qwen Image 2.1 \
+             (transformer, VAE e LLM) no Voxel",
+        );
+    }
+    let missing = crate::layout::missing_parts(&path);
+    if !missing.is_empty() {
+        let message = format!(
+            "este arquivo traz só o transformer. Faltam na pasta do repositório: {}",
+            missing.join(", ")
+        );
+        return reject(StatusCode::BAD_REQUEST, &message);
+    }
     *state.model.lock().unwrap_or_else(PoisonError::into_inner) = Some(path);
     Json(Ack { accepted: true }).into_response()
 }

@@ -1,0 +1,32 @@
+--- a/src/name_conversion.cpp
++++ b/src/name_conversion.cpp
+@@ -24,12 +24,17 @@
+ }
+ 
+ void replace_with_prefix_map(std::string& name, const std::unordered_map<std::string, std::string>& prefix_map) {
++    size_t best = 0;
++    const std::string* replacement = nullptr;
+     for (const auto& [old_prefix, new_prefix] : prefix_map) {
+-        if (starts_with(name, old_prefix)) {
+-            name = new_prefix + name.substr(old_prefix.size());
+-            break;
++        if (old_prefix.size() > best && starts_with(name, old_prefix)) {
++            best = old_prefix.size();
++            replacement = &new_prefix;
+         }
+     }
++    if (replacement != nullptr) {
++        name = *replacement + name.substr(best);
++    }
+ }
+ 
+ std::string convert_open_clip_to_hf_clip_name(std::string name) {
+@@ -1669,6 +1674,8 @@
+         {"text_encoders.llm.text_embedding_projection.", "text_embedding_projection."},
+         {"text_encoder.", "cond_stage_model.transformer."},
+         {"te.", "cond_stage_model.transformer."},
++        // voxel_te_dot: Diffusers names the second CLIP te.1., and te. is a prefix of that.
++        {"te.1.", "cond_stage_model.1.transformer."},
+         {"text_encoder.2.", "cond_stage_model.1.transformer."},
+         {"conditioner.embedders.0.open_clip.", "cond_stage_model."},
+         // https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0

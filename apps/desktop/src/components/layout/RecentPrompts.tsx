@@ -13,6 +13,7 @@ import type { GenerationParams } from "./PromptPanel";
 import { RecentPromptDialog } from "./RecentPromptDialog";
 
 type RecentPromptsProps = {
+  pending?: string | null;
   count: number;
   onPromptChange: (value: string) => void;
   onNegativePromptChange: (value: string) => void;
@@ -26,6 +27,7 @@ const fieldClass =
   "w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100";
 
 export function RecentPrompts({
+  pending = null,
   count,
   onPromptChange,
   onNegativePromptChange,
@@ -102,6 +104,13 @@ export function RecentPrompts({
       entry.negativePrompt.toLowerCase().includes(needle)
     );
   });
+  const running =
+    pending !== null &&
+    pending.trim() !== "" &&
+    needle === "" &&
+    !entries.some((entry) => entry.prompt === pending)
+      ? pending
+      : null;
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
@@ -115,12 +124,20 @@ export function RecentPrompts({
         className={fieldClass}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {visible.length === 0 ? (
+        {visible.length === 0 && running === null ? (
           <p className="text-sm text-zinc-500">
             {needle === "" ? t("panel.recentEmpty") : t("panel.recentNone")}
           </p>
         ) : (
           <ul className="flex flex-col gap-1">
+            {running === null ? null : (
+              <li className="flex items-start gap-1 text-sm">
+                <span title={running} className="min-w-0 flex-1 truncate">
+                  {running}
+                </span>
+                <span className="shrink-0 text-zinc-500">{t("panel.recentRunning")}</span>
+              </li>
+            )}
             {visible.map((entry) => (
               <li key={entryKey(entry)} className="flex items-start gap-1">
                 <button

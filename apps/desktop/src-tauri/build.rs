@@ -46,6 +46,7 @@ fn main() {
             "duplicate_template",
             "rename_template",
             "delete_template",
+            "record_debug",
         ]),
     ))
     .expect("falha no build do Tauri");

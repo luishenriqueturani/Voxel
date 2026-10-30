@@ -77,7 +77,11 @@ pub fn search_with(
             continue;
         };
         let room = PACKAGE_LIMIT - packages.len();
-        packages.extend(packages_within(&found, room));
+        let mut within = packages_within(&found, room);
+        if is_flux1(&detail) {
+            crate::companions::mark_borrowed(&mut within);
+        }
+        packages.extend(within);
     }
     Ok(packages)
 }
@@ -178,6 +182,17 @@ fn parse_repo(body: &str) -> Result<Vec<HubFile>, ModelError> {
         });
     }
     Ok(files)
+}
+
+/// Repositório derivado do Flux.1, pelas tags de modelo base ou pela arquitetura do GGUF.
+fn is_flux1(body: &str) -> bool {
+    let Ok(meta) = serde_json::from_str::<RepoMeta>(body) else {
+        return false;
+    };
+    let tagged = meta.tags.iter().any(|tag| tag.contains("FLUX.1-"));
+    let other = meta.tags.iter().any(|tag| tag.contains("FLUX.2"));
+    let gguf = meta.gguf.and_then(|gguf| gguf.architecture).as_deref() == Some("flux");
+    tagged || (gguf && !other)
 }
 
 fn file_url(repo: &str, filename: &str) -> String {
@@ -306,6 +321,19 @@ struct RepoBody {
 }
 
 #[derive(Deserialize)]
+struct RepoMeta {
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    gguf: Option<GgufMeta>,
+}
+
+#[derive(Deserialize)]
+struct GgufMeta {
+    architecture: Option<String>,
+}
+
+#[derive(Deserialize)]
 #[serde(untagged)]
 enum Gated {
     Flag(bool),
@@ -345,7 +373,7 @@ struct Lfs {
 
 #[cfg(test)]
 mod tests {
-    use super::{disk_name, find_file, hub_job, parse_repo, search_with};
+    use super::{disk_name, find_file, hub_job, is_flux1, parse_repo, search_with};
 
     const DETAIL: &str = r#"{
         "id": "acme/gato",
@@ -371,6 +399,33 @@ mod tests {
         assert_eq!(files[1].filename, "v2/outro.gguf");
         assert!(files[1].sha256.is_empty());
         assert_eq!(disk_name(&files[1].filename), "v2__outro.gguf");
+    }
+
+    #[test]
+    fn reconhece_o_flux1_pelas_tags_ou_pelo_gguf() {
+        assert!(is_flux1(
+            r#"{"tags":["base_model:quantized:black-forest-labs/FLUX.1-dev"]}"#
+        ));
+        assert!(is_flux1(r#"{"tags":[],"gguf":{"architecture":"flux"}}"#));
+        assert!(!is_flux1(
+            r#"{"tags":["black-forest-labs/FLUX.2-dev"],"gguf":{"architecture":"flux"}}"#
+        ));
+        assert!(!is_flux1(r#"{"tags":["sdxl"]}"#));
+    }
+
+    #[test]
+    fn a_busca_real_junta_as_pecas_ao_gguf() {
+        let Ok(query) = std::env::var("VOXEL_HUB_LIVE") else {
+            return;
+        };
+        for package in super::search(&query, None).unwrap() {
+            println!(
+                "{} [{}] {} partes",
+                package.name,
+                package.extras,
+                package.parts.len()
+            );
+        }
     }
 
     #[test]

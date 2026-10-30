@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import type { GenerationParams, OutputMode } from "../components/layout/PromptPanel";
+import { rememberRun } from "../lib/debugReport";
 import { blankEdit, canStartEdit, type EditPayload, generationRequest } from "../lib/edit";
 import { applyEditResult } from "../lib/imageVersions";
 import {
@@ -17,16 +18,34 @@ import {
   meshViewsOf,
   pickForPath,
 } from "../lib/meshViews";
-import { explicitBackend, paramsForRun } from "../lib/modelPreset";
-import { type GalleryImage, generateImage, imageSrc, isCancelled } from "../native/generation";
+import { explicitBackend, paramsForRun, presetFor } from "../lib/modelPreset";
+import {
+  type GalleryImage,
+  type GenerationProgress,
+  generateImage,
+  imageSrc,
+  isCancelled,
+} from "../native/generation";
 import { meshFromImage, meshOptimize } from "../native/mesh";
 import type { PythonIntent } from "../native/pythonEnv";
 
-type Frame = {
+export type Frame = {
   step: number;
   total: number;
   preview: string | null;
+  image: number;
+  images: number;
 };
+
+function frameFrom(progress: GenerationProgress, current: Frame | null): Frame {
+  return {
+    step: progress.step,
+    total: progress.total,
+    preview: progress.preview ?? current?.preview ?? null,
+    image: (progress.index ?? 0) + 1,
+    images: progress.count ?? 1,
+  };
+}
 
 export type MeshPaths = {
   glb: string;
@@ -60,6 +79,7 @@ type GenerationRequestOptions = {
   noteIntent: (reason: PythonIntent) => Promise<void>;
   setWaitingEnvironment: (value: boolean) => void;
   onImageBackend?: (backend: string) => void;
+  imageBackend?: string;
   slides: GalleryImage[];
   slideIndex: number;
 };
@@ -76,6 +96,7 @@ type GenerationActions = {
   addMeshPaths: (paths: string[]) => void;
   addCurrentViews: () => void;
   canAddCurrent: boolean;
+  pendingPrompt: string | null;
 };
 
 function backendFor(
@@ -88,6 +109,31 @@ function backendFor(
   }
   onImageBackend?.(backend);
   return backend;
+}
+
+function noteRun(
+  modelId: string,
+  backend: string,
+  mode: string,
+  edit: string,
+  params: GenerationParams,
+  seed: number | null,
+): void {
+  rememberRun({
+    modelId,
+    family: presetFor(modelId)?.family ?? "desconhecida",
+    backend,
+    mode,
+    edit,
+    width: params.width,
+    height: params.height,
+    steps: params.steps,
+    cfg: params.cfg,
+    seed: seed === null ? "aleatória" : String(seed),
+    count: params.count,
+    resolution: params.resolution,
+    aspect: params.aspect,
+  });
 }
 
 function chosenSeed(typed: string, override?: number): number | null {
@@ -105,6 +151,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
   const [meshFiles, setMeshFiles] = useState<MeshPaths | null>(null);
   const [meshOrigin, setMeshOrigin] = useState<MeshOrigin>("text");
   const [meshPick, setMeshPick] = useState<MeshPick | null>(null);
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const meshPickRef = useRef<MeshPick | null>(null);
   const prepareRef = useRef(false);
   const pickToken = useRef(0);
@@ -131,6 +178,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
     noteIntent,
     setWaitingEnvironment,
     onImageBackend,
+    imageBackend = "vulkan",
     slides,
     slideIndex,
   } = options;
@@ -242,10 +290,12 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
             await prepareEnvironment();
             setWaitingEnvironment(false);
             setGenerating(true);
+            setPendingPrompt(prompt);
             setSlides([]);
             setSlideIndex(0);
             setFrame(null);
             const seed = chosenSeed(params.seed, seedOverride);
+            noteRun(modelId, backend ?? imageBackend, outputMode, "nenhuma", runParams, seed);
             const image = await generateImage(
               generationRequest(
                 prompt,
@@ -257,11 +307,10 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
                 backend,
               ),
               (progress) => {
-                setFrame((current) => ({
-                  step: progress.step,
-                  total: progress.total,
-                  preview: progress.preview ?? current?.preview ?? null,
-                }));
+                setFrame((current) => frameFrom(progress, current));
+                if (progress.ready) {
+                  setHistoryRevision((current) => current + 1);
+                }
               },
             );
             if (image === null || image.images.length === 0) {
@@ -277,12 +326,15 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
             setHistoryRevision((current) => current + 1);
             openPick(views, last.path, false);
           } catch (error: unknown) {
-            if (!isCancelled(error)) {
+            if (isCancelled(error)) {
+              setHistoryRevision((current) => current + 1);
+            } else {
               reportFailure(error);
             }
           } finally {
             generatingRef.current = false;
             setGenerating(false);
+            setPendingPrompt(null);
             setWaitingEnvironment(false);
           }
         })();
@@ -302,6 +354,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
       holdEdit();
       generatingRef.current = true;
       setGenerating(true);
+      setPendingPrompt(prompt);
       setMeshFiles(null);
       if (edit.mode !== "vary" && edit.mode !== "inpaint") {
         setSlides([]);
@@ -309,14 +362,14 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
       }
       setFrame(null);
       const seed = chosenSeed(params.seed, seedOverride);
+      noteRun(modelId, backend ?? imageBackend, outputMode, edit.mode, runParams, seed);
       void generateImage(
         generationRequest(prompt, negativePrompt, modelId, runParams, seed, edit, backend),
         (progress) => {
-          setFrame((current) => ({
-            step: progress.step,
-            total: progress.total,
-            preview: progress.preview ?? current?.preview ?? null,
-          }));
+          setFrame((current) => frameFrom(progress, current));
+          if (progress.ready) {
+            setHistoryRevision((current) => current + 1);
+          }
           if (
             !editing &&
             progress.ready &&
@@ -355,6 +408,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
         })
         .catch((error: unknown) => {
           if (isCancelled(error)) {
+            setHistoryRevision((current) => current + 1);
             restoreEdit();
             return;
           }
@@ -364,6 +418,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
           discardEdit();
           generatingRef.current = false;
           setGenerating(false);
+          setPendingPrompt(null);
         });
     },
     [
@@ -373,6 +428,7 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
       generatingRef,
       holdEdit,
       modelId,
+      imageBackend,
       onImageBackend,
       negativePrompt,
       params,
@@ -460,5 +516,6 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
     addMeshPaths,
     addCurrentViews,
     canAddCurrent,
+    pendingPrompt,
   };
 }

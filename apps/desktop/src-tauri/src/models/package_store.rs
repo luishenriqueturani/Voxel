@@ -118,18 +118,65 @@ pub fn stored_packages(models: &Path) -> Result<Vec<StoredPackage>, String> {
 /// Falha se o id sair da pasta ou se a remoção falhar.
 pub fn remove_stored_package(models: &Path, id: &str) -> Result<(), String> {
     let path = safe_relative(models, id)?;
+    let repo_dir = repo_dir_of(models, id);
     if path.is_file() {
-        return remove_file_package(&path);
+        let marker = sidecar(&path);
+        let body = read_marker(&marker);
+        return match (repo_dir, body) {
+            (Some(repo_dir), Some(body)) if body.parts.len() > 1 => {
+                remove_listed_parts(&repo_dir, &body, &marker)
+            }
+            _ => remove_file_package(&path),
+        };
     }
     if !path.is_dir() {
         return Err("arquivo ausente".to_owned());
     }
     let marker = marker_for(&path, id).ok_or_else(|| "arquivo ausente".to_owned())?;
     let body = read_marker(&marker).ok_or_else(|| "arquivo ausente".to_owned())?;
-    if repo_root(id) || markers_in(&path).len() > 1 {
-        return remove_listed_parts(&path, &body, &marker);
+    let repo_dir = repo_dir.unwrap_or_else(|| path.clone());
+    let shared = !parts_kept(&repo_dir, &marker).is_empty();
+    if shared || repo_root(id) || markers_in(&path).len() > 1 {
+        return remove_listed_parts(&repo_dir, &body, &marker);
     }
     std::fs::remove_dir_all(&path).map_err(|error| error.to_string())
+}
+
+fn repo_dir_of(models: &Path, id: &str) -> Option<PathBuf> {
+    let parts: Vec<&str> = id.split('/').filter(|part| !part.is_empty()).collect();
+    if parts.len() < 3 || parts[0] != "hub" {
+        return None;
+    }
+    safe_relative(models, &parts[..3].join("/")).ok()
+}
+
+/// Partes que outro marcador do mesmo repositório ainda usa.
+fn parts_kept(repo_dir: &Path, removed: &Path) -> std::collections::HashSet<String> {
+    let mut markers = Vec::new();
+    collect_markers(repo_dir, &mut markers);
+    markers
+        .iter()
+        .filter(|marker| marker.as_path() != removed)
+        .filter_map(|marker| read_marker(marker))
+        .flat_map(|body| body.parts)
+        .collect()
+}
+
+fn collect_markers(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for path in entries.filter_map(Result::ok).map(|entry| entry.path()) {
+        if path.is_dir() {
+            collect_markers(&path, out);
+        } else if path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(is_marker_name)
+        {
+            out.push(path);
+        }
+    }
 }
 
 /// Abre um arquivo solto ou a pasta de um pacote completo.
@@ -277,7 +324,8 @@ fn markers_in(dir: &Path) -> Vec<PathBuf> {
 }
 
 fn remove_listed_parts(repo_dir: &Path, body: &MarkerBody, marker: &Path) -> Result<(), String> {
-    for part in &body.parts {
+    let kept = parts_kept(repo_dir, marker);
+    for part in body.parts.iter().filter(|part| !kept.contains(*part)) {
         let file = safe_relative(repo_dir, part)?;
         if file.is_file() {
             std::fs::remove_file(&file).map_err(|error| error.to_string())?;
@@ -286,8 +334,21 @@ fn remove_listed_parts(repo_dir: &Path, body: &MarkerBody, marker: &Path) -> Res
         if partial.is_file() {
             std::fs::remove_file(partial).map_err(|error| error.to_string())?;
         }
+        prune_empty(repo_dir, &file);
     }
-    std::fs::remove_file(marker).map_err(|error| error.to_string())
+    std::fs::remove_file(marker).map_err(|error| error.to_string())?;
+    prune_empty(repo_dir, marker);
+    Ok(())
+}
+
+fn prune_empty(root: &Path, file: &Path) {
+    let mut dir = file.parent();
+    while let Some(current) = dir {
+        if current == root || !current.starts_with(root) || std::fs::remove_dir(current).is_err() {
+            break;
+        }
+        dir = current.parent();
+    }
 }
 
 fn remove_file_package(path: &Path) -> Result<(), String> {
@@ -392,6 +453,65 @@ mod tests {
         remove_model(&models, &stored.open).unwrap();
         assert!(!opened.exists());
         assert!(resolve_installed(&models, "ausente.safetensors").is_err());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn remover_o_pacote_da_raiz_apaga_as_pastas_vazias_e_mantem_o_vizinho() {
+        let root = std::env::temp_dir().join(format!("voxel-raiz-{}", std::process::id()));
+        let models = root.join("models");
+        let _ = std::fs::remove_dir_all(&root);
+        let repo = "acme/flux";
+        let vae = "vae/diffusion_pytorch_model.safetensors";
+        let index = "model_index.json";
+        let package = PackageSpec {
+            opener: String::new(),
+            ..spec(vec![vae.to_owned(), index.to_owned()])
+        };
+        write_part(&models, repo, vae);
+        write_part(&models, repo, index);
+        write_part(&models, repo, "peso-Q4_K_M.gguf");
+        let stored = complete_package(&models, repo, &package).unwrap().unwrap();
+        assert_eq!(stored.open, "hub/acme/flux");
+        remove_model(&models, &stored.open).unwrap();
+        assert!(!models.join("hub/acme/flux/vae").exists());
+        assert!(models.join("hub/acme/flux/peso-Q4_K_M.gguf").is_file());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_peca_compartilhada_so_sai_com_o_ultimo_pacote() {
+        let root = std::env::temp_dir().join(format!("voxel-partilha-{}", std::process::id()));
+        let models = root.join("models");
+        let _ = std::fs::remove_dir_all(&root);
+        let repo = "acme/flux";
+        let vae = "vae/diffusion_pytorch_model.safetensors";
+        let transformer = "transformer/diffusion_pytorch_model.safetensors";
+        let gguf = "peso-Q8_0.gguf";
+        for part in [vae, transformer, gguf] {
+            write_part(&models, repo, part);
+        }
+        let tree = PackageSpec {
+            opener: String::new(),
+            ..spec(vec![vae.to_owned(), transformer.to_owned()])
+        };
+        let single = PackageSpec {
+            name: gguf.to_owned(),
+            opener: gguf.to_owned(),
+            directory: false,
+            ..spec(vec![gguf.to_owned(), vae.to_owned()])
+        };
+        let tree = complete_package(&models, repo, &tree).unwrap().unwrap();
+        let single = complete_package(&models, repo, &single).unwrap().unwrap();
+        remove_model(&models, &tree.open).unwrap();
+        let repo_dir = models.join("hub/acme/flux");
+        assert!(repo_dir.join(vae).is_file());
+        assert!(!repo_dir.join("transformer").exists());
+        assert_eq!(stored_packages(&models).unwrap().len(), 1);
+        remove_model(&models, &single.open).unwrap();
+        assert!(!repo_dir.join("vae").exists());
+        assert!(!repo_dir.join(gguf).exists());
+        assert!(stored_packages(&models).unwrap().is_empty());
         let _ = std::fs::remove_dir_all(&root);
     }
 

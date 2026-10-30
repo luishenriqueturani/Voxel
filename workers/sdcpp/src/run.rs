@@ -146,6 +146,7 @@ fn finish(
     running: &Running,
     mut on_progress: impl FnMut(i64, i64, Option<PathBuf>),
 ) -> Result<PathBuf, String> {
+    crate::peft::prepare(model, &running.cancel)?;
     let status = spawn(
         binary,
         arguments,

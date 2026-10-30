@@ -88,6 +88,7 @@ type PromptPanelProps = {
   generating: boolean;
   locked?: boolean;
   historyRevision?: number;
+  pendingPrompt?: string | null;
   onHistoryError?: (error: unknown) => void;
   onRestore?: (entry: PromptEntry) => void;
   editMode?: EditMode;
@@ -164,6 +165,7 @@ export function PromptPanel({
   generating,
   locked = false,
   historyRevision = 0,
+  pendingPrompt = null,
   onHistoryError = ignoreHistoryError,
   onRestore = ignoreRestore,
   editMode = "new",
@@ -376,6 +378,7 @@ export function PromptPanel({
 
       <RecentPrompts
         key={historyRevision}
+        pending={pendingPrompt}
         count={params.count}
         onPromptChange={onPromptChange}
         onNegativePromptChange={onNegativePromptChange}

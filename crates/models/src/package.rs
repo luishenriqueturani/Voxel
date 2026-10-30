@@ -10,18 +10,22 @@ const COMPONENTS: &[&str] = &[
     "vae",
     "text_encoder",
     "text_encoder_2",
+    "text_encoders",
     "tokenizer",
     "tokenizer_2",
+    "processor",
 ];
 
 const ROLE_ORDER: &[&str] = &[
     "text_encoder",
     "text_encoder_2",
+    "text_encoders",
     "unet",
     "transformer",
     "vae",
     "tokenizer",
     "tokenizer_2",
+    "processor",
     "index",
     "file",
 ];
@@ -52,6 +56,9 @@ pub struct HubPackage {
     pub directory: bool,
     pub marker: String,
     pub parts: Vec<HubPart>,
+    /// Vazio, `included` quando o VAE e os codificadores vêm junto, `borrowed`
+    /// quando o arquivo depende das peças de outro Flux.1 instalado, ou `lora`.
+    pub extras: String,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -111,7 +118,10 @@ pub fn group_packages(files: &[HubFile]) -> Vec<HubPackage> {
             });
         }
     }
-    drafts.into_iter().map(finish_draft).collect()
+    let mut packages: Vec<HubPackage> = drafts.into_iter().map(finish_draft).collect();
+    crate::companions::attach(&mut packages);
+    crate::companions::mark_loras(&mut packages);
+    packages
 }
 
 /// Devolve no máximo `limit` pacotes inteiros, sem cortar uma parte no meio.
@@ -142,6 +152,7 @@ fn finish_draft(draft: Draft) -> HubPackage {
         directory,
         marker,
         parts,
+        extras: String::new(),
     }
 }
 
@@ -224,6 +235,8 @@ fn classify(file: &HubFile) -> Classified {
             },
             role: if is_index_name(base) {
                 "index".to_owned()
+            } else if base == "tokenizer.json" {
+                "tokenizer".to_owned()
             } else {
                 (*dirs[position]).to_owned()
             },
@@ -509,6 +522,26 @@ mod tests {
             .parts
             .iter()
             .find(|part| part.filename.ends_with("tokenizer.json"))
+            .unwrap();
+        assert_eq!(tokenizer.role, "tokenizer");
+    }
+
+    #[test]
+    fn o_tokenizer_do_processor_entra_no_pacote() {
+        let packages = group_packages(&[
+            file("Qwen/Qwen-Image-2.1", "model_index.json", 1),
+            file("Qwen/Qwen-Image-2.1", "processor/tokenizer.json", 20),
+            file(
+                "Qwen/Qwen-Image-2.1",
+                "transformer/diffusion_pytorch_model.safetensors",
+                30,
+            ),
+        ]);
+        assert_eq!(packages.len(), 1);
+        let tokenizer = packages[0]
+            .parts
+            .iter()
+            .find(|part| part.filename == "processor/tokenizer.json")
             .unwrap();
         assert_eq!(tokenizer.role, "tokenizer");
     }

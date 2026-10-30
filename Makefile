@@ -12,6 +12,8 @@ SDCPP_SRC := workers/sdcpp/stable-diffusion.cpp
 SDCPP_BUILD := workers/sdcpp/build/vulkan
 SDCPP_COMMIT := b13a482
 SDCPP_PATCH := workers/sdcpp/moss-hf-llm.patch
+SDCPP_SDXL_PATCH := workers/sdcpp/diffusers-te-prefix.patch
+SDCPP_QWEN_PATCH := workers/sdcpp/qwen-hf-llm.patch
 SDCPP_PREFIX := workers/sdcpp/build/prefix
 SDCPP_HEADERS := workers/sdcpp/build/vulkan-headers/include
 
@@ -68,6 +70,12 @@ build-sdcpp:
 	fi
 	@if ! grep -q hf_language $(SDCPP_SRC)/src/name_conversion.cpp; then \
 		patch -d $(SDCPP_SRC) -p1 --batch --input="$(CURDIR)/$(SDCPP_PATCH)"; \
+	fi
+	@if ! grep -q voxel_te_dot $(SDCPP_SRC)/src/name_conversion.cpp; then \
+		patch -d $(SDCPP_SRC) -p1 --batch --input="$(CURDIR)/$(SDCPP_SDXL_PATCH)"; \
+	fi
+	@if ! grep -q voxel_qwen_language $(SDCPP_SRC)/src/name_conversion.cpp; then \
+		patch -d $(SDCPP_SRC) -p1 --batch --input="$(CURDIR)/$(SDCPP_QWEN_PATCH)"; \
 	fi
 	@if [ ! -f $(SDCPP_BUILD)/CMakeCache.txt ]; then \
 		test -d $(SDCPP_HEADERS); \

@@ -212,11 +212,15 @@ pub fn generate(
         let file = format!("imagem_{:02}.png", index + 1);
         let output = folder.join(&file);
         if jobs.stopped() {
-            return Err("cancelado".to_owned());
+            break;
         }
         let image_seed = seed.saturating_add(i64::from(index));
         let started = Instant::now();
-        render_one(app, &worker, request, &limits, &output, image_seed, index)?;
+        match render_one(app, &worker, request, &limits, &output, image_seed, index) {
+            Ok(()) => {}
+            Err(error) if error.contains("cancelado") => break,
+            Err(error) => return Err(error),
+        }
         let metadata = metadata_for(request, backend, &limits, image_seed, &file, started);
         output::embed_metadata(&output, &metadata)?;
         database
@@ -242,10 +246,13 @@ pub fn generate(
             seed: image_seed,
         });
         saved.push(metadata);
+        output::write_metadata(&folder, &saved)?;
     }
-    output::write_metadata(&folder, &saved)?;
     // Solta o modelo 2D enquanto o processo ainda está vivo. A malha só começa depois.
     let _ = worker.unload();
+    if images.is_empty() {
+        return Err("cancelado".to_owned());
+    }
     Ok(GeneratedImage {
         path: last_path,
         seed,

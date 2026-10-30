@@ -1,5 +1,6 @@
 mod background;
 mod db;
+mod debug_log;
 mod generate;
 mod history;
 mod image_job;
@@ -113,7 +114,8 @@ pub fn run() {
             templates::update_template,
             templates::duplicate_template,
             templates::rename_template,
-            templates::delete_template
+            templates::delete_template,
+            record_debug
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");
@@ -206,6 +208,14 @@ fn set_image_backend(
     backend: String,
 ) -> Result<generate::ImageBackendChoice, String> {
     generate::set_backend(&database, &backend)
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn record_debug(paths: State<'_, AppPaths>, body: String) -> Result<String, String> {
+    debug_log::write_debug(&paths.state.join("debug"), &body)
+        .map(|path| path.display().to_string())
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]

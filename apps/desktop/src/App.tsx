@@ -12,7 +12,7 @@ import { DownloadProvider } from "./downloads/DownloadProvider";
 import { useAppMenu } from "./hooks/useAppMenu";
 import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
-import { useGenerationRequest } from "./hooks/useGenerationRequest";
+import { type Frame, useGenerationRequest } from "./hooks/useGenerationRequest";
 import { useImageEdit } from "./hooks/useImageEdit";
 import { useMeshDrop } from "./hooks/useMeshDrop";
 import { usePythonEnvironment } from "./hooks/usePythonEnvironment";
@@ -73,11 +73,7 @@ export default function App() {
   const [negativePrompt, setNegativePrompt] = useState("");
   const [outputMode, setOutputMode] = useState<OutputMode>("2d");
   const [waitingEnvironment, setWaitingEnvironment] = useState(false);
-  const [frame, setFrame] = useState<{
-    step: number;
-    total: number;
-    preview: string | null;
-  } | null>(null);
+  const [frame, setFrame] = useState<Frame | null>(null);
   const [params, setParams] = useState<GenerationParams>({
     resolution: 512,
     aspect: "1:1",
@@ -191,6 +187,7 @@ export default function App() {
     addMeshPaths,
     addCurrentViews,
     canAddCurrent,
+    pendingPrompt,
   } = useGenerationRequest({
     generatingRef,
     removing,
@@ -208,6 +205,7 @@ export default function App() {
     prompt,
     negativePrompt,
     modelId,
+    imageBackend,
     reportFailure,
     outputMode,
     prepareEnvironment: python.wait,
@@ -355,7 +353,6 @@ export default function App() {
       setPreview(result.image);
     }
   }
-
   function chooseImageBackend(backend: string) {
     setImageBackend(backend);
     void saveImageBackend(backend);
@@ -471,6 +468,7 @@ export default function App() {
             sourcePath={selected?.path ?? null}
             editRef={editRef}
             historyRevision={historyRevision}
+            pendingPrompt={pendingPrompt}
             gallerySignal={gallerySignal}
             viewerSignal={viewerSignal}
             onHistoryError={reportFailure}
@@ -479,6 +477,8 @@ export default function App() {
             shown={shown}
             step={generating ? (frame?.step ?? 0) : 0}
             total={generating ? (frame?.total ?? 0) : 0}
+            image={generating ? (frame?.image ?? 0) : 0}
+            images={generating ? (frame?.images ?? 0) : 0}
             canSave={selected !== null && !generating && !removing}
             canRegenerate={selected?.seed != null && !generating && !removing}
             canRemove={selected !== null && !generating && !removing}

@@ -137,4 +137,26 @@ describe("RecentPrompts", () => {
     await user.click(screen.getByRole("button", { name: "Desafixar" }));
     expect(setPromptFavorite).toHaveBeenCalledWith(casa, false);
   });
+
+  it("mostra o prompt em geração no topo até a primeira imagem entrar no histórico", async () => {
+    vi.mocked(loadRecentPrompts).mockResolvedValue([casa]);
+    const props = {
+      count: 1,
+      onPromptChange: vi.fn(),
+      onNegativePromptChange: vi.fn(),
+      onModelChange: vi.fn(),
+      onParamsChange: vi.fn(),
+      onError: vi.fn(),
+      onRestore: vi.fn(),
+    };
+    const { unmount } = render(<RecentPrompts pending="um gato" {...props} />);
+    expect(await screen.findByText("Gerando…")).toBeInTheDocument();
+    expect(screen.getByText("um gato")).toBeInTheDocument();
+    unmount();
+
+    vi.mocked(loadRecentPrompts).mockResolvedValue([gato, casa]);
+    render(<RecentPrompts pending="um gato" {...props} />);
+    expect(await screen.findByRole("button", { name: "um gato" })).toBeInTheDocument();
+    expect(screen.queryByText("Gerando…")).not.toBeInTheDocument();
+  });
 });

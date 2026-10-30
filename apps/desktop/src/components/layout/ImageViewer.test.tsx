@@ -301,5 +301,26 @@ describe("ImageViewer", () => {
     );
     expect(screen.queryByText(/Preparando o prompt/)).not.toBeInTheDocument();
     expect(screen.getByText("Passo 2 de 20")).toBeInTheDocument();
+    expect(screen.queryByText(/Imagem \d de/)).not.toBeInTheDocument();
+  });
+
+  it("mostra qual imagem do lote está sendo gerada", () => {
+    render(
+      <ImageViewer
+        src="data:image/png;base64,aaaa"
+        step={5}
+        total={20}
+        image={2}
+        images={4}
+        generating
+        canSave={false}
+        canRegenerate={false}
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+    expect(screen.getAllByText("Imagem 2 de 4")).toHaveLength(2);
+    expect(screen.getByText("Passo 5 de 20")).toBeInTheDocument();
   });
 });

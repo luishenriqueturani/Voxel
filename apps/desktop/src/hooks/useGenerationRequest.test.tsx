@@ -162,6 +162,58 @@ describe("useGenerationRequest", () => {
     });
   });
 
+  it("mantém as imagens prontas de um lote interrompido", async () => {
+    const setSlides = vi.fn();
+    const setHistoryRevision = vi.fn();
+    const frente = slides[0];
+    if (frente === undefined) {
+      throw new Error("slide ausente");
+    }
+    vi.mocked(generateImage).mockResolvedValue({
+      path: "/tmp/frente.png",
+      seed: 1,
+      modelId: "sd15",
+      preview: "aaa",
+      images: [frente],
+    });
+    const { result } = renderHook(() =>
+      useGenerationRequest({
+        generatingRef,
+        removing: false,
+        editRef: { current: blankEdit },
+        holdEdit: vi.fn(),
+        commitEdit: vi.fn(),
+        discardEdit: vi.fn(),
+        restoreEdit: vi.fn(),
+        setGenerating: vi.fn(),
+        setSlides,
+        setSlideIndex: vi.fn(),
+        setFrame: vi.fn(),
+        setHistoryRevision,
+        params,
+        prompt: "um gato",
+        negativePrompt: "",
+        modelId: "sd15",
+        reportFailure,
+        outputMode: "2d",
+        prepareEnvironment,
+        noteIntent,
+        setWaitingEnvironment: vi.fn(),
+        slides: [],
+        slideIndex: 0,
+      }),
+    );
+
+    act(() => {
+      result.current.request();
+    });
+
+    await waitFor(() => {
+      expect(setSlides).toHaveBeenCalledWith([frente]);
+      expect(setHistoryRevision).toHaveBeenCalled();
+    });
+  });
+
   it("no modo imagens abre a seleção sem gerar texto", () => {
     const { result } = renderRequest();
 
