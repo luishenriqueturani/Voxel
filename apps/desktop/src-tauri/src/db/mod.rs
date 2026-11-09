@@ -12,7 +12,7 @@ pub use error::DbError;
 pub use flows::{FlowDocument, FlowDraft};
 pub use generations::GenerationRecord;
 pub use history::{GalleryRow, PromptEntry, PromptImage};
-pub use queue::{QueueItem, QueueJob, QueueOutput, QueueResolved};
+pub use queue::{MeshPick, QueueItem, QueueJob, QueueOutput, QueueResolved, QueueThumb};
 pub use settings::{Language, QueueFinish, SettingsUpdate, UserSettings};
 pub use templates::{PromptTemplate, TemplateDraft};
 

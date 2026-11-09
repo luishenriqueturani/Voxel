@@ -1,12 +1,14 @@
 //! Fila persistida: jobs, itens, saídas e logs de falha isolada.
 
 mod control;
+mod picks;
+mod report;
 mod store;
 mod types;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub use types::{QueueItem, QueueJob, QueueOutput, QueueResolved};
+pub use types::{MeshPick, QueueItem, QueueJob, QueueOutput, QueueResolved, QueueThumb};
 use voxel_queue::{ItemProgress, ItemStatus};
 
 use super::Database;

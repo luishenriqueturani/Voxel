@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueueJob } from "../../hooks/useQueueJob";
 import { queueCounts } from "../../native/queue";
 import { Button } from "../ui/button";
 import { QueueControls } from "./QueueControls";
+import { QueuePicks } from "./QueuePicks";
+import { QueueReport } from "./QueueReport";
 
 type QueueViewProps = {
   onBack: () => void;
@@ -16,8 +19,10 @@ function statusKey(status: string): (typeof STATUSES)[number] {
 
 export function QueueView({ onBack }: QueueViewProps) {
   const { t } = useTranslation();
-  const { job, failure } = useQueueJob();
+  const { job, failure, run } = useQueueJob(true);
+  const [pickFailure, setPickFailure] = useState<string | null>(null);
   const counts = queueCounts(job);
+  const finished = job !== null && (job.status === "done" || job.status === "cancelled");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
@@ -28,6 +33,7 @@ export function QueueView({ onBack }: QueueViewProps) {
       </div>
       <h1 className="text-lg font-semibold">{t("queue.title")}</h1>
       {failure !== null ? <p role="alert">{failure}</p> : null}
+      {pickFailure !== null ? <p role="alert">{pickFailure}</p> : null}
       {job === null ? (
         <p className="text-sm text-zinc-500">{t("queue.empty")}</p>
       ) : (
@@ -36,6 +42,17 @@ export function QueueView({ onBack }: QueueViewProps) {
         </p>
       )}
       <QueueControls />
+      {finished && job !== null ? <QueueReport job={job} /> : null}
+      {finished && job !== null ? (
+        <QueuePicks
+          job={job}
+          onQueued={(next) => {
+            setPickFailure(null);
+            void run(async () => next);
+          }}
+          onFailure={setPickFailure}
+        />
+      ) : null}
       {job === null ? null : (
         <ol className="flex max-w-2xl flex-col gap-1">
           {job.items.map((item, index) => (

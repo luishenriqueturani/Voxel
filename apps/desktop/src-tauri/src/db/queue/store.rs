@@ -97,6 +97,25 @@ impl Database {
         id.map(|value| self.queue_job(&value)).transpose()
     }
 
+    /// Job mais recente, inclusive já encerrado.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn latest_queue_job(&self) -> Result<Option<QueueJob>, DbError> {
+        let id: Option<String> = {
+            let connection = self.lock()?;
+            connection
+                .query_row(
+                    "SELECT id FROM queue_jobs ORDER BY updated_at DESC, id DESC LIMIT 1",
+                    [],
+                    |row| row.get(0),
+                )
+                .optional()?
+        };
+        id.map(|value| self.queue_job(&value)).transpose()
+    }
+
     /// Status do job mais recente, inclusive já encerrado.
     ///
     /// # Errors
@@ -120,11 +139,12 @@ impl Database {
     /// Falha se o job não existir.
     pub fn queue_job(&self, id: &str) -> Result<QueueJob, DbError> {
         let connection = self.lock()?;
-        let (name, status, end_retry): (String, String, i64) = connection
+        let (name, status, end_retry, created_at, updated_at): (String, String, i64, String, String) =
+            connection
             .query_row(
-                "SELECT name, status, end_retry FROM queue_jobs WHERE id = ?1",
+                "SELECT name, status, end_retry, created_at, updated_at FROM queue_jobs WHERE id = ?1",
                 [id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
             )
             .map_err(|error| match error {
                 rusqlite::Error::QueryReturnedNoRows => DbError::Missing,
@@ -176,6 +196,8 @@ impl Database {
             name,
             status,
             end_retry: end_retry != 0,
+            created_at,
+            updated_at,
             items,
         })
     }

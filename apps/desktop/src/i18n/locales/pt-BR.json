@@ -297,7 +297,19 @@
       "done": "Concluído",
       "failed": "Falho",
       "cancelled": "Cancelado"
-    }
+    },
+    "reportTitle": "Relatório",
+    "reportDone": "Concluídos: {{count}}",
+    "reportFailed": "Falhos: {{count}}",
+    "reportCancelled": "Cancelados: {{count}}",
+    "reportTime": "Tempo total: {{time}}",
+    "elapsedHours": "{{hours}}h {{minutes}}min",
+    "elapsedMinutes": "{{minutes}} min",
+    "openLog": "Abrir log",
+    "picksTitle": "Escolher imagens para o 3D",
+    "picksHint": "Marque as favoritas de cada item e envie para uma fila só de 3D.",
+    "picksImage": "{{prompt}} · variação {{index}}",
+    "picksSend": "Enviar para 3D"
   },
   "models": {
     "showIncompatible": "Mostrar modelos incompatíveis",

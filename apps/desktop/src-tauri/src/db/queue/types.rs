@@ -47,7 +47,29 @@ pub struct QueueJob {
     pub name: String,
     pub status: String,
     pub end_retry: bool,
+    pub created_at: String,
+    pub updated_at: String,
     pub items: Vec<QueueItem>,
+}
+
+/// Imagens escolhidas de um item no modo "escolher depois".
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeshPick {
+    pub item_id: String,
+    pub paths: Vec<String>,
+}
+
+/// Totais do relatório ao fim da fila.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QueueSummary {
+    pub name: String,
+    pub status: String,
+    pub elapsed_secs: i64,
+    pub done: u32,
+    pub failed: u32,
+    pub cancelled: u32,
+    pub later: u32,
 }
 
 /// Arquivo gerado por um passo.
@@ -55,4 +77,12 @@ pub struct QueueJob {
 pub struct QueueOutput {
     pub path: String,
     pub seed: Option<i64>,
+}
+
+/// Miniatura JPEG em base64 para a tela de escolha.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QueueThumb {
+    pub path: String,
+    pub preview: String,
 }

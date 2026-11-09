@@ -59,6 +59,9 @@ fn main() {
             "resume_queue",
             "cancel_queue",
             "reorder_queue_items",
+            "latest_queue_job",
+            "enqueue_mesh_picks",
+            "queue_thumbnails",
             "record_debug",
         ]),
     ))

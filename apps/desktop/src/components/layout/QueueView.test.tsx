@@ -35,6 +35,7 @@ vi.mock("../../native/queue", async (importOriginal) => {
   return {
     ...actual,
     loadUnfinishedQueueJob: vi.fn(async () => job),
+    loadLatestQueueJob: vi.fn(async () => null),
     pauseQueue: vi.fn(),
     resumeQueue: vi.fn(),
     cancelQueue: vi.fn(),

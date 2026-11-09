@@ -10,7 +10,7 @@ pub fn should_apply(status: Option<&str>) -> bool {
     status == Some("done")
 }
 
-/// Roda a ação configurada se o último job concluiu, não se foi cancelado.
+/// Notifica o relatório e, se configurado, suspende ou desliga.
 pub fn apply_finish(database: &Database) {
     let Ok(status) = database.latest_queue_status() else {
         return;
@@ -18,13 +18,24 @@ pub fn apply_finish(database: &Database) {
     if !should_apply(status.as_deref()) {
         return;
     }
-    let Ok(action) = database.queue_finish() else {
+    let Ok(Some(job)) = database.latest_queue_job() else {
         return;
     };
     let language = database
         .settings()
         .ok()
         .and_then(|settings| settings.language);
+    let english = language == Some(Language::English);
+    let body = Database::queue_notify_body(&job, english);
+    let _ = Command::new("notify-send")
+        .args(["--app-name=Voxel", "Voxel", &body])
+        .spawn();
+    let Ok(action) = database.queue_finish() else {
+        return;
+    };
+    if action == QueueFinish::Notify {
+        return;
+    }
     if let Some((bin, args)) = finish_command(action, language) {
         let _ = Command::new(bin).args(args).spawn();
     }

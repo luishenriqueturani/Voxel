@@ -141,6 +141,9 @@ pub fn run() {
             queue::resume_queue,
             queue::cancel_queue,
             queue::reorder_queue_items,
+            queue::latest_queue_job,
+            queue::enqueue_mesh_picks,
+            queue::queue_thumbnails,
             record_debug
         ])
         .run(tauri::generate_context!())

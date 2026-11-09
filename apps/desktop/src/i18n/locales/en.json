@@ -297,7 +297,19 @@
       "done": "Done",
       "failed": "Failed",
       "cancelled": "Cancelled"
-    }
+    },
+    "reportTitle": "Report",
+    "reportDone": "Done: {{count}}",
+    "reportFailed": "Failed: {{count}}",
+    "reportCancelled": "Cancelled: {{count}}",
+    "reportTime": "Total time: {{time}}",
+    "elapsedHours": "{{hours}}h {{minutes}}min",
+    "elapsedMinutes": "{{minutes}} min",
+    "openLog": "Open log",
+    "picksTitle": "Pick images for 3D",
+    "picksHint": "Select the favorites of each item and send them to a 3D-only queue.",
+    "picksImage": "{{prompt}} · variation {{index}}",
+    "picksSend": "Send to 3D"
   },
   "models": {
     "showIncompatible": "Show incompatible models",

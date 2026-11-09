@@ -306,6 +306,14 @@ mod tests {
     }
 
     #[test]
+    fn escolher_depois_encerra_nas_imagens() {
+        let mut item = ItemProgress::pending(2, MeshMode::Later);
+        record_images(&mut item, 2);
+        assert_eq!(item.status, ItemStatus::Done);
+        assert_eq!(next_action(&[item]), None);
+    }
+
+    #[test]
     fn falta_de_vram_reduz_a_resolucao_e_desliga_o_3d_pesado() {
         assert!(vram_error("CUDA out of memory"));
         assert!(vram_error("torch.cuda.OutOfMemoryError"));

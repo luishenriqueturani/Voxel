@@ -2,7 +2,7 @@
 
 use tauri::{AppHandle, Manager, State};
 
-use crate::db::{Database, QueueJob};
+use crate::db::{Database, MeshPick, QueueJob, QueueThumb};
 use crate::live_job::LiveJobs;
 use crate::queue_run::QueuePump;
 
@@ -131,4 +131,62 @@ pub async fn reorder_queue_items(
     .await?;
     notify(&app);
     Ok(job)
+}
+
+/// Job mais recente, inclusive já encerrado, para o relatório e a escolha do 3D.
+///
+/// # Errors
+///
+/// Falha se o banco não puder ser lido.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub async fn latest_queue_job(database: State<'_, Database>) -> Result<Option<QueueJob>, String> {
+    on_db(database, |database| database.latest_queue_job()).await
+}
+
+/// Enfileira só o 3D das imagens escolhidas e acorda o worker.
+///
+/// # Errors
+///
+/// Falha se as imagens não forem do item ou se nada foi escolhido.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub async fn enqueue_mesh_picks(
+    app: AppHandle,
+    database: State<'_, Database>,
+    job_id: String,
+    picks: Vec<MeshPick>,
+) -> Result<QueueJob, String> {
+    let job = on_db(database, move |database| {
+        database.enqueue_mesh_picks(&job_id, &picks)
+    })
+    .await?;
+    notify(&app);
+    Ok(job)
+}
+
+/// Miniaturas JPEG das imagens da fila, para a tela de escolha.
+#[tauri::command]
+pub async fn queue_thumbnails(paths: Vec<String>) -> Vec<QueueThumb> {
+    tauri::async_runtime::spawn_blocking(move || {
+        paths
+            .into_iter()
+            .map(|path| QueueThumb {
+                preview: jpeg_preview(&path),
+                path,
+            })
+            .collect()
+    })
+    .await
+    .unwrap_or_default()
+}
+
+fn jpeg_preview(path: &str) -> String {
+    let Ok(bytes) = voxel_imaging::thumbnail_jpeg(std::path::Path::new(path), 192) else {
+        return String::new();
+    };
+    if bytes.is_empty() {
+        return String::new();
+    }
+    crate::setup::encode_base64(&bytes)
 }

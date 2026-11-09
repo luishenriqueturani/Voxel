@@ -65,6 +65,9 @@
     "allow-resume-queue",
     "allow-cancel-queue",
     "allow-reorder-queue-items",
+    "allow-latest-queue-job",
+    "allow-enqueue-mesh-picks",
+    "allow-queue-thumbnails",
     "allow-record-debug",
     "dialog:allow-open",
     "dialog:allow-save"

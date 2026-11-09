@@ -315,10 +315,10 @@ Uma semana de uso. O Voltar das configurações está no cabeçalho do conteúdo
 
 ### Modo "Escolher depois" e relatório
 
-- [ ] Tela para escolher as imagens favoritas de cada item
-- [ ] Enviar as escolhidas para uma fila só de 3D
-- [ ] Relatório final: concluídos, falhos com link para o log, tempo total
-- [ ] Notificação do sistema ao terminar
+- [x] Tela para escolher as imagens favoritas de cada item
+- [x] Enviar as escolhidas para uma fila só de 3D
+- [x] Relatório final: concluídos, falhos com link para o log, tempo total
+- [x] Notificação do sistema ao terminar
 
 ### Galeria completa
 

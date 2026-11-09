@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
-import { loadUnfinishedQueueJob, type QueueJob } from "../native/queue";
+import { loadLatestQueueJob, loadUnfinishedQueueJob, type QueueJob } from "../native/queue";
 
 const POLL_MS = 2000;
 
-export function useQueueJob() {
+export function useQueueJob(includeFinished = false) {
   const [job, setJob] = useState<QueueJob | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const next = await loadUnfinishedQueueJob();
-      setJob(next);
+      const open = await loadUnfinishedQueueJob();
+      if (open !== null || !includeFinished) {
+        setJob(open);
+        setFailure(null);
+        return;
+      }
+      setJob(await loadLatestQueueJob());
       setFailure(null);
     } catch (error: unknown) {
       setFailure(error instanceof Error ? error.message : String(error));
     }
-  }, []);
+  }, [includeFinished]);
 
   useEffect(() => {
     void refresh();
@@ -35,5 +40,5 @@ export function useQueueJob() {
     }
   }
 
-  return { job, failure, run };
+  return { job, failure, run, refresh };
 }
