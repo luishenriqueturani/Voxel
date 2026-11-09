@@ -17,10 +17,18 @@ vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
   invoke: vi.fn(
     async (command: string, args?: { update?: { language?: string; theme?: string } }) => {
+      if (command === "unfinished_queue_job") {
+        return null;
+      }
       if (command === "update_settings" && args?.update) {
         updates.push(args.update);
       }
-      return { language: "en", theme: "dark" };
+      return {
+        language: "en",
+        theme: "dark",
+        inhibitSleep: true,
+        queueFinish: "none",
+      };
     },
   ),
 }));

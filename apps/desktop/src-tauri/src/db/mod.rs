@@ -1,8 +1,9 @@
 mod error;
-mod flows;
+pub(crate) mod flows;
 mod generations;
 mod history;
 mod migrate;
+mod queue;
 mod settings;
 mod setup_store;
 mod templates;
@@ -11,7 +12,8 @@ pub use error::DbError;
 pub use flows::{FlowDocument, FlowDraft};
 pub use generations::GenerationRecord;
 pub use history::{GalleryRow, PromptEntry, PromptImage};
-pub use settings::{SettingsUpdate, UserSettings};
+pub use queue::{QueueItem, QueueJob, QueueOutput, QueueResolved};
+pub use settings::{Language, QueueFinish, SettingsUpdate, UserSettings};
 pub use templates::{PromptTemplate, TemplateDraft};
 
 use std::path::Path;

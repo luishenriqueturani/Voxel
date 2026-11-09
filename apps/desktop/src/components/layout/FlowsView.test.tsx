@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { blankItem, type FlowDocument, type FlowDraft, IDLE_FLOW_COMMAND } from "../../lib/flow";
 import { updateFlow } from "../../native/flows";
+import { enqueueFlow } from "../../native/queue";
 import { FlowsView } from "./FlowsView";
 
 const store = vi.hoisted(() => ({
@@ -65,7 +66,26 @@ vi.mock("../../native/templates", () => ({
   loadTemplates: vi.fn(async () => store.templates.slice()),
 }));
 
+vi.mock("../../native/queue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../native/queue")>();
+  return {
+    ...actual,
+    enqueueFlow: vi.fn(async (id: string) => ({
+      id: `job-${id}`,
+      name: id,
+      status: "pending",
+      endRetry: false,
+      items: [],
+    })),
+    loadUnfinishedQueueJob: vi.fn(async () => null),
+  };
+});
+
 describe("editor de fluxos", () => {
+  beforeEach(() => {
+    vi.mocked(enqueueFlow).mockClear();
+  });
+
   it("cria itens, reordena, confirma Todas e sobrescreve a seed", async () => {
     store.rows = [];
     store.templates = [{ id: "tpl", name: "Personagem", body: "{prompt}, T-pose", count: 1 }];
@@ -142,5 +162,32 @@ describe("editor de fluxos", () => {
 
     await user.click(screen.getByRole("button", { name: "Salvar arquivo" }));
     expect(screen.getByText("Arquivo: /tmp/vila.json")).toBeInTheDocument();
+  });
+
+  it("enfileira o fluxo sem abrir o modal de erro", async () => {
+    store.rows = [];
+    store.templates = [];
+    const user = userEvent.setup();
+    render(<FlowsView onBack={vi.fn()} command={IDLE_FLOW_COMMAND} />);
+    await user.click(screen.getByRole("button", { name: "Criar" }));
+    await user.click(screen.getByRole("button", { name: "Executar" }));
+    expect(enqueueFlow).toHaveBeenCalledWith("flow-1");
+    expect(
+      screen.getByText("Enfileirado. A fila continua se o aplicativo fechar."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("pede itens antes de enfileirar um fluxo vazio", async () => {
+    store.rows = [];
+    store.templates = [];
+    const user = userEvent.setup();
+    render(<FlowsView onBack={vi.fn()} command={IDLE_FLOW_COMMAND} />);
+    await user.click(screen.getByRole("button", { name: "Criar" }));
+    await user.click(within(screen.getByRole("article")).getByRole("button", { name: "Remover" }));
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Executar" }));
+    expect(enqueueFlow).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Adicione itens antes de executar.");
   });
 });

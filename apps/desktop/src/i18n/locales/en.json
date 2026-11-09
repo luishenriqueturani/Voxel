@@ -193,6 +193,15 @@
     "tokenSave": "Save token",
     "tokenClear": "Delete token",
     "tokenSaved": "Token saved on this computer.",
+    "inhibitSleep": "Prevent sleep while the queue runs",
+    "inhibitSleepHint": "The system stays awake while the queue is generating.",
+    "queueFinish": "When the queue finishes",
+    "queueFinishOptions": {
+      "none": "Do nothing",
+      "notify": "Notify",
+      "suspend": "Sleep",
+      "poweroff": "Shut down"
+    },
     "sections": {
       "general": "General",
       "hardware": "Hardware",
@@ -263,7 +272,32 @@
     "item": "Item {{index}}",
     "newName": "New flow",
     "saveFile": "Save file",
-    "savedTo": "File: {{path}}"
+    "savedTo": "File: {{path}}",
+    "execute": "Run",
+    "queued": "Queued. The queue continues if the app closes.",
+    "needItems": "Add items before running."
+  },
+  "queue": {
+    "title": "Execution queue",
+    "empty": "Nothing in the queue.",
+    "progress": "{{done}}/{{total}}",
+    "progressPaused": "{{done}}/{{total}} (paused)",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel queue",
+    "paused": "Queue paused",
+    "running": "Queue running",
+    "pending": "Pending",
+    "moveUp": "Move up in queue",
+    "moveDown": "Move down in queue",
+    "itemStatus": {
+      "pending": "Pending",
+      "images": "Images",
+      "mesh": "3D",
+      "done": "Done",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    }
   },
   "models": {
     "showIncompatible": "Show incompatible models",

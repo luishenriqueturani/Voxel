@@ -5,6 +5,7 @@ import type { ListedModel } from "../../native/models";
 import type { PythonProgress } from "../../native/pythonEnv";
 import { Button } from "../ui/button";
 import { EnvironmentSection } from "./EnvironmentSection";
+import { ExecutionSection } from "./ExecutionSection";
 import { ModelsSection } from "./ModelsSection";
 
 export const SETTING_SECTIONS = [
@@ -176,6 +177,8 @@ export function SettingsView({
             onReinstall={onReinstallEnvironment}
             onRemove={onRemoveEnvironment}
           />
+        ) : section === "execution" ? (
+          <ExecutionSection />
         ) : (
           <p className="text-sm text-zinc-500">{t("settings.empty")}</p>
         )}

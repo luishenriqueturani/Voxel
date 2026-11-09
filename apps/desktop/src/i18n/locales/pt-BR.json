@@ -193,6 +193,15 @@
     "tokenSave": "Salvar token",
     "tokenClear": "Apagar token",
     "tokenSaved": "Token salvo neste computador.",
+    "inhibitSleep": "Impedir suspensão durante a fila",
+    "inhibitSleepHint": "O sistema não dorme enquanto houver geração na fila.",
+    "queueFinish": "Ao terminar a fila",
+    "queueFinishOptions": {
+      "none": "Nada",
+      "notify": "Notificar",
+      "suspend": "Suspender",
+      "poweroff": "Desligar"
+    },
     "sections": {
       "general": "Geral",
       "hardware": "Hardware",
@@ -263,7 +272,32 @@
     "item": "Item {{index}}",
     "newName": "Novo fluxo",
     "saveFile": "Salvar arquivo",
-    "savedTo": "Arquivo: {{path}}"
+    "savedTo": "Arquivo: {{path}}",
+    "execute": "Executar",
+    "queued": "Enfileirado. A fila continua se o aplicativo fechar.",
+    "needItems": "Adicione itens antes de executar."
+  },
+  "queue": {
+    "title": "Fila de execução",
+    "empty": "Nenhum fluxo na fila.",
+    "progress": "{{done}}/{{total}}",
+    "progressPaused": "{{done}}/{{total}} (pausada)",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "cancel": "Cancelar fila",
+    "paused": "Fila pausada",
+    "running": "Fila em execução",
+    "pending": "Pendentes",
+    "moveUp": "Subir na fila",
+    "moveDown": "Descer na fila",
+    "itemStatus": {
+      "pending": "Pendente",
+      "images": "Imagens",
+      "mesh": "3D",
+      "done": "Concluído",
+      "failed": "Falho",
+      "cancelled": "Cancelado"
+    }
   },
   "models": {
     "showIncompatible": "Mostrar modelos incompatíveis",

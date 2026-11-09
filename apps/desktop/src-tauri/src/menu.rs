@@ -76,8 +76,8 @@ pub fn menu_groups() -> Vec<MenuGroup> {
             items: vec![
                 item("flows.manage", true, None),
                 item("flows.templates", true, None),
-                item("flows.queue", false, None),
-                item("flows.pause", false, None),
+                item("flows.queue", true, None),
+                item("flows.pause", true, None),
             ],
         },
         MenuGroup {

@@ -225,7 +225,12 @@ impl Database {
         Ok(())
     }
 
-    fn template(&self, id: &str) -> Result<PromptTemplate, DbError> {
+    /// Lê um template pela identidade.
+    ///
+    /// # Errors
+    ///
+    /// Falha se o template não existir.
+    pub fn template(&self, id: &str) -> Result<PromptTemplate, DbError> {
         self.lock()?
             .query_row(
                 "SELECT id, name, body, negative, model_2d, model_3d, resolution, aspect, steps,

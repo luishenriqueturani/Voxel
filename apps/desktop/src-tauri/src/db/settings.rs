@@ -56,11 +56,57 @@ impl Theme {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum QueueFinish {
+    #[default]
+    None,
+    Notify,
+    Suspend,
+    PowerOff,
+}
+
+impl QueueFinish {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Notify => "notify",
+            Self::Suspend => "suspend",
+            Self::PowerOff => "poweroff",
+        }
+    }
+
+    #[must_use]
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "none" => Some(Self::None),
+            "notify" => Some(Self::Notify),
+            "suspend" => Some(Self::Suspend),
+            "poweroff" => Some(Self::PowerOff),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserSettings {
     pub language: Option<Language>,
     pub theme: Option<Theme>,
+    pub inhibit_sleep: bool,
+    pub queue_finish: QueueFinish,
+}
+
+impl Default for UserSettings {
+    fn default() -> Self {
+        Self {
+            language: None,
+            theme: None,
+            inhibit_sleep: true,
+            queue_finish: QueueFinish::None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -68,6 +114,8 @@ pub struct UserSettings {
 pub struct SettingsUpdate {
     pub language: Option<Language>,
     pub theme: Option<Theme>,
+    pub inhibit_sleep: Option<bool>,
+    pub queue_finish: Option<QueueFinish>,
 }
 
 impl Database {
@@ -80,6 +128,12 @@ impl Database {
         Ok(UserSettings {
             language: self.get("language")?.as_deref().and_then(Language::parse),
             theme: self.get("theme")?.as_deref().and_then(Theme::parse),
+            inhibit_sleep: self.get("inhibit_sleep")?.as_deref() != Some("0"),
+            queue_finish: self
+                .get("queue_finish")?
+                .as_deref()
+                .and_then(QueueFinish::parse)
+                .unwrap_or(QueueFinish::None),
         })
     }
 
@@ -95,7 +149,31 @@ impl Database {
         if let Some(theme) = update.theme {
             self.set("theme", theme.as_str())?;
         }
+        if let Some(inhibit) = update.inhibit_sleep {
+            self.set("inhibit_sleep", if inhibit { "1" } else { "0" })?;
+        }
+        if let Some(finish) = update.queue_finish {
+            self.set("queue_finish", finish.as_str())?;
+        }
         self.settings()
+    }
+
+    /// Inibe suspensão enquanto a fila gera, salvo se o usuário desligou.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn inhibit_sleep(&self) -> Result<bool, DbError> {
+        Ok(self.settings()?.inhibit_sleep)
+    }
+
+    /// Ação depois que a fila termina sozinha.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn queue_finish(&self) -> Result<QueueFinish, DbError> {
+        Ok(self.settings()?.queue_finish)
     }
 
     /// Backend de imagem escolhido nas configurações, se o usuário tiver trocado.
@@ -179,7 +257,7 @@ impl Database {
 
 #[cfg(test)]
 mod tests {
-    use super::{Language, SettingsUpdate, Theme, UserSettings};
+    use super::{Language, QueueFinish, SettingsUpdate, Theme, UserSettings};
     use crate::db::migrated;
 
     #[test]
@@ -188,7 +266,7 @@ mod tests {
         database
             .update_settings(&SettingsUpdate {
                 language: Some(Language::English),
-                theme: None,
+                ..SettingsUpdate::default()
             })
             .unwrap();
 
@@ -198,7 +276,7 @@ mod tests {
             database.settings().unwrap(),
             UserSettings {
                 language: Some(Language::English),
-                theme: None
+                ..UserSettings::default()
             }
         );
     }
@@ -206,13 +284,9 @@ mod tests {
     #[test]
     fn configuracoes_novas_sao_ausentes() {
         let settings = migrated().settings().unwrap();
-        assert_eq!(
-            settings,
-            UserSettings {
-                language: None,
-                theme: None
-            }
-        );
+        assert_eq!(settings, UserSettings::default());
+        assert!(settings.inhibit_sleep);
+        assert_eq!(settings.queue_finish, QueueFinish::None);
     }
 
     #[test]
@@ -222,6 +296,7 @@ mod tests {
             .update_settings(&SettingsUpdate {
                 language: Some(Language::Portuguese),
                 theme: Some(Theme::Dark),
+                ..SettingsUpdate::default()
             })
             .unwrap();
 
@@ -236,13 +311,13 @@ mod tests {
         database
             .update_settings(&SettingsUpdate {
                 language: Some(Language::English),
-                theme: None,
+                ..SettingsUpdate::default()
             })
             .unwrap();
         database
             .update_settings(&SettingsUpdate {
-                language: None,
                 theme: Some(Theme::Light),
+                ..SettingsUpdate::default()
             })
             .unwrap();
 
@@ -250,7 +325,8 @@ mod tests {
             database.settings().unwrap(),
             UserSettings {
                 language: Some(Language::English),
-                theme: Some(Theme::Light)
+                theme: Some(Theme::Light),
+                ..UserSettings::default()
             }
         );
     }
@@ -261,13 +337,7 @@ mod tests {
         database.set("language", "klingon").unwrap();
         database.set("theme", "sepia").unwrap();
 
-        assert_eq!(
-            database.settings().unwrap(),
-            UserSettings {
-                language: None,
-                theme: None
-            }
-        );
+        assert_eq!(database.settings().unwrap(), UserSettings::default());
     }
 
     #[test]
@@ -280,8 +350,8 @@ mod tests {
         database.migrate().unwrap();
         database
             .update_settings(&SettingsUpdate {
-                language: None,
                 theme: Some(Theme::Dark),
+                ..SettingsUpdate::default()
             })
             .unwrap();
         drop(database);
@@ -333,5 +403,24 @@ mod tests {
         let update: SettingsUpdate = serde_json::from_str(r#"{"theme":"light"}"#).unwrap();
         assert_eq!(update.language, None);
         assert_eq!(update.theme, Some(Theme::Light));
+        assert_eq!(update.inhibit_sleep, None);
+        assert_eq!(update.queue_finish, None);
+    }
+
+    #[test]
+    fn inibe_sono_e_acao_ao_terminar_gravam() {
+        let database = migrated();
+        database
+            .update_settings(&SettingsUpdate {
+                inhibit_sleep: Some(false),
+                queue_finish: Some(QueueFinish::Suspend),
+                ..SettingsUpdate::default()
+            })
+            .unwrap();
+        assert!(!database.inhibit_sleep().unwrap());
+        assert_eq!(database.queue_finish().unwrap(), QueueFinish::Suspend);
+        assert_eq!(QueueFinish::parse("poweroff"), Some(QueueFinish::PowerOff));
+        assert_eq!(QueueFinish::PowerOff.as_str(), "poweroff");
+        assert_eq!(QueueFinish::parse("reboot"), None);
     }
 }

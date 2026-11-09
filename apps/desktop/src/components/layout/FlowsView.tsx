@@ -19,9 +19,11 @@ import {
   pickFlowToSave,
   updateFlow,
 } from "../../native/flows";
+import { enqueueFlow } from "../../native/queue";
 import { loadTemplates, type PromptTemplate } from "../../native/templates";
 import { Button } from "../ui/button";
 import { FlowItemCard } from "./FlowItemCard";
+import { QueueControls } from "./QueueControls";
 
 type FlowsViewProps = {
   onBack: () => void;
@@ -50,6 +52,7 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [queued, setQueued] = useState(false);
 
   const selected = flows.find((flow) => flow.id === selectedId) ?? null;
   const selectedRef = useRef(selected);
@@ -79,6 +82,7 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
     });
     setSelectedId(flow.id);
     setFailure(null);
+    setQueued(false);
   }
 
   async function persist(next: FlowDocument) {
@@ -128,6 +132,26 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
     }
   }
 
+  async function execute() {
+    if (selected === null) {
+      return;
+    }
+    if (selected.items.length === 0) {
+      setQueued(false);
+      setFailure(t("flows.needItems"));
+      return;
+    }
+    try {
+      await updateFlow(selected.id, draftOf(selected));
+      await enqueueFlow(selected.id);
+      setFailure(null);
+      setQueued(true);
+    } catch (error: unknown) {
+      setQueued(false);
+      setFailure(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   async function remove() {
     if (selectedId === null) {
       return;
@@ -138,6 +162,7 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
       setFlows(remaining);
       setSelectedId(remaining[0]?.id ?? null);
       setFailure(null);
+      setQueued(false);
     } catch (error: unknown) {
       setFailure(error instanceof Error ? error.message : String(error));
     }
@@ -186,6 +211,7 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
       <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
         <h1 className="text-lg font-semibold">{t("flows.title")}</h1>
         {failure !== null ? <p role="alert">{failure}</p> : null}
+        {queued ? <p>{t("flows.queued")}</p> : null}
         {selected === null ? null : (
           <div className="flex max-w-2xl flex-col gap-4">
             <label className="flex flex-col gap-1 text-sm font-medium">
@@ -223,10 +249,12 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
             ) : null}
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => void saveFile()}>{t("flows.saveFile")}</Button>
+              <Button onClick={() => void execute()}>{t("flows.execute")}</Button>
               <Button variant="ghost" onClick={() => void remove()}>
                 {t("templates.delete")}
               </Button>
             </div>
+            <QueueControls />
             <ol className="flex flex-col gap-3">
               {selected.items.map((item, index) => (
                 <li key={item.id}>

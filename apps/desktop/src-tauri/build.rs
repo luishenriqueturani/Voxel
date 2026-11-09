@@ -52,6 +52,13 @@ fn main() {
             "delete_flow",
             "import_flow_file",
             "export_flow_file",
+            "enqueue_flow",
+            "active_queue_job",
+            "unfinished_queue_job",
+            "pause_queue",
+            "resume_queue",
+            "cancel_queue",
+            "reorder_queue_items",
             "record_debug",
         ]),
     ))

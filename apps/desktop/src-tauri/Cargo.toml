@@ -21,6 +21,7 @@ voxel-logging.workspace = true
 voxel-mesh.workspace = true
 voxel-models.workspace = true
 voxel-protocol.workspace = true
+voxel-queue.workspace = true
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"

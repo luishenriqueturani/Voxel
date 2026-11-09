@@ -5527,6 +5527,7 @@ dependencies = [
  "voxel-mesh",
  "voxel-models",
  "voxel-protocol",
+ "voxel-queue",
 ]
 
 [[package]]

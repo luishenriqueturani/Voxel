@@ -1,20 +1,64 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DownloadContext } from "../../downloads/DownloadProvider";
+import type { QueueJob } from "../../native/queue";
 import { StatusBar } from "./StatusBar";
+
+const queue = vi.hoisted(() => ({
+  current: null as QueueJob | null,
+}));
 
 vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
 }));
 
+vi.mock("../../native/queue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../native/queue")>();
+  return {
+    ...actual,
+    loadUnfinishedQueueJob: vi.fn(async () => queue.current),
+  };
+});
+
+const job: QueueJob = {
+  id: "job-1",
+  name: "NPCs",
+  status: "running",
+  endRetry: false,
+  items: [
+    {
+      id: "a",
+      status: "done",
+      prompt: "ferreiro",
+      count: 1,
+      mesh: "none",
+      images: 1,
+      meshes: 0,
+    },
+    {
+      id: "b",
+      status: "pending",
+      prompt: "guarda",
+      count: 1,
+      mesh: "none",
+      images: 0,
+      meshes: 0,
+    },
+  ],
+};
+
 describe("StatusBar no app Tauri", () => {
   it("não mostra o atalho de preferências, que fica no menu nativo", () => {
-    render(<StatusBar status={null} onOpenSettings={() => undefined} />);
+    queue.current = null;
+    render(
+      <StatusBar status={null} onOpenSettings={() => undefined} onOpenQueue={() => undefined} />,
+    );
 
     expect(screen.queryByRole("button", { name: "Preferências" })).not.toBeInTheDocument();
   });
 
   it("mostra GPU, backend, memórias e temperaturas", () => {
+    queue.current = null;
     render(
       <StatusBar
         status={{
@@ -30,6 +74,7 @@ describe("StatusBar no app Tauri", () => {
           gpuCelsius: 48,
         }}
         onOpenSettings={() => undefined}
+        onOpenQueue={() => undefined}
       />,
     );
 
@@ -44,7 +89,17 @@ describe("StatusBar no app Tauri", () => {
     expect(bar).toHaveTextContent("Temp. GPU: 48 °C");
   });
 
+  it("mostra o progresso da fila e abre a tela", async () => {
+    queue.current = job;
+    const onOpenQueue = vi.fn();
+    render(<StatusBar status={null} onOpenSettings={() => undefined} onOpenQueue={onOpenQueue} />);
+    const button = await screen.findByRole("button", { name: "Fila: 1/2" });
+    button.click();
+    expect(onOpenQueue).toHaveBeenCalled();
+  });
+
   it("mostra o download ativo à direita, com o restante da fila", () => {
+    queue.current = null;
     render(
       <DownloadContext.Provider
         value={{
@@ -55,7 +110,7 @@ describe("StatusBar no app Tauri", () => {
           enqueueHub: () => undefined,
         }}
       >
-        <StatusBar status={null} onOpenSettings={() => undefined} />
+        <StatusBar status={null} onOpenSettings={() => undefined} onOpenQueue={() => undefined} />
       </DownloadContext.Provider>,
     );
     const label = screen.getByText("Baixando Stable Diffusion 1.5 40% · 1 na fila");

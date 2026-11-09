@@ -5,6 +5,7 @@ mod flows;
 mod generate;
 mod history;
 mod image_job;
+mod inhibit;
 mod live_job;
 mod menu;
 mod mesh;
@@ -13,6 +14,10 @@ mod output;
 pub mod paths;
 mod probe;
 mod python_env;
+mod queue;
+mod queue_finish;
+mod queue_power;
+mod queue_run;
 mod setup;
 mod status;
 mod templates;
@@ -58,6 +63,13 @@ pub fn run() {
             app.manage(SetupGate::default());
             app.manage(live_job::LiveJobs::default());
             app.manage(python_env::Environment::default());
+            app.manage(queue_run::QueuePump::default());
+            let handle = app.handle().clone();
+            app.manage(Mutex::new(
+                std::thread::Builder::new()
+                    .name("voxel-queue".into())
+                    .spawn(move || queue_power::pump(&handle))?,
+            ));
 
             let menu = build_menu(app.handle(), &default_labels())?;
             app.set_menu(menu)?;
@@ -122,6 +134,13 @@ pub fn run() {
             flows::delete_flow,
             flows::import_flow_file,
             flows::export_flow_file,
+            queue::enqueue_flow,
+            queue::active_queue_job,
+            queue::unfinished_queue_job,
+            queue::pause_queue,
+            queue::resume_queue,
+            queue::cancel_queue,
+            queue::reorder_queue_items,
             record_debug
         ])
         .run(tauri::generate_context!())

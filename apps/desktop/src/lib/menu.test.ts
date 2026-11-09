@@ -42,6 +42,8 @@ describe("actionForMenu", () => {
     expect(actionForMenu("file.openFlow")).toBe("open-flow");
     expect(actionForMenu("file.saveFlow")).toBe("save-flow");
     expect(actionForMenu("flows.manage")).toBe("flows");
+    expect(actionForMenu("flows.queue")).toBe("queue");
+    expect(actionForMenu("flows.pause")).toBe("toggle-queue");
   });
 
   it("ignora itens ainda sem função", () => {

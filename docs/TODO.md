@@ -302,16 +302,16 @@ Uma semana de uso. O Voltar das configurações está no cabeçalho do conteúdo
 
 ### Fila de execução (§5.5, §5.6)
 
-- [ ] Fila persistida no SQLite, com retomada após fechar o app ou reiniciar o PC
-- [ ] Execução intercalada: imagens do item → 3D do item → próximo item
-- [ ] Falha isolada: marcar item como falho, gravar log e seguir
-- [ ] Erros da fila não abrem modal; ficam acumulados para o relatório
-- [ ] Retry automático com configurações mais leves em falta de VRAM
-- [ ] Tentar novamente itens falhos ao final
-- [ ] Pausar, retomar, cancelar e reordenar pendentes
-- [ ] Impedir suspensão do sistema durante a fila (`systemd-inhibit`/D-Bus)
-- [ ] Ação ao terminar a fila: nada / notificar / suspender / desligar
-- [ ] Tela da fila de execução (Fluxos → Fila de execução) e progresso na barra de status
+- [x] Fila persistida no SQLite, com retomada após fechar o app ou reiniciar o PC
+- [x] Execução intercalada: imagens do item → 3D do item → próximo item
+- [x] Falha isolada: marcar item como falho, gravar log e seguir
+- [x] Erros da fila não abrem modal; ficam acumulados para o relatório
+- [x] Retry automático com configurações mais leves em falta de VRAM
+- [x] Tentar novamente itens falhos ao final
+- [x] Pausar, retomar, cancelar e reordenar pendentes
+- [x] Impedir suspensão do sistema durante a fila (`systemd-inhibit`/D-Bus)
+- [x] Ação ao terminar a fila: nada / notificar / suspender / desligar
+- [x] Tela da fila de execução (Fluxos → Fila de execução) e progresso na barra de status
 
 ### Modo "Escolher depois" e relatório
 

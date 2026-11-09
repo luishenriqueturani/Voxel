@@ -1,14 +1,17 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { useDownloadQueue } from "../../downloads/DownloadProvider";
+import { useQueueJob } from "../../hooks/useQueueJob";
 import { environmentLabel } from "../../lib/pythonStatus";
 import type { PythonProgress } from "../../native/pythonEnv";
+import { queueCounts } from "../../native/queue";
 import type { MachineStatus } from "../../native/status";
 
 type StatusBarProps = {
   status: MachineStatus | null;
   environment?: PythonProgress;
   onOpenSettings: () => void;
+  onOpenQueue: () => void;
 };
 
 function imageBackendName(
@@ -26,10 +29,14 @@ function gib(bytes: number): string {
   return (bytes / 1024 ** 3).toFixed(1);
 }
 
-export function StatusBar({ status, environment, onOpenSettings }: StatusBarProps) {
+export function StatusBar({ status, environment, onOpenSettings, onOpenQueue }: StatusBarProps) {
   const { t } = useTranslation();
   const downloads = useDownloadQueue();
+  const { job } = useQueueJob();
+  const counts = queueCounts(job);
   const unknown = t("status.unknown");
+  const queueLabel =
+    job === null ? unknown : t(counts.paused ? "queue.progressPaused" : "queue.progress", counts);
   const download = downloadLabel(downloads, t);
   const memory = (used: number | null, total: number | null) =>
     used === null || total === null
@@ -76,9 +83,9 @@ export function StatusBar({ status, environment, onOpenSettings }: StatusBarProp
           ? unknown
           : t("status.celsius", { value: status.gpuCelsius })}
       </span>
-      <span>
-        {t("status.queue")}: {unknown}
-      </span>
+      <button type="button" onClick={onOpenQueue} className="underline-offset-2 hover:underline">
+        {t("status.queue")}: {queueLabel}
+      </button>
       <span>
         {t("status.environment")}: {environmentLabel(environment, t)}
       </span>

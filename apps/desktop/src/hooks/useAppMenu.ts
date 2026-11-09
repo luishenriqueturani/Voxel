@@ -9,9 +9,10 @@ import { cancelGeneration, copyPreview, saveGeneratedImage } from "../native/gen
 import { importLocalModel, type ListedModel, loadModels, modelsDirectory } from "../native/models";
 import type { ProfileCatalog, SetupStep } from "../native/setup";
 import { resetSetup } from "../native/setup";
+import { toggleQueuePause } from "../native/queue";
 import { useNativeMenu } from "./useNativeMenu";
 
-type AppView = "workspace" | "settings" | "welcome" | "templates" | "flows";
+type AppView = "workspace" | "settings" | "welcome" | "templates" | "flows" | "queue";
 
 type AppMenuInput = {
   setView: (view: AppView) => void;
@@ -123,6 +124,10 @@ export function useAppMenu(input: AppMenuInput): void {
             void openLocalPath(path);
           }
         });
+      } else if (action === "queue") {
+        input.setView("queue");
+      } else if (action === "toggle-queue") {
+        void toggleQueuePause();
       }
     },
     [input, openSettings],

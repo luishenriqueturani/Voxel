@@ -106,7 +106,12 @@ const RULES: &[Rule] = &[
         kind: ErrorKind::OutOfMemory,
         action: SuggestedAction::RetryLighter,
         contains_all: &[],
-        contains_any: &["out of memory", "hiperroroutofmemory", "cuda out of memory"],
+        contains_any: &[
+            "out of memory",
+            "outofmemory",
+            "hiperroroutofmemory",
+            "cuda out of memory",
+        ],
         signals: &[],
     },
     Rule {
@@ -195,6 +200,10 @@ mod tests {
             ErrorKind::OutOfMemory
         );
         assert_eq!(classify("Out of Memory", None).kind, ErrorKind::OutOfMemory);
+        assert_eq!(
+            classify("torch.cuda.OutOfMemoryError", None).kind,
+            ErrorKind::OutOfMemory
+        );
     }
 
     #[test]

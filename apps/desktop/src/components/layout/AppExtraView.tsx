@@ -12,10 +12,11 @@ import {
 import type { PythonProgress } from "../../native/pythonEnv";
 import { saveHfToken } from "../../native/token";
 import { FlowsView } from "./FlowsView";
+import { QueueView } from "./QueueView";
 import { type SettingSection, SettingsView } from "./SettingsView";
 import { TemplatesView } from "./TemplatesView";
 
-export type ExtraView = "templates" | "flows" | "settings";
+export type ExtraView = "templates" | "flows" | "settings" | "queue";
 
 type AppExtraViewProps = {
   view: ExtraView;
@@ -65,6 +66,9 @@ export function AppExtraView({
   }
   if (view === "flows") {
     return <FlowsView onBack={onWorkspace} command={flowCommand} />;
+  }
+  if (view === "queue") {
+    return <QueueView onBack={onWorkspace} />;
   }
   return (
     <SettingsView

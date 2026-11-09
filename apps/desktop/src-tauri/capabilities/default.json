@@ -58,6 +58,13 @@
     "allow-delete-flow",
     "allow-import-flow-file",
     "allow-export-flow-file",
+    "allow-enqueue-flow",
+    "allow-active-queue-job",
+    "allow-unfinished-queue-job",
+    "allow-pause-queue",
+    "allow-resume-queue",
+    "allow-cancel-queue",
+    "allow-reorder-queue-items",
     "allow-record-debug",
     "dialog:allow-open",
     "dialog:allow-save"

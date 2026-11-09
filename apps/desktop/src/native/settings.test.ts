@@ -4,7 +4,12 @@ import { loadStoredSettings, saveStoredSettings } from "./settings";
 
 vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
-  invoke: vi.fn(async () => ({ language: "en", theme: "dark" })),
+  invoke: vi.fn(async () => ({
+    language: "en",
+    theme: "dark",
+    inhibitSleep: true,
+    queueFinish: "none",
+  })),
 }));
 
 describe("configurações no Tauri", () => {
@@ -13,7 +18,12 @@ describe("configurações no Tauri", () => {
   });
 
   it("lê o banco", async () => {
-    await expect(loadStoredSettings()).resolves.toEqual({ language: "en", theme: "dark" });
+    await expect(loadStoredSettings()).resolves.toEqual({
+      language: "en",
+      theme: "dark",
+      inhibitSleep: true,
+      queueFinish: "none",
+    });
     expect(invoke).toHaveBeenCalledWith("get_settings");
   });
 

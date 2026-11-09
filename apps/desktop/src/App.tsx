@@ -47,7 +47,7 @@ import {
 import { loadMachineStatus, type MachineStatus } from "./native/status";
 import { loadHfTokenStatus } from "./native/token";
 
-type View = "workspace" | "settings" | "welcome" | "templates" | "flows";
+type View = "workspace" | "settings" | "welcome" | "templates" | "flows" | "queue";
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -542,6 +542,7 @@ export default function App() {
           status={machine}
           environment={python.progress}
           onOpenSettings={() => setView("settings")}
+          onOpenQueue={() => setView("queue")}
         />
         {notice !== null ? (
           <ErrorModal

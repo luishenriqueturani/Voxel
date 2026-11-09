@@ -20,7 +20,9 @@ export type MenuEffect =
   | "new-flow"
   | "open-flow"
   | "save-flow"
-  | "flows";
+  | "flows"
+  | "queue"
+  | "toggle-queue";
 
 export function actionForMenu(id: string): MenuEffect | null {
   switch (id) {
@@ -68,6 +70,10 @@ export function actionForMenu(id: string): MenuEffect | null {
       return "save-flow";
     case "flows.manage":
       return "flows";
+    case "flows.queue":
+      return "queue";
+    case "flows.pause":
+      return "toggle-queue";
     default:
       return null;
   }

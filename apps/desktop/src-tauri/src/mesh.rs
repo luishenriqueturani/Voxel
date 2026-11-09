@@ -66,7 +66,7 @@ pub async fn mesh_from_image(
     .map_err(|error| error.to_string())?
 }
 
-fn from_image(
+pub(crate) fn from_image(
     app: &AppHandle,
     paths: &AppPaths,
     views: &[String],
