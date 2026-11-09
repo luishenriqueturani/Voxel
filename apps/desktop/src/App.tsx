@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AppExtraView } from "./components/layout/AppExtraView";
 import { ErrorModal } from "./components/layout/ErrorModal";
 import { PowerNotice } from "./components/layout/PowerNotice";
 import type { GenerationParams, OutputMode } from "./components/layout/PromptPanel";
-import { type SettingSection, SettingsView } from "./components/layout/SettingsView";
+import type { SettingSection } from "./components/layout/SettingsView";
 import { StatusBar } from "./components/layout/StatusBar";
-import { TemplatesView } from "./components/layout/TemplatesView";
 import { WelcomeView } from "./components/layout/WelcomeView";
 import { WorkspaceView } from "./components/layout/WorkspaceView";
 import { DownloadProvider } from "./downloads/DownloadProvider";
@@ -17,6 +17,7 @@ import { useImageEdit } from "./hooks/useImageEdit";
 import { useMeshDrop } from "./hooks/useMeshDrop";
 import { usePythonEnvironment } from "./hooks/usePythonEnvironment";
 import { blankEdit } from "./lib/edit";
+import { type FlowMenuCommand, IDLE_FLOW_COMMAND } from "./lib/flow";
 import { selectableModels } from "./lib/modelChoice";
 import { applyTheme, LANGUAGE_KEY, resolveTheme, type Theme } from "./lib/preferences";
 import { mergeStep, prefersDark, SUMMARY_KEYS } from "./lib/shell";
@@ -31,13 +32,7 @@ import {
   loadGenerationDefaults,
   saveGeneratedImage,
 } from "./native/generation";
-import {
-  importLocalModel,
-  type ListedModel,
-  loadModels,
-  modelsDirectory,
-  removeModel,
-} from "./native/models";
+import { type ListedModel, loadModels } from "./native/models";
 import { loadPowerNotice } from "./native/power";
 import { loadStoredSettings, saveStoredSettings } from "./native/settings";
 import {
@@ -50,13 +45,14 @@ import {
   type SetupStep,
 } from "./native/setup";
 import { loadMachineStatus, type MachineStatus } from "./native/status";
-import { loadHfTokenStatus, saveHfToken } from "./native/token";
+import { loadHfTokenStatus } from "./native/token";
 
-type View = "workspace" | "settings" | "welcome" | "templates";
+type View = "workspace" | "settings" | "welcome" | "templates" | "flows";
 
 export default function App() {
   const { t, i18n } = useTranslation();
   const [view, setView] = useState<View>("workspace");
+  const [flowCommand, setFlowCommand] = useState<FlowMenuCommand>(IDLE_FLOW_COMMAND);
   const [setupSteps, setSetupSteps] = useState<SetupStep[]>([]);
   const [catalog, setCatalog] = useState<ProfileCatalog[]>([]);
   const [setupBackend, setSetupBackend] = useState<string | null>(null);
@@ -407,6 +403,7 @@ export default function App() {
     selectedPath: selected?.path ?? null,
     selectedSeed: selected?.seed ?? null,
     previewSrc: shown,
+    setFlowCommand,
   });
 
   const summaryKey =
@@ -518,10 +515,11 @@ export default function App() {
               }
             }}
           />
-        ) : view === "templates" ? (
-          <TemplatesView onBack={() => setView("workspace")} />
         ) : (
-          <SettingsView
+          <AppExtraView
+            view={view}
+            onWorkspace={() => setView("workspace")}
+            flowCommand={flowCommand}
             section={section}
             onSectionChange={setSection}
             theme={theme}
@@ -531,38 +529,13 @@ export default function App() {
             recommendedBackend={recommendedBackend}
             onImageBackendChange={chooseImageBackend}
             hfTokenConfigured={hfTokenConfigured}
-            onHfTokenSave={(token) => {
-              void saveHfToken(token).then(setHfTokenConfigured);
-            }}
-            onHfTokenClear={() => {
-              void saveHfToken("").then(setHfTokenConfigured);
-            }}
-            models={library}
-            onRemove={(filename) => {
-              void removeModel(filename).then(() => loadModels().then(setLibrary));
-            }}
-            onOpenFolder={() => {
-              void modelsDirectory().then((path) => {
-                if (path !== null) {
-                  void openLocalPath(path);
-                }
-              });
-            }}
-            onImport={() => {
-              void importLocalModel().then((imported) => {
-                if (imported) {
-                  void loadModels().then(setLibrary);
-                }
-              });
-            }}
-            onBack={() => setView("workspace")}
+            setHfTokenConfigured={setHfTokenConfigured}
+            library={library}
+            setLibrary={setLibrary}
+            reportFailure={reportFailure}
             environment={python.progress ?? null}
-            onReinstallEnvironment={() => {
-              void python.reinstall();
-            }}
-            onRemoveEnvironment={() => {
-              void python.remove().catch(reportFailure);
-            }}
+            reinstallEnvironment={python.reinstall}
+            removeEnvironment={python.remove}
           />
         )}
         <StatusBar

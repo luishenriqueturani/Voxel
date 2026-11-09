@@ -293,12 +293,12 @@ Uma semana de uso. O Voltar das configurações está no cabeçalho do conteúdo
 
 ### Editor de fluxos (§5.3, §5.4)
 
-- [ ] Criar, abrir, salvar fluxos (menu Arquivo)
-- [ ] Adicionar, remover e reordenar itens
-- [ ] Por item: prompt, quantidade de imagens, modo 3D
-- [ ] 3D desmarcado por padrão com várias imagens, com confirmação ao marcar "Todas"
-- [ ] Modos 3D: Não / Todas / Escolher depois
-- [ ] Sobrescrever qualquer parâmetro do template por item
+- [x] Criar, abrir, salvar fluxos (menu Arquivo)
+- [x] Adicionar, remover e reordenar itens
+- [x] Por item: prompt, quantidade de imagens, modo 3D
+- [x] 3D desmarcado por padrão com várias imagens, com confirmação ao marcar "Todas"
+- [x] Modos 3D: Não / Todas / Escolher depois
+- [x] Sobrescrever qualquer parâmetro do template por item
 
 ### Fila de execução (§5.5, §5.6)
 

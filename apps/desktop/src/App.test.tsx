@@ -91,6 +91,15 @@ describe("App", () => {
 
     await act(() => onAction("flows.templates"));
     expect(screen.getByRole("heading", { name: "Gerenciar templates" })).toBeInTheDocument();
+
+    await act(() => onAction("file.newFlow"));
+    expect(await screen.findByRole("heading", { name: "Gerenciar fluxos" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Novo fluxo", pressed: true }),
+    ).toBeInTheDocument();
+
+    await act(() => onAction("flows.manage"));
+    expect(screen.getByRole("heading", { name: "Gerenciar fluxos" })).toBeInTheDocument();
   });
 
   it("abre as configurações, troca o idioma e o tema, e volta", async () => {

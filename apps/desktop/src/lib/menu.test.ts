@@ -38,10 +38,13 @@ describe("actionForMenu", () => {
     expect(actionForMenu("edit.copy")).toBe("copy-image");
     expect(actionForMenu("generate.regenerate")).toBe("regenerate");
     expect(actionForMenu("flows.templates")).toBe("templates");
+    expect(actionForMenu("file.newFlow")).toBe("new-flow");
+    expect(actionForMenu("file.openFlow")).toBe("open-flow");
+    expect(actionForMenu("file.saveFlow")).toBe("save-flow");
+    expect(actionForMenu("flows.manage")).toBe("flows");
   });
 
   it("ignora itens ainda sem função", () => {
-    expect(actionForMenu("file.newFlow")).toBeNull();
     expect(actionForMenu("help.about")).toBeNull();
   });
 });

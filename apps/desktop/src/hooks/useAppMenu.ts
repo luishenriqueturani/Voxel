@@ -1,6 +1,7 @@
 import { type Dispatch, type SetStateAction, useCallback } from "react";
 import type { GenerationParams } from "../components/layout/PromptPanel";
 import type { SettingSection } from "../components/layout/SettingsView";
+import type { FlowMenuCommand } from "../lib/flow";
 import { actionForMenu } from "../lib/menu";
 import type { Theme } from "../lib/preferences";
 import { openLocalPath } from "../native/files";
@@ -10,7 +11,7 @@ import type { ProfileCatalog, SetupStep } from "../native/setup";
 import { resetSetup } from "../native/setup";
 import { useNativeMenu } from "./useNativeMenu";
 
-type AppView = "workspace" | "settings" | "welcome" | "templates";
+type AppView = "workspace" | "settings" | "welcome" | "templates" | "flows";
 
 type AppMenuInput = {
   setView: (view: AppView) => void;
@@ -34,6 +35,7 @@ type AppMenuInput = {
   selectedPath: string | null;
   selectedSeed: number | null;
   previewSrc: string | null;
+  setFlowCommand: Dispatch<SetStateAction<FlowMenuCommand>>;
 };
 
 export function useAppMenu(input: AppMenuInput): void {
@@ -104,6 +106,17 @@ export function useAppMenu(input: AppMenuInput): void {
         });
       } else if (action === "templates") {
         input.setView("templates");
+      } else if (action === "flows") {
+        input.setView("flows");
+      } else if (action === "new-flow") {
+        input.setView("flows");
+        input.setFlowCommand((current) => ({ kind: "new", n: current.n + 1 }));
+      } else if (action === "open-flow") {
+        input.setView("flows");
+        input.setFlowCommand((current) => ({ kind: "open", n: current.n + 1 }));
+      } else if (action === "save-flow") {
+        input.setView("flows");
+        input.setFlowCommand((current) => ({ kind: "save", n: current.n + 1 }));
       } else if (action === "open-models-folder") {
         void modelsDirectory().then((path) => {
           if (path !== null) {

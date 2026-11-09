@@ -1,6 +1,7 @@
 mod background;
 mod db;
 mod debug_log;
+mod flows;
 mod generate;
 mod history;
 mod image_job;
@@ -115,6 +116,12 @@ pub fn run() {
             templates::duplicate_template,
             templates::rename_template,
             templates::delete_template,
+            flows::list_flows,
+            flows::create_flow,
+            flows::update_flow,
+            flows::delete_flow,
+            flows::import_flow_file,
+            flows::export_flow_file,
             record_debug
         ])
         .run(tauri::generate_context!())

@@ -52,6 +52,12 @@
     "allow-duplicate-template",
     "allow-rename-template",
     "allow-delete-template",
+    "allow-list-flows",
+    "allow-create-flow",
+    "allow-update-flow",
+    "allow-delete-flow",
+    "allow-import-flow-file",
+    "allow-export-flow-file",
     "allow-record-debug",
     "dialog:allow-open",
     "dialog:allow-save"

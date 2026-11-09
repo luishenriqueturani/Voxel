@@ -46,6 +46,12 @@ fn main() {
             "duplicate_template",
             "rename_template",
             "delete_template",
+            "list_flows",
+            "create_flow",
+            "update_flow",
+            "delete_flow",
+            "import_flow_file",
+            "export_flow_file",
             "record_debug",
         ]),
     ))

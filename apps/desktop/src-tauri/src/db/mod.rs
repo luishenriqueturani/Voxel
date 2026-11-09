@@ -1,4 +1,5 @@
 mod error;
+mod flows;
 mod generations;
 mod history;
 mod migrate;
@@ -7,6 +8,7 @@ mod setup_store;
 mod templates;
 
 pub use error::DbError;
+pub use flows::{FlowDocument, FlowDraft};
 pub use generations::GenerationRecord;
 pub use history::{GalleryRow, PromptEntry, PromptImage};
 pub use settings::{SettingsUpdate, UserSettings};

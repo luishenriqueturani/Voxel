@@ -16,7 +16,11 @@ export type MenuEffect =
   | "import-model"
   | "open-models-folder"
   | "diagnostics"
-  | "templates";
+  | "templates"
+  | "new-flow"
+  | "open-flow"
+  | "save-flow"
+  | "flows";
 
 export function actionForMenu(id: string): MenuEffect | null {
   switch (id) {
@@ -56,6 +60,14 @@ export function actionForMenu(id: string): MenuEffect | null {
       return "open-models-folder";
     case "flows.templates":
       return "templates";
+    case "file.newFlow":
+      return "new-flow";
+    case "file.openFlow":
+      return "open-flow";
+    case "file.saveFlow":
+      return "save-flow";
+    case "flows.manage":
+      return "flows";
     default:
       return null;
   }

@@ -236,6 +236,35 @@
     "newName": "New template",
     "copyName": "{{name}} copy"
   },
+  "flows": {
+    "title": "Manage flows",
+    "create": "Create",
+    "empty": "No flows",
+    "name": "Name",
+    "template": "Template",
+    "noTemplate": "No template",
+    "addItem": "Add item",
+    "removeItem": "Remove",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "prompt": "Item prompt",
+    "meshLabel": "3D",
+    "mesh": {
+      "none": "No",
+      "all": "All",
+      "later": "Choose later"
+    },
+    "confirmAllBody": "This item has {{count}} images. Generating 3D for every variation takes much longer.",
+    "confirmAll": "Generate all",
+    "cancel": "Cancel",
+    "overrides": "Override parameters",
+    "override": "Override {{field}}",
+    "inherit": "Uses the template value",
+    "item": "Item {{index}}",
+    "newName": "New flow",
+    "saveFile": "Save file",
+    "savedTo": "File: {{path}}"
+  },
   "models": {
     "showIncompatible": "Show incompatible models",
     "download": "Download",

@@ -40,9 +40,9 @@ pub fn menu_groups() -> Vec<MenuGroup> {
         MenuGroup {
             id: "file",
             items: vec![
-                item("file.newFlow", false, None),
-                item("file.openFlow", false, None),
-                item("file.saveFlow", false, None),
+                item("file.newFlow", true, None),
+                item("file.openFlow", true, None),
+                item("file.saveFlow", true, None),
                 MenuNode::Separator,
                 item("file.openImage", true, None),
                 item("file.export", true, None),
@@ -74,8 +74,8 @@ pub fn menu_groups() -> Vec<MenuGroup> {
         MenuGroup {
             id: "flows",
             items: vec![
-                item("flows.manage", false, None),
-                item("flows.templates", false, None),
+                item("flows.manage", true, None),
+                item("flows.templates", true, None),
                 item("flows.queue", false, None),
                 item("flows.pause", false, None),
             ],

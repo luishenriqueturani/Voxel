@@ -236,6 +236,35 @@
     "newName": "Novo template",
     "copyName": "{{name}} cópia"
   },
+  "flows": {
+    "title": "Gerenciar fluxos",
+    "create": "Criar",
+    "empty": "Nenhum fluxo",
+    "name": "Nome",
+    "template": "Template",
+    "noTemplate": "Nenhum template",
+    "addItem": "Adicionar item",
+    "removeItem": "Remover",
+    "moveUp": "Subir",
+    "moveDown": "Descer",
+    "prompt": "Prompt do item",
+    "meshLabel": "3D",
+    "mesh": {
+      "none": "Não",
+      "all": "Todas",
+      "later": "Escolher depois"
+    },
+    "confirmAllBody": "Este item tem {{count}} imagens. Gerar 3D de cada variação leva bem mais tempo.",
+    "confirmAll": "Gerar todas",
+    "cancel": "Cancelar",
+    "overrides": "Sobrescrever parâmetros",
+    "override": "Sobrescrever {{field}}",
+    "inherit": "Usa o valor do template",
+    "item": "Item {{index}}",
+    "newName": "Novo fluxo",
+    "saveFile": "Salvar arquivo",
+    "savedTo": "Arquivo: {{path}}"
+  },
   "models": {
     "showIncompatible": "Mostrar modelos incompatíveis",
     "download": "Baixar",
