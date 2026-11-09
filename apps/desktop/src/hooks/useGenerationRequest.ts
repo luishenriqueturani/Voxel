@@ -97,6 +97,7 @@ type GenerationActions = {
   addCurrentViews: () => void;
   canAddCurrent: boolean;
   pendingPrompt: string | null;
+  setMeshFiles: Dispatch<SetStateAction<MeshPaths | null>>;
 };
 
 function backendFor(
@@ -517,5 +518,6 @@ export function useGenerationRequest(options: GenerationRequestOptions): Generat
     addCurrentViews,
     canAddCurrent,
     pendingPrompt,
+    setMeshFiles,
   };
 }

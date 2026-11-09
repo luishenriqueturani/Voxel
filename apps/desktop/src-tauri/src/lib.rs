@@ -28,8 +28,8 @@ use std::sync::Mutex;
 use background::{open_edit_image, remove_background};
 use db::{Database, SettingsUpdate, UserSettings};
 use history::{
-    has_older_prompts, list_gallery, list_older_prompts, list_prompt_images, list_recent_prompts,
-    set_prompt_favorite,
+    has_older_prompts, list_gallery, list_gallery_facets, list_older_prompts, list_prompt_images,
+    list_recent_prompts, set_prompt_favorite,
 };
 use menu::{build_menu, default_labels};
 use paths::AppPaths;
@@ -105,6 +105,7 @@ pub fn run() {
             list_prompt_images,
             set_prompt_favorite,
             list_gallery,
+            list_gallery_facets,
             machine_status,
             copy_generation,
             hf_token_status,

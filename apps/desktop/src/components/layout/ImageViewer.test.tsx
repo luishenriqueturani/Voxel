@@ -255,6 +255,36 @@ describe("ImageViewer", () => {
     expect(onSelectVersion).toHaveBeenCalledWith(0);
   });
 
+  it("compara a variação anterior lado a lado", async () => {
+    const user = userEvent.setup();
+    render(
+      <ImageViewer
+        src="data:image/png;base64,nova"
+        previousSrc="data:image/png;base64,antiga"
+        step={0}
+        total={0}
+        index={1}
+        count={2}
+        canSave={false}
+        canRegenerate={false}
+        onSave={vi.fn()}
+        onCopy={vi.fn()}
+        onRegenerate={vi.fn()}
+        onPrevious={vi.fn()}
+        onNext={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Comparar" }));
+    expect(screen.getByRole("img", { name: "Anterior" })).toHaveAttribute(
+      "src",
+      "data:image/png;base64,antiga",
+    );
+    expect(screen.getByRole("img", { name: "Esta" })).toHaveAttribute(
+      "src",
+      "data:image/png;base64,nova",
+    );
+  });
+
   it("avisa que o prompt está sendo preparado antes do primeiro passo", () => {
     const { rerender } = render(
       <ImageViewer

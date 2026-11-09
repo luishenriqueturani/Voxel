@@ -1,4 +1,4 @@
-//! Prompts recentes, favoritos e a lista da galeria.
+//! Prompts recentes e favoritos.
 
 use serde::{Deserialize, Serialize};
 
@@ -28,21 +28,6 @@ pub struct PromptEntry {
 pub struct PromptImage {
     pub path: String,
     pub seed: i64,
-}
-
-/// Uma geração já gravada, sem a miniatura.
-#[derive(Debug, Clone, PartialEq)]
-pub struct GalleryRow {
-    pub path: String,
-    pub prompt: String,
-    pub negative_prompt: String,
-    pub model_id: String,
-    pub steps: i64,
-    pub width: i64,
-    pub height: i64,
-    pub cfg: f64,
-    pub seed: i64,
-    pub created_at: String,
 }
 
 impl Database {
@@ -126,26 +111,6 @@ impl Database {
             ),
         )?;
         Ok(())
-    }
-
-    /// Gerações mais novas primeiro.
-    ///
-    /// # Errors
-    ///
-    /// Falha se a leitura do banco falhar.
-    pub fn gallery(&self, limit: i64) -> Result<Vec<GalleryRow>, DbError> {
-        let connection = self.lock()?;
-        let mut statement = connection.prepare(
-            "SELECT path, prompt, COALESCE(negative_prompt, ''), model_id, steps, width, height,
-                    cfg, seed, created_at
-             FROM generations
-             ORDER BY id DESC
-             LIMIT ?1",
-        )?;
-        let rows = statement
-            .query_map([limit], map_gallery)?
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(rows)
     }
 
     /// Imagens da geração mais recente desse prompt que ainda estão no disco.
@@ -256,21 +221,6 @@ fn available_batch(rows: &[PromptImage]) -> Vec<PromptImage> {
         .collect();
     images.reverse();
     images
-}
-
-fn map_gallery(row: &rusqlite::Row<'_>) -> rusqlite::Result<GalleryRow> {
-    Ok(GalleryRow {
-        path: row.get(0)?,
-        prompt: row.get(1)?,
-        negative_prompt: row.get(2)?,
-        model_id: row.get(3)?,
-        steps: row.get(4)?,
-        width: row.get(5)?,
-        height: row.get(6)?,
-        cfg: row.get(7)?,
-        seed: row.get(8)?,
-        created_at: row.get(9)?,
-    })
 }
 
 fn same_prompt(left: &PromptEntry, right: &PromptEntry) -> bool {
@@ -389,16 +339,5 @@ mod tests {
             vec![4, 5]
         );
         let _ = std::fs::remove_dir_all(root);
-    }
-
-    #[test]
-    fn a_galeria_vem_da_mais_nova() {
-        let database = Database::open_in_memory().unwrap();
-        database.migrate().unwrap();
-        database.record_generation(&record("primeira", 1)).unwrap();
-        database.record_generation(&record("segunda", 2)).unwrap();
-        let rows = database.gallery(10).unwrap();
-        assert_eq!(rows[0].prompt, "segunda");
-        assert_eq!(rows[1].seed, 1);
     }
 }

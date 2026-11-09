@@ -10,7 +10,9 @@ use voxel_models::Catalog;
 use voxel_protocol::{ImageToMeshRequest, LoadModelRequest, MeshBackend, ModelKind, WorkerProcess};
 
 use crate::background::cut_file;
+use crate::db::{Database, GenerationRecord};
 use crate::live_job::LiveJobs;
+use crate::output::{unix_now, utc_timestamp};
 use crate::paths::AppPaths;
 use crate::python_env::{Environment, Layout, process_env};
 use crate::setup::encode_base64;
@@ -101,6 +103,7 @@ pub(crate) fn from_image(
         .to_path_buf();
     let references = copy_references(&folder, &ordered, &primary_path)?;
     let optimized = optimized_copy(Path::new(&glb), optimize)?;
+    remember_mesh(app, &glb, primary);
     Ok(MeshFiles {
         image_path: cutout.display().to_string(),
         glb_path: glb,
@@ -117,6 +120,39 @@ pub(crate) fn from_image(
 /// o ponto de entrada pede um rasterizador CUDA.
 fn measured_multiview_models() -> &'static [&'static str] {
     &[]
+}
+
+fn remember_mesh(app: &AppHandle, glb: &str, source: &str) {
+    let Some(database) = app.try_state::<Database>() else {
+        return;
+    };
+    if database.generation_by_path(glb).ok().flatten().is_some() {
+        return;
+    }
+    let created_at = utc_timestamp(unix_now());
+    let record = match database.generation_by_path(source) {
+        Ok(Some(mut found)) => {
+            glb.clone_into(&mut found.path);
+            MESH_MODEL.clone_into(&mut found.model_id);
+            found.created_at = created_at;
+            found
+        }
+        _ => GenerationRecord {
+            path: glb.to_owned(),
+            prompt: String::new(),
+            negative_prompt: None,
+            model_id: MESH_MODEL.to_owned(),
+            backend: "python".to_owned(),
+            seed: 0,
+            steps: 0,
+            width: 0,
+            height: 0,
+            cfg: 0.0,
+            elapsed_ms: 0,
+            created_at,
+        },
+    };
+    let _ = database.record_generation(&record);
 }
 
 fn views_for_model(

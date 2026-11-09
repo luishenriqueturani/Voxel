@@ -32,6 +32,7 @@ import {
   loadGenerationDefaults,
   saveGeneratedImage,
 } from "./native/generation";
+import { companionObj, isMeshItem, type GalleryItem } from "./native/history";
 import { type ListedModel, loadModels } from "./native/models";
 import { loadPowerNotice } from "./native/power";
 import { loadStoredSettings, saveStoredSettings } from "./native/settings";
@@ -184,6 +185,7 @@ export default function App() {
     addCurrentViews,
     canAddCurrent,
     pendingPrompt,
+    setMeshFiles,
   } = useGenerationRequest({
     generatingRef,
     removing,
@@ -213,6 +215,20 @@ export default function App() {
   });
   useGenerateShortcut(requestGeneration);
   useMeshDrop(addMeshPaths);
+
+  const openGalleryItem = useCallback(
+    (item: GalleryItem) => {
+      if (isMeshItem(item)) {
+        setMeshFiles({ glb: item.path, obj: companionObj(item.path) });
+        setSlides([{ src: item.preview, path: item.path, seed: item.seed, transparent: false }]);
+        setSlideIndex(0);
+        return;
+      }
+      setMeshFiles(null);
+      openGeneration(item);
+    },
+    [openGeneration, setMeshFiles],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -470,7 +486,7 @@ export default function App() {
             viewerSignal={viewerSignal}
             onHistoryError={reportFailure}
             onRestoreHistory={openHistory}
-            onOpenGeneration={openGeneration}
+            onOpenGeneration={openGalleryItem}
             shown={shown}
             step={generating ? (frame?.step ?? 0) : 0}
             total={generating ? (frame?.total ?? 0) : 0}
@@ -508,6 +524,7 @@ export default function App() {
             versions={generating ? undefined : selected?.versions}
             versionIndex={selected?.versionIndex ?? 0}
             onSelectVersion={selectVersion}
+            previousSrc={slideIndex > 0 ? (slides[slideIndex - 1]?.src ?? null) : null}
             onRemoveBackground={removeBackground}
             onSendTo3d={() => {
               if (selected?.path) {

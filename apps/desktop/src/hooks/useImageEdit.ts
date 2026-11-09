@@ -3,7 +3,49 @@ import { applyEditResult, showVersion } from "../lib/imageVersions";
 import { popSlides, pushSlides } from "../lib/slideHistory";
 import { loadImageFile, openImageForEdit, removeImageBackground } from "../native/background";
 import type { GalleryImage } from "../native/generation";
-import { loadPromptImages, type PromptEntry } from "../native/history";
+import { loadPromptImages, type PromptEntry, type PromptImage } from "../native/history";
+
+type GenerationRef = { path: string; seed: number } & Partial<PromptEntry>;
+
+function asPromptEntry(entry: GenerationRef): PromptEntry | null {
+  if (
+    typeof entry.prompt !== "string" ||
+    entry.prompt === "" ||
+    typeof entry.negativePrompt !== "string" ||
+    typeof entry.modelId !== "string" ||
+    typeof entry.steps !== "number" ||
+    typeof entry.width !== "number" ||
+    typeof entry.height !== "number" ||
+    typeof entry.cfg !== "number"
+  ) {
+    return null;
+  }
+  return {
+    prompt: entry.prompt,
+    negativePrompt: entry.negativePrompt,
+    modelId: entry.modelId,
+    steps: entry.steps,
+    width: entry.width,
+    height: entry.height,
+    cfg: entry.cfg,
+    seed: entry.seed,
+    pinned: entry.pinned ?? false,
+  };
+}
+
+async function filesFor(entry: GenerationRef): Promise<PromptImage[]> {
+  const listed = asPromptEntry(entry);
+  if (listed === null) {
+    return [{ path: entry.path, seed: entry.seed }];
+  }
+  const files = await loadPromptImages(listed);
+  if (files.length === 0) {
+    return [{ path: entry.path, seed: entry.seed }];
+  }
+  return files.some((file) => file.path === entry.path)
+    ? files
+    : [...files, { path: entry.path, seed: entry.seed }];
+}
 
 type UseImageEditOptions = {
   slides: GalleryImage[];
@@ -29,7 +71,7 @@ export function useImageEdit({
   removing: boolean;
   openImage: () => void;
   removeBackground: () => void;
-  openGeneration: (entry: { path: string; seed: number }) => void;
+  openGeneration: (entry: GenerationRef) => void;
   openHistory: (entry: PromptEntry) => void;
   canUndoEdit: boolean;
   holdEdit: () => void;
@@ -153,30 +195,48 @@ export function useImageEdit({
       });
   }, [busy, reportFailure, setSlides, slideIndex, slides]);
 
+  const showFiles = useCallback(
+    async (files: PromptImage[], ticket: number, focusPath?: string) => {
+      const next: GalleryImage[] = [];
+      for (const file of files) {
+        if (historyTicket.current !== ticket) {
+          return;
+        }
+        const image = await loadImageFile(file.path).catch(() => null);
+        if (image === null) {
+          continue;
+        }
+        next.push({
+          src: image.src,
+          path: image.path,
+          seed: file.seed,
+          transparent: image.transparent,
+        });
+      }
+      if (historyTicket.current !== ticket) {
+        return;
+      }
+      const focused =
+        focusPath === undefined ? -1 : next.findIndex((slide) => slide.path === focusPath);
+      setSlides(next);
+      setSlideIndex(focused >= 0 ? focused : Math.max(0, next.length - 1));
+      setView("workspace");
+    },
+    [setSlideIndex, setSlides, setView],
+  );
+
   const openGeneration = useCallback(
-    (entry: { path: string; seed: number }) => {
+    (entry: GenerationRef) => {
       if (busy || removingRef.current) {
         return;
       }
-      void loadImageFile(entry.path)
-        .then((image) => {
-          if (image === null) {
-            return;
-          }
-          setSlides([
-            {
-              src: image.src,
-              path: image.path,
-              seed: entry.seed,
-              transparent: image.transparent,
-            },
-          ]);
-          setSlideIndex(0);
-          setView("workspace");
-        })
+      const ticket = historyTicket.current + 1;
+      historyTicket.current = ticket;
+      void filesFor(entry)
+        .then((files) => showFiles(files, ticket, entry.path))
         .catch(reportFailure);
     },
-    [busy, reportFailure, setSlideIndex, setSlides, setView],
+    [busy, reportFailure, showFiles],
   );
 
   const openHistory = useCallback(
@@ -187,33 +247,10 @@ export function useImageEdit({
       const ticket = historyTicket.current + 1;
       historyTicket.current = ticket;
       void loadPromptImages(entry)
-        .then(async (files) => {
-          const next: GalleryImage[] = [];
-          for (const file of files) {
-            if (historyTicket.current !== ticket) {
-              return;
-            }
-            const image = await loadImageFile(file.path).catch(() => null);
-            if (image === null) {
-              continue;
-            }
-            next.push({
-              src: image.src,
-              path: image.path,
-              seed: file.seed,
-              transparent: image.transparent,
-            });
-          }
-          if (historyTicket.current !== ticket) {
-            return;
-          }
-          setSlides(next);
-          setSlideIndex(next.length === 0 ? 0 : next.length - 1);
-          setView("workspace");
-        })
+        .then((files) => showFiles(files, ticket))
         .catch(reportFailure);
     },
-    [busy, reportFailure, setSlideIndex, setSlides, setView],
+    [busy, reportFailure, showFiles],
   );
 
   return {

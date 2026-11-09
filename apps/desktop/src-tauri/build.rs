@@ -23,6 +23,7 @@ fn main() {
             "list_prompt_images",
             "set_prompt_favorite",
             "list_gallery",
+            "list_gallery_facets",
             "machine_status",
             "copy_generation",
             "hf_token_status",

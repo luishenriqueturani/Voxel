@@ -1,5 +1,6 @@
 mod error;
 pub(crate) mod flows;
+mod gallery;
 mod generations;
 mod history;
 mod migrate;
@@ -10,8 +11,9 @@ mod templates;
 
 pub use error::DbError;
 pub use flows::{FlowDocument, FlowDraft};
+pub use gallery::{GalleryFacets, GalleryFilter, GalleryRow};
 pub use generations::GenerationRecord;
-pub use history::{GalleryRow, PromptEntry, PromptImage};
+pub use history::{PromptEntry, PromptImage};
 pub use queue::{MeshPick, QueueItem, QueueJob, QueueOutput, QueueResolved, QueueThumb};
 pub use settings::{Language, QueueFinish, SettingsUpdate, UserSettings};
 pub use templates::{PromptTemplate, TemplateDraft};

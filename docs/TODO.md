@@ -322,8 +322,8 @@ Uma semana de uso. O Voltar das configurações está no cabeçalho do conteúdo
 
 ### Galeria completa
 
-- [ ] Filtros por data, modelo, fluxo e tipo (2D/3D)
-- [ ] Comparar variações lado a lado
+- [x] Filtros por data, modelo, fluxo e tipo (2D/3D)
+- [x] Comparar variações lado a lado
 
 ### O que o SD 1.5 não cobre
 

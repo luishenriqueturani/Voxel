@@ -29,6 +29,7 @@
     "allow-list-prompt-images",
     "allow-set-prompt-favorite",
     "allow-list-gallery",
+    "allow-list-gallery-facets",
     "allow-machine-status",
     "allow-copy-generation",
     "allow-hf-token-status",

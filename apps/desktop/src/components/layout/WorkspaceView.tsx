@@ -104,6 +104,7 @@ type WorkspaceViewProps = {
   versions?: ImageVersion[];
   versionIndex?: number;
   onSelectVersion?: (index: number) => void;
+  previousSrc?: string | null;
 };
 
 export function WorkspaceView({
@@ -168,6 +169,7 @@ export function WorkspaceView({
   versions,
   versionIndex = 0,
   onSelectVersion,
+  previousSrc = null,
 }: WorkspaceViewProps) {
   const { t } = useTranslation();
   const [showGallery, setShowGallery] = useState(false);
@@ -352,6 +354,7 @@ export function WorkspaceView({
               versions={versions}
               versionIndex={versionIndex}
               onSelectVersion={onSelectVersion}
+              previousSrc={previousSrc}
             />
           )}
         </div>

@@ -1,5 +1,7 @@
 //! Histórico das imagens geradas. O arquivo em disco continua sendo a fonte da imagem.
 
+use rusqlite::OptionalExtension;
+
 use super::{Database, DbError};
 
 /// Uma linha da tabela `generations`.
@@ -47,6 +49,43 @@ impl Database {
             ),
         )?;
         Ok(())
+    }
+
+    /// Última geração gravada neste caminho, se existir.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn generation_by_path(&self, path: &str) -> Result<Option<GenerationRecord>, DbError> {
+        let connection = self.lock()?;
+        let row = connection
+            .query_row(
+                "SELECT path, prompt, negative_prompt, model_id, backend, seed, steps, width, height,
+                        cfg, elapsed_ms, created_at
+                 FROM generations
+                 WHERE path = ?1
+                 ORDER BY id DESC
+                 LIMIT 1",
+                [path],
+                |row| {
+                    Ok(GenerationRecord {
+                        path: row.get(0)?,
+                        prompt: row.get(1)?,
+                        negative_prompt: row.get(2)?,
+                        model_id: row.get(3)?,
+                        backend: row.get(4)?,
+                        seed: row.get(5)?,
+                        steps: row.get(6)?,
+                        width: row.get(7)?,
+                        height: row.get(8)?,
+                        cfg: row.get(9)?,
+                        elapsed_ms: row.get(10)?,
+                        created_at: row.get(11)?,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(row)
     }
 }
 

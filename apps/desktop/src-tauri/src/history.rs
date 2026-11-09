@@ -3,7 +3,7 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::{Database, GalleryRow, PromptEntry, PromptImage};
+use crate::db::{Database, GalleryFacets, GalleryFilter, GalleryRow, PromptEntry, PromptImage};
 use crate::setup::encode_base64;
 
 const THUMB_EDGE: u32 = 192;
@@ -23,6 +23,10 @@ pub struct GalleryItem {
     pub seed: i64,
     pub created_at: String,
     pub preview: String,
+    pub pinned: bool,
+    pub kind: String,
+    pub flow_id: String,
+    pub flow_name: String,
 }
 
 /// Prompts recentes, com os fixados no topo.
@@ -122,16 +126,36 @@ pub async fn list_prompt_images(
 /// Falha se o banco não puder ser lido. Uma imagem ausente fica sem miniatura.
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
-pub async fn list_gallery(database: State<'_, Database>) -> Result<Vec<GalleryItem>, String> {
+pub async fn list_gallery(
+    database: State<'_, Database>,
+    filter: Option<GalleryFilter>,
+) -> Result<Vec<GalleryItem>, String> {
     let database = database.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || gallery_of(&database))
+    let filter = filter.unwrap_or_default();
+    tauri::async_runtime::spawn_blocking(move || gallery_of(&database, &filter))
         .await
         .map_err(|error| error.to_string())?
 }
 
-fn gallery_of(database: &Database) -> Result<Vec<GalleryItem>, String> {
+/// Modelos e fluxos distintos para os filtros da galeria.
+///
+/// # Errors
+///
+/// Falha se o banco não puder ser lido.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub async fn list_gallery_facets(database: State<'_, Database>) -> Result<GalleryFacets, String> {
+    let database = database.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        database.gallery_facets().map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn gallery_of(database: &Database, filter: &GalleryFilter) -> Result<Vec<GalleryItem>, String> {
     database
-        .gallery(GALLERY_LIMIT)
+        .gallery(filter, GALLERY_LIMIT)
         .map_err(|error| error.to_string())
         .map(|rows| rows.into_iter().map(with_preview).collect())
 }
@@ -149,6 +173,10 @@ fn with_preview(row: GalleryRow) -> GalleryItem {
         cfg: row.cfg,
         seed: row.seed,
         created_at: row.created_at,
+        pinned: false,
+        kind: row.kind,
+        flow_id: row.flow_id,
+        flow_name: row.flow_name,
     }
 }
 

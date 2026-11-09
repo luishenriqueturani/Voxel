@@ -41,6 +41,7 @@ type ImageViewerProps = {
   versionIndex?: number;
   onSelectVersion?: (index: number) => void;
   viewOnly?: boolean;
+  previousSrc?: string | null;
 };
 
 type Pan = { x: number; y: number };
@@ -95,6 +96,7 @@ export function ImageViewer({
   versionIndex = 0,
   onSelectVersion,
   viewOnly = false,
+  previousSrc = null,
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -191,7 +193,9 @@ export function ImageViewer({
   }
   const viewingMesh = meshFiles !== null && showMesh;
   const previousVersion = versionIndex > 0 ? versions[versionIndex - 1] : undefined;
-  const compareSrc = comparing && previousVersion ? previousVersion.src : null;
+  const otherSrc = previousVersion?.src ?? (previousSrc || null);
+  const compareSrc = comparing ? otherSrc : null;
+  const canCompare = Boolean(otherSrc);
   const meshAddress = viewingMesh ? meshUrl(shownMesh) : null;
 
   return (
@@ -327,16 +331,17 @@ export function ImageViewer({
                   <ChevronRight aria-hidden="true" size={16} />
                 </Button>
               </div>
-              <Button
-                variant="ghost"
-                className="w-full"
-                aria-pressed={comparing}
-                disabled={previousVersion === undefined}
-                onClick={() => setComparing((current) => !current)}
-              >
-                {t("viewer.compare")}
-              </Button>
             </div>
+          ) : null}
+          {canCompare ? (
+            <Button
+              variant="ghost"
+              className="w-full"
+              aria-pressed={comparing}
+              onClick={() => setComparing((current) => !current)}
+            >
+              {t("viewer.compare")}
+            </Button>
           ) : null}
           {generating && images > 1 ? (
             <p className="text-sm text-zinc-500">{t("generation.image", { image, images })}</p>

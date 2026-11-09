@@ -12,10 +12,38 @@ export type PromptEntry = {
   pinned: boolean;
 };
 
+export type GalleryKind = "image" | "mesh";
+
 export type GalleryItem = PromptEntry & {
   path: string;
   createdAt: string;
   preview: string;
+  kind: GalleryKind;
+  flowId: string;
+  flowName: string;
+};
+
+export type GalleryQuery = {
+  prompt: string;
+  modelId: string;
+  flowId: string;
+  kind: string;
+  from: string;
+  to: string;
+};
+
+export type GalleryFacets = {
+  models: string[];
+  flows: Array<{ id: string; name: string }>;
+};
+
+export const EMPTY_GALLERY_QUERY: GalleryQuery = {
+  prompt: "",
+  modelId: "",
+  flowId: "",
+  kind: "",
+  from: "",
+  to: "",
 };
 
 function isEntry(value: unknown): value is PromptEntry {
@@ -57,26 +85,60 @@ export function promptsFrom(value: unknown): PromptEntry[] {
   return Array.isArray(value) ? value.filter(isEntry) : [];
 }
 
+function asGalleryItem(value: unknown): GalleryItem | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const row = value as Partial<GalleryItem>;
+  if (
+    typeof row.path !== "string" ||
+    typeof row.prompt !== "string" ||
+    typeof row.negativePrompt !== "string" ||
+    typeof row.modelId !== "string" ||
+    typeof row.steps !== "number" ||
+    typeof row.width !== "number" ||
+    typeof row.height !== "number" ||
+    typeof row.cfg !== "number" ||
+    typeof row.seed !== "number"
+  ) {
+    return null;
+  }
+  const preview = typeof row.preview === "string" ? row.preview : "";
+  return {
+    path: row.path,
+    prompt: row.prompt,
+    negativePrompt: row.negativePrompt,
+    modelId: row.modelId,
+    steps: row.steps,
+    width: row.width,
+    height: row.height,
+    cfg: row.cfg,
+    seed: row.seed,
+    pinned: typeof row.pinned === "boolean" ? row.pinned : false,
+    createdAt: typeof row.createdAt === "string" ? row.createdAt : "",
+    preview: preview === "" ? "" : `data:image/jpeg;base64,${preview}`,
+    kind: row.kind === "mesh" ? "mesh" : "image",
+    flowId: typeof row.flowId === "string" ? row.flowId : "",
+    flowName: typeof row.flowName === "string" ? row.flowName : "",
+  };
+}
+
 export function galleryFrom(value: unknown): GalleryItem[] {
   if (!Array.isArray(value)) {
     return [];
   }
   return value.flatMap((item) => {
-    if (!isEntry(item) || typeof item !== "object" || item === null) {
-      return [];
-    }
-    const row = item as GalleryItem;
-    if (typeof row.path !== "string" || typeof row.preview !== "string") {
-      return [];
-    }
-    return [
-      {
-        ...row,
-        createdAt: typeof row.createdAt === "string" ? row.createdAt : "",
-        preview: row.preview === "" ? "" : `data:image/jpeg;base64,${row.preview}`,
-      },
-    ];
+    const row = asGalleryItem(item);
+    return row === null ? [] : [row];
   });
+}
+
+export function isMeshItem(item: { kind?: string; path: string }): boolean {
+  return item.kind === "mesh" || /\.(glb|gltf)$/i.test(item.path);
+}
+
+export function companionObj(glb: string): string {
+  return glb.replace(/\.(glb|gltf)$/i, ".obj");
 }
 
 export async function loadPromptImages(entry: PromptEntry): Promise<PromptImage[]> {
@@ -114,9 +176,37 @@ export async function setPromptFavorite(entry: PromptEntry, pinned: boolean): Pr
   await invoke("set_prompt_favorite", { entry, pinned });
 }
 
-export async function loadGallery(): Promise<GalleryItem[]> {
+export async function loadGallery(
+  filter: GalleryQuery = EMPTY_GALLERY_QUERY,
+): Promise<GalleryItem[]> {
   if (!isTauri()) {
     return [];
   }
-  return galleryFrom(await invoke("list_gallery"));
+  return galleryFrom(await invoke("list_gallery", { filter }));
+}
+
+export async function loadGalleryFacets(): Promise<GalleryFacets> {
+  if (!isTauri()) {
+    return { models: [], flows: [] };
+  }
+  const value = await invoke("list_gallery_facets");
+  if (typeof value !== "object" || value === null) {
+    return { models: [], flows: [] };
+  }
+  const row = value as Partial<GalleryFacets>;
+  return {
+    models: Array.isArray(row.models) ? row.models.filter((item) => typeof item === "string") : [],
+    flows: Array.isArray(row.flows)
+      ? row.flows.flatMap((flow) => {
+          if (typeof flow !== "object" || flow === null) {
+            return [];
+          }
+          const item = flow as { id?: unknown; name?: unknown };
+          if (typeof item.id !== "string" || typeof item.name !== "string") {
+            return [];
+          }
+          return [{ id: item.id, name: item.name }];
+        })
+      : [],
+  };
 }
