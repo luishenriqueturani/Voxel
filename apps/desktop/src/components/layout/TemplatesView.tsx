@@ -12,7 +12,7 @@ import {
   updateTemplate,
 } from "../../native/templates";
 import { Button } from "../ui/button";
-import { ASPECTS } from "./PromptPanel";
+import { TemplatesGuide } from "./TemplatesGuide";
 
 type TemplatesViewProps = {
   onBack: () => void;
@@ -26,20 +26,12 @@ function draftOf(template: PromptTemplate): TemplateDraft {
   return draft;
 }
 
-function blankDraft(name: string): TemplateDraft {
+function blankDraft(): TemplateDraft {
   return {
-    name,
-    body: "{prompt}",
+    name: "",
+    body: "",
     negative: "",
-    model2d: "sd15",
-    model3d: "triposr",
-    resolution: 512,
-    aspect: "1:1",
-    steps: 20,
-    cfg: 7,
-    seed: "",
-    count: 1,
-    postprocess: false,
+    placement: "after",
   };
 }
 
@@ -48,7 +40,7 @@ export function TemplatesView({ onBack }: TemplatesViewProps) {
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TemplateDraft | null>(null);
-  const [sample, setSample] = useState("ferreiro");
+  const [sample, setSample] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,14 +67,11 @@ export function TemplatesView({ onBack }: TemplatesViewProps) {
     setFailure(null);
   }
 
-  async function create() {
-    try {
-      const created = await createTemplate(blankDraft(t("templates.newName")));
-      setTemplates((current) => [...current, created]);
-      select(created);
-    } catch (error: unknown) {
-      setFailure(error instanceof Error ? error.message : String(error));
-    }
+  function create() {
+    setSelectedId(null);
+    setDraft(blankDraft());
+    setSample("");
+    setFailure(null);
   }
 
   async function duplicate() {
@@ -118,10 +107,16 @@ export function TemplatesView({ onBack }: TemplatesViewProps) {
   }
 
   async function save() {
-    if (selectedId === null || draft === null) {
+    if (draft === null) {
       return;
     }
     try {
+      if (selectedId === null) {
+        const created = await createTemplate(draft);
+        setTemplates((current) => [...current, created]);
+        select(created);
+        return;
+      }
       replace(await updateTemplate(selectedId, draft));
     } catch (error: unknown) {
       setFailure(error instanceof Error ? error.message : String(error));
@@ -157,7 +152,7 @@ export function TemplatesView({ onBack }: TemplatesViewProps) {
         <Button variant="ghost" className="justify-start" onClick={onBack}>
           {t("settings.back")}
         </Button>
-        <Button onClick={() => void create()}>{t("templates.create")}</Button>
+        <Button onClick={create}>{t("templates.create")}</Button>
         <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
           {templates.map((template) => (
             <li key={template.id}>
@@ -176,175 +171,109 @@ export function TemplatesView({ onBack }: TemplatesViewProps) {
           <p className="text-sm text-zinc-500">{t("templates.empty")}</p>
         ) : null}
       </aside>
-      <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
-        <h1 className="text-lg font-semibold">{t("templates.title")}</h1>
-        {failure !== null ? <p role="alert">{failure}</p> : null}
-        {draft === null || composed === null ? null : (
-          <form
-            className="flex max-w-xl flex-col gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void save();
-            }}
-          >
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("templates.name")}
-              <input
-                aria-label={t("templates.name")}
-                className={fieldClass}
-                value={draft.name}
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-              />
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={!nameReady}
-                onClick={() => void rename()}
-              >
-                {t("templates.rename")}
+      <section className="flex min-h-0 min-w-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+          <h1 className="text-lg font-semibold">{t("templates.title")}</h1>
+          {failure !== null ? <p role="alert">{failure}</p> : null}
+          {draft === null || composed === null ? (
+            <p className="text-sm text-zinc-500">{t("templates.pickOrCreate")}</p>
+          ) : (
+            <form
+              className="flex max-w-xl flex-col gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void save();
+              }}
+            >
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                {t("templates.name")}
+                <input
+                  aria-label={t("templates.name")}
+                  className={fieldClass}
+                  placeholder={t("templates.newName")}
+                  value={draft.name}
+                  onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={!nameReady || selectedId === null}
+                  onClick={() => void rename()}
+                >
+                  {t("templates.rename")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={selectedId === null}
+                  onClick={() => void duplicate()}
+                >
+                  {t("templates.duplicate")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={selectedId === null}
+                  onClick={() => void remove()}
+                >
+                  {t("templates.delete")}
+                </Button>
+              </div>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                {t("templates.body")}
+                <textarea
+                  aria-label={t("templates.body")}
+                  className={`${fieldClass} min-h-24`}
+                  value={draft.body}
+                  onChange={(event) => setDraft({ ...draft, body: event.target.value })}
+                />
+              </label>
+              <p className="text-xs text-zinc-500">{t("templates.bodyHint")}</p>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={draft.placement === "before"}
+                  onChange={(event) =>
+                    setDraft({ ...draft, placement: event.target.checked ? "before" : "after" })
+                  }
+                />
+                {t("templates.placeBefore")}
+              </label>
+              <p className="text-xs text-zinc-500">{t("templates.placeHint")}</p>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                {t("templates.negative")}
+                <textarea
+                  aria-label={t("templates.negative")}
+                  className={`${fieldClass} min-h-16`}
+                  value={draft.negative}
+                  onChange={(event) => setDraft({ ...draft, negative: event.target.value })}
+                />
+              </label>
+              <Button type="submit" disabled={!nameReady}>
+                {t("templates.save")}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => void duplicate()}>
-                {t("templates.duplicate")}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => void remove()}>
-                {t("templates.delete")}
-              </Button>
-            </div>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("templates.body")}
-              <textarea
-                aria-label={t("templates.body")}
-                className={`${fieldClass} min-h-24`}
-                value={draft.body}
-                onChange={(event) => setDraft({ ...draft, body: event.target.value })}
-              />
-            </label>
-            <p className="text-xs text-zinc-500">{t("templates.bodyHint")}</p>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("templates.negative")}
-              <textarea
-                aria-label={t("templates.negative")}
-                className={`${fieldClass} min-h-16`}
-                value={draft.negative}
-                onChange={(event) => setDraft({ ...draft, negative: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("templates.model2d")}
-              <input
-                aria-label={t("templates.model2d")}
-                className={fieldClass}
-                value={draft.model2d}
-                onChange={(event) => setDraft({ ...draft, model2d: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("templates.model3d")}
-              <input
-                aria-label={t("templates.model3d")}
-                className={fieldClass}
-                value={draft.model3d}
-                onChange={(event) => setDraft({ ...draft, model3d: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("panel.resolution")}
-              <select
-                aria-label={t("panel.resolution")}
-                className={fieldClass}
-                value={String(draft.resolution)}
-                onChange={(event) => setDraft({ ...draft, resolution: Number(event.target.value) })}
-              >
-                <option value="512">512</option>
-                <option value="768">768</option>
-                <option value="1024">1024</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("panel.aspect")}
-              <select
-                aria-label={t("panel.aspect")}
-                className={fieldClass}
-                value={draft.aspect}
-                onChange={(event) => setDraft({ ...draft, aspect: event.target.value })}
-              >
-                {ASPECTS.map((aspect) => (
-                  <option key={aspect} value={aspect}>
-                    {aspect}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("panel.steps")}
-              <input
-                aria-label={t("panel.steps")}
-                className={fieldClass}
-                inputMode="numeric"
-                value={String(draft.steps)}
-                onChange={(event) => setDraft({ ...draft, steps: Number(event.target.value) })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("panel.cfg")}
-              <input
-                aria-label={t("panel.cfg")}
-                className={fieldClass}
-                inputMode="decimal"
-                value={String(draft.cfg)}
-                onChange={(event) => setDraft({ ...draft, cfg: Number(event.target.value) })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("panel.seed")}
-              <input
-                aria-label={t("panel.seed")}
-                className={fieldClass}
-                value={draft.seed}
-                onChange={(event) => setDraft({ ...draft, seed: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("panel.count")}
-              <input
-                aria-label={t("panel.count")}
-                className={fieldClass}
-                inputMode="numeric"
-                value={String(draft.count)}
-                onChange={(event) => setDraft({ ...draft, count: Number(event.target.value) })}
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={draft.postprocess}
-                onChange={(event) => setDraft({ ...draft, postprocess: event.target.checked })}
-              />
-              {t("templates.postprocess")}
-            </label>
-            <Button type="submit" disabled={!nameReady}>
-              {t("templates.save")}
-            </Button>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("templates.sample")}
-              <input
-                aria-label={t("templates.sample")}
-                className={fieldClass}
-                value={sample}
-                onChange={(event) => setSample(event.target.value)}
-              />
-            </label>
-            <div>
-              <h2 className="text-sm font-medium">{t("templates.final")}</h2>
-              <p>{composed.prompt}</p>
-              <p>
-                {t("templates.negative")}: {composed.negative || t("templates.noNegative")}
-              </p>
-            </div>
-          </form>
-        )}
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                {t("templates.sample")}
+                <input
+                  aria-label={t("templates.sample")}
+                  className={fieldClass}
+                  value={sample}
+                  onChange={(event) => setSample(event.target.value)}
+                />
+              </label>
+              <div>
+                <h2 className="text-sm font-medium">{t("templates.final")}</h2>
+                <p>{composed.prompt}</p>
+                <p>
+                  {t("templates.negative")}: {composed.negative || t("templates.noNegative")}
+                </p>
+              </div>
+            </form>
+          )}
+        </div>
+        <TemplatesGuide />
       </section>
     </div>
   );

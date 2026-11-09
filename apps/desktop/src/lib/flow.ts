@@ -1,4 +1,4 @@
-import { composeGeneration } from "./templatePrompt";
+import { composeGeneration, type TemplateSource } from "./templatePrompt";
 
 export const FLOW_FILE_VERSION = 1;
 export const MESH_MODES = ["none", "all", "later"] as const;
@@ -23,6 +23,7 @@ export type FlowItem = {
   prompt: string;
   count: number;
   mesh: MeshMode;
+  templateId: string | null;
   overrides: FlowOverrides;
 };
 
@@ -35,8 +36,7 @@ export type FlowDraft = {
 
 export type FlowDocument = FlowDraft & { id: string };
 
-export type FlowTemplate = {
-  body: string;
+export type FlowDefaults = {
   negative: string;
   model2d: string;
   model3d: string;
@@ -48,7 +48,7 @@ export type FlowTemplate = {
   postprocess: boolean;
 };
 
-export type ResolvedFlowItem = FlowTemplate & {
+export type ResolvedFlowItem = FlowDefaults & {
   prompt: string;
   count: number;
   mesh: MeshMode;
@@ -70,11 +70,10 @@ export type FlowMenuCommand = {
 
 export const IDLE_FLOW_COMMAND: FlowMenuCommand = { kind: "idle", n: 0 };
 
-const FALLBACK_TEMPLATE: FlowTemplate = {
-  body: "{prompt}",
+const FALLBACK: FlowDefaults = {
   negative: "",
-  model2d: "",
-  model3d: "",
+  model2d: "sd15",
+  model3d: "triposr",
   resolution: 512,
   aspect: "1:1",
   steps: 20,
@@ -91,6 +90,17 @@ export function needsAllConfirmation(count: number, mesh: MeshMode): boolean {
   return count > 1 && mesh === "all";
 }
 
+export function outputOf(mesh: MeshMode): "2d" | "3d" {
+  return mesh === "none" ? "2d" : "3d";
+}
+
+export function meshForOutput(mode: "2d" | "3d", count: number): MeshMode {
+  if (mode === "2d") {
+    return "none";
+  }
+  return count > 1 ? "later" : "all";
+}
+
 export function clampItemCount(value: number): number {
   if (!Number.isFinite(value)) {
     return 1;
@@ -105,6 +115,7 @@ export function blankItem(id: string, count = 1): FlowItem {
     prompt: "",
     count: nextCount,
     mesh: defaultMeshMode(nextCount),
+    templateId: null,
     overrides: {},
   };
 }
@@ -135,25 +146,24 @@ export function isMeshMode(value: unknown): value is MeshMode {
   return value === "none" || value === "all" || value === "later";
 }
 
-export function resolveItem(template: FlowTemplate | null, item: FlowItem): ResolvedFlowItem {
-  const base: FlowTemplate = { ...FALLBACK_TEMPLATE, ...(template ?? {}) };
+export function resolveItem(item: FlowItem, template?: TemplateSource | null): ResolvedFlowItem {
   const overrides = item.overrides;
-  const composed = composeGeneration(
-    { body: base.body, negative: overrides.negative ?? base.negative },
-    item.prompt,
-  );
+  const itemNegative = overrides.negative ?? FALLBACK.negative;
+  const composed =
+    template == null
+      ? { prompt: item.prompt, negative: itemNegative }
+      : composeGeneration(template, item.prompt, itemNegative);
   return {
-    body: base.body,
     prompt: composed.prompt,
     negative: composed.negative,
-    model2d: overrides.model2d ?? base.model2d,
-    model3d: overrides.model3d ?? base.model3d,
-    resolution: overrides.resolution ?? base.resolution,
-    aspect: overrides.aspect ?? base.aspect,
-    steps: overrides.steps ?? base.steps,
-    cfg: overrides.cfg ?? base.cfg,
-    seed: overrides.seed ?? base.seed,
-    postprocess: overrides.postprocess ?? base.postprocess,
+    model2d: overrides.model2d ?? FALLBACK.model2d,
+    model3d: overrides.model3d ?? FALLBACK.model3d,
+    resolution: overrides.resolution ?? FALLBACK.resolution,
+    aspect: overrides.aspect ?? FALLBACK.aspect,
+    steps: overrides.steps ?? FALLBACK.steps,
+    cfg: overrides.cfg ?? FALLBACK.cfg,
+    seed: overrides.seed ?? FALLBACK.seed,
+    postprocess: overrides.postprocess ?? FALLBACK.postprocess,
     count: item.count,
     mesh: item.mesh,
   };
@@ -169,6 +179,7 @@ export function serializeFlowFile(flow: Pick<FlowDraft, "name" | "templateId" | 
       prompt: item.prompt,
       count: item.count,
       mesh: item.mesh,
+      templateId: item.templateId,
       overrides: { ...item.overrides },
     })),
   };
@@ -200,7 +211,13 @@ export function parseFlowFile(text: string): FlowDraft {
     name: file.name.trim(),
     templateId,
     path: null,
-    items: file.items.map((entry, index) => readItem(entry, index)),
+    items: file.items.map((entry, index) => {
+      const item = readItem(entry, index);
+      if (item.templateId === null && templateId !== null) {
+        return { ...item, templateId };
+      }
+      return item;
+    }),
   };
 }
 
@@ -218,6 +235,8 @@ function readItem(value: unknown, index: number): FlowItem {
     prompt: typeof item.prompt === "string" ? item.prompt : "",
     count,
     mesh: item.mesh,
+    templateId:
+      typeof item.templateId === "string" && item.templateId !== "" ? item.templateId : null,
     overrides: readOverrides(item.overrides),
   };
 }

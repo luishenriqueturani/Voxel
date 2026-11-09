@@ -1,4 +1,4 @@
-//! Biblioteca de templates de prompt. O marcador `{prompt}` recebe o texto do item.
+//! Biblioteca de templates de prompt: texto base, negativo e posição.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -7,7 +7,32 @@ use serde::{Deserialize, Serialize};
 use super::{Database, DbError};
 use crate::output::{unix_now, utc_timestamp};
 
-/// Template reutilizável por qualquer fluxo.
+/// O texto base entra antes ou depois do prompt da geração.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PromptPlacement {
+    Before,
+    After,
+}
+
+impl PromptPlacement {
+    fn parse(value: &str) -> Self {
+        if value == "before" {
+            Self::Before
+        } else {
+            Self::After
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Before => "before",
+            Self::After => "after",
+        }
+    }
+}
+
+/// Template reutilizável na geração avulsa e nos fluxos.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptTemplate {
@@ -15,17 +40,46 @@ pub struct PromptTemplate {
     pub name: String,
     pub body: String,
     pub negative: String,
-    #[serde(rename = "model2d")]
-    pub model_2d: String,
-    #[serde(rename = "model3d")]
-    pub model_3d: String,
-    pub resolution: i64,
-    pub aspect: String,
-    pub steps: i64,
-    pub cfg: f64,
-    pub seed: String,
-    pub count: i64,
-    pub postprocess: bool,
+    pub placement: PromptPlacement,
+}
+
+const MARKER: &str = "{prompt}";
+
+impl PromptTemplate {
+    /// Junta o texto-base com o prompt do item, na posição gravada.
+    #[must_use]
+    pub fn compose(&self, item_prompt: &str, item_negative: &str) -> (String, String) {
+        (
+            compose_prompt(&self.body, item_prompt, self.placement),
+            compose_negative(&self.negative, item_negative),
+        )
+    }
+}
+
+fn compose_prompt(body: &str, item_prompt: &str, placement: PromptPlacement) -> String {
+    if body.contains(MARKER) {
+        return body.replace(MARKER, item_prompt);
+    }
+    match placement {
+        PromptPlacement::Before => join_parts(body, item_prompt),
+        PromptPlacement::After => join_parts(item_prompt, body),
+    }
+}
+
+fn compose_negative(template_negative: &str, item_negative: &str) -> String {
+    join_parts(template_negative, item_negative)
+}
+
+fn join_parts(left: &str, right: &str) -> String {
+    let first = left.trim();
+    let second = right.trim();
+    if first.is_empty() {
+        return second.to_owned();
+    }
+    if second.is_empty() {
+        return first.to_owned();
+    }
+    format!("{first}, {second}")
 }
 
 /// Campos de um template novo ou editado, sem identidade.
@@ -35,17 +89,7 @@ pub struct TemplateDraft {
     pub name: String,
     pub body: String,
     pub negative: String,
-    #[serde(rename = "model2d")]
-    pub model_2d: String,
-    #[serde(rename = "model3d")]
-    pub model_3d: String,
-    pub resolution: i64,
-    pub aspect: String,
-    pub steps: i64,
-    pub cfg: f64,
-    pub seed: String,
-    pub count: i64,
-    pub postprocess: bool,
+    pub placement: PromptPlacement,
 }
 
 impl Database {
@@ -57,8 +101,7 @@ impl Database {
     pub fn list_templates(&self) -> Result<Vec<PromptTemplate>, DbError> {
         let connection = self.lock()?;
         let mut statement = connection.prepare(
-            "SELECT id, name, body, negative, model_2d, model_3d, resolution, aspect, steps, cfg,
-                    seed, count, postprocess
+            "SELECT id, name, body, negative, placement
              FROM templates
              ORDER BY name COLLATE NOCASE, id",
         )?;
@@ -78,35 +121,17 @@ impl Database {
             name: draft.name,
             body: draft.body,
             negative: draft.negative,
-            model_2d: draft.model_2d,
-            model_3d: draft.model_3d,
-            resolution: draft.resolution,
-            aspect: draft.aspect,
-            steps: draft.steps,
-            cfg: draft.cfg,
-            seed: draft.seed,
-            count: draft.count,
-            postprocess: draft.postprocess,
+            placement: draft.placement,
         };
         self.lock()?.execute(
-            "INSERT INTO templates (
-                id, name, body, negative, model_2d, model_3d, resolution, aspect, steps, cfg,
-                seed, count, postprocess, created_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            "INSERT INTO templates (id, name, body, negative, placement, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             (
                 &template.id,
                 &template.name,
                 &template.body,
                 &template.negative,
-                &template.model_2d,
-                &template.model_3d,
-                template.resolution,
-                &template.aspect,
-                template.steps,
-                template.cfg,
-                &template.seed,
-                template.count,
-                i64::from(template.postprocess),
+                template.placement.as_str(),
                 utc_timestamp(unix_now()),
             ),
         )?;
@@ -126,24 +151,14 @@ impl Database {
         let draft = checked(draft)?;
         let changed = self.lock()?.execute(
             "UPDATE templates
-             SET name = ?2, body = ?3, negative = ?4, model_2d = ?5, model_3d = ?6,
-                 resolution = ?7, aspect = ?8, steps = ?9, cfg = ?10, seed = ?11, count = ?12,
-                 postprocess = ?13
+             SET name = ?2, body = ?3, negative = ?4, placement = ?5
              WHERE id = ?1",
             (
                 id,
                 &draft.name,
                 &draft.body,
                 &draft.negative,
-                &draft.model_2d,
-                &draft.model_3d,
-                draft.resolution,
-                &draft.aspect,
-                draft.steps,
-                draft.cfg,
-                &draft.seed,
-                draft.count,
-                i64::from(draft.postprocess),
+                draft.placement.as_str(),
             ),
         )?;
         if changed == 0 {
@@ -154,15 +169,7 @@ impl Database {
             name: draft.name,
             body: draft.body,
             negative: draft.negative,
-            model_2d: draft.model_2d,
-            model_3d: draft.model_3d,
-            resolution: draft.resolution,
-            aspect: draft.aspect,
-            steps: draft.steps,
-            cfg: draft.cfg,
-            seed: draft.seed,
-            count: draft.count,
-            postprocess: draft.postprocess,
+            placement: draft.placement,
         })
     }
 
@@ -177,15 +184,7 @@ impl Database {
             name: name.to_owned(),
             body: existing.body,
             negative: existing.negative,
-            model_2d: existing.model_2d,
-            model_3d: existing.model_3d,
-            resolution: existing.resolution,
-            aspect: existing.aspect,
-            steps: existing.steps,
-            cfg: existing.cfg,
-            seed: existing.seed,
-            count: existing.count,
-            postprocess: existing.postprocess,
+            placement: existing.placement,
         })
     }
 
@@ -233,10 +232,7 @@ impl Database {
     pub fn template(&self, id: &str) -> Result<PromptTemplate, DbError> {
         self.lock()?
             .query_row(
-                "SELECT id, name, body, negative, model_2d, model_3d, resolution, aspect, steps,
-                        cfg, seed, count, postprocess
-                 FROM templates
-                 WHERE id = ?1",
+                "SELECT id, name, body, negative, placement FROM templates WHERE id = ?1",
                 [id],
                 read_template,
             )
@@ -248,21 +244,13 @@ impl Database {
 }
 
 fn read_template(row: &rusqlite::Row<'_>) -> rusqlite::Result<PromptTemplate> {
-    let postprocess: i64 = row.get(12)?;
+    let placement: String = row.get(4)?;
     Ok(PromptTemplate {
         id: row.get(0)?,
         name: row.get(1)?,
         body: row.get(2)?,
         negative: row.get(3)?,
-        model_2d: row.get(4)?,
-        model_3d: row.get(5)?,
-        resolution: row.get(6)?,
-        aspect: row.get(7)?,
-        steps: row.get(8)?,
-        cfg: row.get(9)?,
-        seed: row.get(10)?,
-        count: row.get(11)?,
-        postprocess: postprocess != 0,
+        placement: PromptPlacement::parse(&placement),
     })
 }
 
@@ -271,48 +259,12 @@ fn checked(draft: &TemplateDraft) -> Result<TemplateDraft, DbError> {
     if name.is_empty() {
         return Err(DbError::Invalid("nome vazio"));
     }
-    if draft.model_2d.trim().is_empty() || draft.model_3d.trim().is_empty() {
-        return Err(DbError::Invalid("modelo vazio"));
-    }
-    if !matches!(draft.resolution, 512 | 768 | 1024) {
-        return Err(DbError::Invalid("resolução inválida"));
-    }
-    if !known_aspect(&draft.aspect) {
-        return Err(DbError::Invalid("proporção inválida"));
-    }
-    if !matches!(draft.steps, 1..=500) {
-        return Err(DbError::Invalid("passos inválidos"));
-    }
-    if !draft.cfg.is_finite() || !(0.0..=30.0).contains(&draft.cfg) {
-        return Err(DbError::Invalid("cfg inválido"));
-    }
-    if !draft.seed.is_empty() && draft.seed.parse::<i64>().is_err() {
-        return Err(DbError::Invalid("seed inválida"));
-    }
-    if draft.count < 1 {
-        return Err(DbError::Invalid("quantidade inválida"));
-    }
     Ok(TemplateDraft {
         name: name.to_owned(),
         body: draft.body.clone(),
         negative: draft.negative.clone(),
-        model_2d: draft.model_2d.trim().to_owned(),
-        model_3d: draft.model_3d.trim().to_owned(),
-        resolution: draft.resolution,
-        aspect: draft.aspect.clone(),
-        steps: draft.steps,
-        cfg: draft.cfg,
-        seed: draft.seed.clone(),
-        count: draft.count,
-        postprocess: draft.postprocess,
+        placement: draft.placement,
     })
-}
-
-fn known_aspect(value: &str) -> bool {
-    matches!(
-        value,
-        "1:1" | "4:3" | "3:2" | "16:9" | "21:9" | "3:4" | "2:3" | "9:16" | "9:21"
-    )
 }
 
 fn new_id() -> String {
@@ -323,22 +275,14 @@ fn new_id() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Database, DbError, TemplateDraft};
+    use super::{Database, DbError, PromptPlacement, TemplateDraft};
 
     fn personagem() -> TemplateDraft {
         TemplateDraft {
             name: "Personagem para 3D".to_owned(),
-            body: "{prompt}, corpo inteiro, T-pose".to_owned(),
+            body: "corpo inteiro, T-pose".to_owned(),
             negative: "múltiplas pessoas".to_owned(),
-            model_2d: "sd15".to_owned(),
-            model_3d: "triposr".to_owned(),
-            resolution: 512,
-            aspect: "1:1".to_owned(),
-            steps: 20,
-            cfg: 7.0,
-            seed: String::new(),
-            count: 1,
-            postprocess: true,
+            placement: PromptPlacement::After,
         }
     }
 
@@ -347,17 +291,15 @@ mod tests {
         let database = Database::open_in_memory().unwrap();
         database.migrate().unwrap();
         let created = database.create_template(&personagem()).unwrap();
-        assert!(created.body.contains("{prompt}"));
-        assert!(created.postprocess);
+        assert_eq!(created.body, "corpo inteiro, T-pose");
+        assert_eq!(created.placement, PromptPlacement::After);
 
         let copy = database
             .duplicate_template(&created.id, "Personagem cópia")
             .unwrap();
         assert_ne!(copy.id, created.id);
         assert_eq!(copy.body, created.body);
-        assert_eq!(copy.model_2d, "sd15");
-        assert_eq!(copy.model_3d, "triposr");
-        assert!(copy.postprocess);
+        assert_eq!(copy.placement, PromptPlacement::After);
 
         let renamed = database.rename_template(&created.id, "  Herói  ").unwrap();
         assert_eq!(renamed.name, "Herói");
@@ -390,18 +332,45 @@ mod tests {
     }
 
     #[test]
-    fn a_edicao_troca_os_parametros_e_o_pos_processamento() {
+    fn a_edicao_troca_o_texto_e_a_posicao() {
         let database = Database::open_in_memory().unwrap();
         database.migrate().unwrap();
         let created = database.create_template(&personagem()).unwrap();
         let mut draft = personagem();
-        draft.steps = 28;
-        draft.postprocess = false;
+        draft.placement = PromptPlacement::Before;
         draft.negative = "fundo complexo".to_owned();
         let updated = database.update_template(&created.id, &draft).unwrap();
         assert_eq!(updated.id, created.id);
-        assert_eq!(updated.steps, 28);
-        assert!(!updated.postprocess);
+        assert_eq!(updated.placement, PromptPlacement::Before);
         assert_eq!(updated.negative, "fundo complexo");
+    }
+
+    #[test]
+    fn compoe_o_prompt_e_o_negativo() {
+        let after = super::PromptTemplate {
+            id: "a".to_owned(),
+            name: "Personagem".to_owned(),
+            body: "T-pose".to_owned(),
+            negative: "fundo".to_owned(),
+            placement: PromptPlacement::After,
+        };
+        assert_eq!(
+            after.compose("ferreiro", "borrado"),
+            ("ferreiro, T-pose".to_owned(), "fundo, borrado".to_owned())
+        );
+        let before = super::PromptTemplate {
+            placement: PromptPlacement::Before,
+            body: "foto de estúdio".to_owned(),
+            ..after.clone()
+        };
+        assert_eq!(
+            before.compose("ferreiro", "").0,
+            "foto de estúdio, ferreiro"
+        );
+        let marked = super::PromptTemplate {
+            body: "{prompt}, T-pose".to_owned(),
+            ..after
+        };
+        assert_eq!(marked.compose("ferreiro", "").0, "ferreiro, T-pose");
     }
 }

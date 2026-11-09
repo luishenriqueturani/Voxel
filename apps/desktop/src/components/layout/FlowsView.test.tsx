@@ -3,12 +3,41 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { blankItem, type FlowDocument, type FlowDraft, IDLE_FLOW_COMMAND } from "../../lib/flow";
 import { updateFlow } from "../../native/flows";
+import type { ListedModel } from "../../native/models";
 import { enqueueFlow } from "../../native/queue";
 import { FlowsView } from "./FlowsView";
 
+const library: ListedModel[] = [
+  {
+    id: "sd15",
+    name: "Stable Diffusion 1.5",
+    license: "MIT",
+    bytes: 1,
+    filename: "sd15",
+    installed: true,
+    catalog: true,
+    compatibility: "compatible",
+    reason: null,
+    architecture: "sd15",
+    kind: "image",
+  },
+  {
+    id: "triposr",
+    name: "TripoSR",
+    license: "MIT",
+    bytes: 1,
+    filename: "triposr",
+    installed: true,
+    catalog: true,
+    compatibility: "compatible",
+    reason: null,
+    architecture: null,
+    kind: "mesh",
+  },
+];
+
 const store = vi.hoisted(() => ({
   rows: [] as FlowDocument[],
-  templates: [] as { id: string; name: string; body: string; count: number }[],
 }));
 
 function documentOf(draft: FlowDraft, id: string): FlowDocument {
@@ -44,6 +73,7 @@ vi.mock("../../native/flows", () => ({
           prompt: "aldeã",
           count: 4,
           mesh: "later",
+          templateId: null,
           overrides: { seed: "1234" },
         },
       ],
@@ -63,7 +93,15 @@ vi.mock("../../native/flows", () => ({
 }));
 
 vi.mock("../../native/templates", () => ({
-  loadTemplates: vi.fn(async () => store.templates.slice()),
+  loadTemplates: vi.fn(async () => [
+    {
+      id: "tpl-1",
+      name: "Personagem",
+      body: "T-pose",
+      negative: "fundo",
+      placement: "after",
+    },
+  ]),
 }));
 
 vi.mock("../../native/queue", async (importOriginal) => {
@@ -86,39 +124,50 @@ describe("editor de fluxos", () => {
     vi.mocked(enqueueFlow).mockClear();
   });
 
-  it("cria itens, reordena, confirma Todas e sobrescreve a seed", async () => {
+  it("cria itens, escolhe 3D e os parâmetros sem checkbox", async () => {
     store.rows = [];
-    store.templates = [{ id: "tpl", name: "Personagem", body: "{prompt}, T-pose", count: 1 }];
     const user = userEvent.setup();
-    render(<FlowsView onBack={vi.fn()} command={IDLE_FLOW_COMMAND} />);
+    render(<FlowsView onBack={vi.fn()} command={IDLE_FLOW_COMMAND} library={library} />);
 
     expect(screen.getByText("Nenhum fluxo")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Criar" }));
     expect(screen.getByRole("button", { name: "Novo fluxo", pressed: true })).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Template" }), "tpl");
     await user.type(screen.getByRole("textbox", { name: "Prompt do item" }), "ferreiro");
-    expect(screen.getByText("Prompt final: ferreiro, T-pose")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Prompt do item" })).toHaveValue("ferreiro");
+    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveValue("sd15");
+    expect(screen.getByRole("combobox", { name: "Resolução" })).toHaveValue("512");
+    expect(screen.queryByRole("combobox", { name: "Modelo 3D" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Seed" })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("spinbutton", { name: "Quantidade de imagens" }), {
       target: { value: "4" },
     });
     expect(screen.getByRole("spinbutton", { name: "Quantidade de imagens" })).toHaveValue(4);
-    expect(screen.getByRole("radio", { name: "Não" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "2D" })).toBeChecked();
+
+    await user.click(screen.getByRole("radio", { name: "3D" }));
+    expect(screen.getByRole("radio", { name: "Escolher depois" })).toBeChecked();
+    expect(screen.getByRole("combobox", { name: "Modelo 3D" })).toHaveValue("triposr");
+    expect(screen.queryByRole("combobox", { name: "Modelo" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Resolução" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Proporção" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: "Passos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: "CFG" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("spinbutton", { name: "Quantidade de imagens" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("radio", { name: "Todas" }));
     expect(
       screen.getByText("Este item tem 4 imagens. Gerar 3D de cada variação leva bem mais tempo."),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(screen.getByRole("radio", { name: "Não" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Escolher depois" })).toBeChecked();
 
     await user.click(screen.getByRole("radio", { name: "Todas" }));
     await user.click(screen.getByRole("button", { name: "Gerar todas" }));
     expect(screen.getByRole("radio", { name: "Todas" })).toBeChecked();
-
-    await user.click(screen.getByRole("checkbox", { name: "Sobrescrever Seed" }));
-    await user.type(await screen.findByRole("textbox", { name: "Seed" }), "1234");
     expect(updateFlow).toHaveBeenCalledWith(
       "flow-1",
       expect.objectContaining({
@@ -126,7 +175,19 @@ describe("editor de fluxos", () => {
           expect.objectContaining({
             count: 4,
             mesh: "all",
-            overrides: expect.objectContaining({ seed: "1234" }),
+          }),
+        ]),
+      }),
+    );
+
+    await user.click(screen.getByRole("radio", { name: "2D" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Resolução" }), "1024");
+    expect(updateFlow).toHaveBeenCalledWith(
+      "flow-1",
+      expect.objectContaining({
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            overrides: expect.objectContaining({ resolution: 1024 }),
           }),
         ]),
       }),
@@ -166,7 +227,6 @@ describe("editor de fluxos", () => {
 
   it("enfileira o fluxo sem abrir o modal de erro", async () => {
     store.rows = [];
-    store.templates = [];
     const user = userEvent.setup();
     render(<FlowsView onBack={vi.fn()} command={IDLE_FLOW_COMMAND} />);
     await user.click(screen.getByRole("button", { name: "Criar" }));
@@ -178,9 +238,27 @@ describe("editor de fluxos", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
+  it("escolhe o template e mostra o prompt composto", async () => {
+    store.rows = [];
+    const user = userEvent.setup();
+    render(<FlowsView onBack={vi.fn()} command={IDLE_FLOW_COMMAND} />);
+    await user.click(screen.getByRole("button", { name: "Criar" }));
+    const article = screen.getByRole("article");
+    await within(article).findByRole("option", { name: "Personagem" });
+    await user.selectOptions(within(article).getByRole("combobox", { name: "Template" }), "tpl-1");
+    expect(updateFlow).toHaveBeenCalledWith(
+      "flow-1",
+      expect.objectContaining({
+        items: [expect.objectContaining({ templateId: "tpl-1" })],
+      }),
+    );
+    expect(within(article).getByRole("textbox", { name: "Prompt negativo" })).toHaveValue("fundo");
+    await user.type(within(article).getByRole("textbox", { name: "Prompt do item" }), "ferreiro");
+    expect(within(article).getByText("ferreiro, T-pose")).toBeInTheDocument();
+  });
+
   it("pede itens antes de enfileirar um fluxo vazio", async () => {
     store.rows = [];
-    store.templates = [];
     const user = userEvent.setup();
     render(<FlowsView onBack={vi.fn()} command={IDLE_FLOW_COMMAND} />);
     await user.click(screen.getByRole("button", { name: "Criar" }));

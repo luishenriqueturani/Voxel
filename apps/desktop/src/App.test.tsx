@@ -89,7 +89,7 @@ describe("App", () => {
     await act(() => onAction("edit.preferences"));
     expect(screen.getByRole("combobox", { name: "Idioma" })).toBeInTheDocument();
 
-    await act(() => onAction("flows.templates"));
+    await act(() => onAction("file.templates"));
     expect(screen.getByRole("heading", { name: "Gerenciar templates" })).toBeInTheDocument();
 
     await act(() => onAction("file.newFlow"));

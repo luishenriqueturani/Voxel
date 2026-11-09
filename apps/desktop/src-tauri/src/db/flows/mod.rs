@@ -53,6 +53,8 @@ pub struct FlowItem {
     pub prompt: String,
     pub count: i64,
     pub mesh: MeshMode,
+    #[serde(rename = "templateId", default)]
+    pub template_id: Option<String>,
     pub overrides: FlowOverrides,
 }
 
@@ -98,6 +100,8 @@ struct FlowFileItem {
     #[serde(default = "one")]
     count: i64,
     mesh: MeshMode,
+    #[serde(default)]
+    template_id: Option<String>,
     #[serde(default)]
     overrides: FlowOverrides,
 }
@@ -295,8 +299,8 @@ impl Database {
             let index =
                 i64::try_from(position).map_err(|_| DbError::Invalid("posição inválida"))?;
             transaction.execute(
-                "INSERT INTO flow_items (id, flow_id, position, prompt, count, mesh, overrides)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                "INSERT INTO flow_items (id, flow_id, position, prompt, count, mesh, overrides, template_id)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 params![
                     item.id,
                     document.id,
@@ -304,7 +308,8 @@ impl Database {
                     item.prompt,
                     item.count,
                     mesh,
-                    overrides
+                    overrides,
+                    item.template_id
                 ],
             )?;
         }
@@ -315,7 +320,7 @@ impl Database {
 
 fn load_items(connection: &Connection) -> Result<HashMap<String, Vec<FlowItem>>, DbError> {
     let mut statement = connection.prepare(
-        "SELECT id, flow_id, prompt, count, mesh, overrides
+        "SELECT id, flow_id, prompt, count, mesh, overrides, template_id
          FROM flow_items
          ORDER BY flow_id, position, id",
     )?;
@@ -327,16 +332,18 @@ fn load_items(connection: &Connection) -> Result<HashMap<String, Vec<FlowItem>>,
             row.get::<_, i64>(3)?,
             row.get::<_, String>(4)?,
             row.get::<_, String>(5)?,
+            row.get::<_, Option<String>>(6)?,
         ))
     })?;
     let mut grouped: HashMap<String, Vec<FlowItem>> = HashMap::new();
     for row in rows {
-        let (flow_id, id, prompt, count, mesh, overrides) = row?;
+        let (flow_id, id, prompt, count, mesh, overrides, template_id) = row?;
         grouped.entry(flow_id).or_default().push(FlowItem {
             id,
             prompt,
             count,
             mesh: parse_mesh(&mesh)?,
+            template_id,
             overrides: parse_overrides(&overrides)?,
         });
     }
@@ -351,7 +358,7 @@ fn parse_flow_file(text: &str) -> Result<FlowDraft, DbError> {
     }
     Ok(FlowDraft {
         name: file.name,
-        template_id: file.template_id,
+        template_id: file.template_id.clone(),
         path: None,
         items: file
             .items
@@ -365,6 +372,7 @@ fn parse_flow_file(text: &str) -> Result<FlowDraft, DbError> {
                 prompt: item.prompt,
                 count: item.count,
                 mesh: item.mesh,
+                template_id: item.template_id.or_else(|| file.template_id.clone()),
                 overrides: item.overrides,
             })
             .collect(),
@@ -384,6 +392,7 @@ fn serialize_flow_file(document: &FlowDocument) -> Result<String, DbError> {
                 prompt: item.prompt.clone(),
                 count: item.count,
                 mesh: item.mesh,
+                template_id: item.template_id.clone(),
                 overrides: item.overrides.clone(),
             })
             .collect(),
@@ -439,6 +448,12 @@ fn checked_item(item: &FlowItem) -> Result<FlowItem, DbError> {
         prompt: item.prompt.clone(),
         count: item.count,
         mesh: item.mesh,
+        template_id: item
+            .template_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToOwned::to_owned),
         overrides,
     })
 }
@@ -504,94 +519,4 @@ fn new_id() -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{Database, DbError, FlowDraft, FlowItem, FlowOverrides, MeshMode};
-
-    fn aldeia() -> FlowDraft {
-        FlowDraft {
-            name: "NPCs da vila".to_owned(),
-            template_id: Some("tpl-1".to_owned()),
-            path: None,
-            items: vec![
-                FlowItem {
-                    id: "i1".to_owned(),
-                    prompt: "ferreiro".to_owned(),
-                    count: 1,
-                    mesh: MeshMode::All,
-                    overrides: FlowOverrides::default(),
-                },
-                FlowItem {
-                    id: "i2".to_owned(),
-                    prompt: "guarda".to_owned(),
-                    count: 4,
-                    mesh: MeshMode::Later,
-                    overrides: FlowOverrides {
-                        seed: Some("1234".to_owned()),
-                        ..FlowOverrides::default()
-                    },
-                },
-            ],
-        }
-    }
-
-    #[test]
-    fn cria_reordena_sobrescreve_e_exclui() {
-        let database = Database::open_in_memory().unwrap();
-        database.migrate().unwrap();
-        let created = database.create_flow(&aldeia()).unwrap();
-        assert_eq!(created.items.len(), 2);
-        assert_eq!(created.items[1].mesh, MeshMode::Later);
-        assert_eq!(created.items[1].overrides.seed.as_deref(), Some("1234"));
-
-        let mut draft = aldeia();
-        draft.items.reverse();
-        draft.items[0].mesh = MeshMode::None;
-        let updated = database.update_flow(&created.id, &draft).unwrap();
-        assert_eq!(updated.items[0].prompt, "guarda");
-        assert_eq!(updated.items[0].mesh, MeshMode::None);
-
-        database.delete_flow(&created.id).unwrap();
-        assert!(database.list_flows().unwrap().is_empty());
-        assert!(matches!(
-            database.delete_flow(&created.id),
-            Err(DbError::Missing)
-        ));
-    }
-
-    #[test]
-    fn arquivo_json_volta_com_os_mesmos_itens() {
-        let database = Database::open_in_memory().unwrap();
-        database.migrate().unwrap();
-        let created = database.create_flow(&aldeia()).unwrap();
-        let dir = std::env::temp_dir().join(format!("voxel-flow-{}", created.id));
-        std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("vila.json");
-        let exported = database.export_flow_file(&created.id, &path).unwrap();
-        assert_eq!(exported.path.as_deref(), path.to_str());
-
-        database.delete_flow(&created.id).unwrap();
-        let imported = database.import_flow_file(&path).unwrap();
-        assert_eq!(imported.name, "NPCs da vila");
-        assert_eq!(imported.items[1].count, 4);
-        assert_eq!(imported.items[1].overrides.seed.as_deref(), Some("1234"));
-        std::fs::remove_dir_all(&dir).ok();
-    }
-
-    #[test]
-    fn recusa_quantidade_e_modo_invalidos() {
-        let database = Database::open_in_memory().unwrap();
-        database.migrate().unwrap();
-        let mut draft = aldeia();
-        draft.items[0].count = 0;
-        assert!(matches!(
-            database.create_flow(&draft),
-            Err(DbError::Invalid("quantidade inválida"))
-        ));
-        draft.name = "   ".to_owned();
-        draft.items[0].count = 1;
-        assert!(matches!(
-            database.create_flow(&draft),
-            Err(DbError::Invalid("nome vazio"))
-        ));
-    }
-}
+mod tests;

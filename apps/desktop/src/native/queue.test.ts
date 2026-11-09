@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   enqueueFlow,
   formatElapsed,
+  itemStatusKey,
   laterItems,
   loadUnfinishedQueueJob,
   movableItems,
   pauseQueue,
+  previewQueueItem,
   queueCounts,
+  queueJobFinished,
   queueSummary,
   toggleQueuePause,
 } from "./queue";
@@ -107,6 +110,25 @@ describe("fila nativa", () => {
       }).elapsedSecs,
     ).toBe(300);
     expect(formatElapsed(7800)).toEqual({ hours: 2, minutes: 10 });
+    expect(itemStatusKey("images")).toBe("images");
+    expect(itemStatusKey("outro")).toBe("pending");
+    expect(queueJobFinished({ ...job, status: "done" })).toBe(true);
+    const first = job.items[0];
+    const second = job.items[1];
+    expect(
+      first === undefined || second === undefined
+        ? null
+        : previewQueueItem(
+            {
+              ...job,
+              items: [
+                { ...first, status: "done", imagePaths: ["/tmp/a.png"] },
+                { ...second, status: "images" },
+              ],
+            },
+            null,
+          )?.id,
+    ).toBe("b");
   });
 
   it("pausa ou retoma conforme o estado atual", async () => {

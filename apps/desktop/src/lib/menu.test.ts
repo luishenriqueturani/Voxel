@@ -37,7 +37,7 @@ describe("actionForMenu", () => {
     expect(actionForMenu("file.export")).toBe("export-image");
     expect(actionForMenu("edit.copy")).toBe("copy-image");
     expect(actionForMenu("generate.regenerate")).toBe("regenerate");
-    expect(actionForMenu("flows.templates")).toBe("templates");
+    expect(actionForMenu("file.templates")).toBe("templates");
     expect(actionForMenu("file.newFlow")).toBe("new-flow");
     expect(actionForMenu("file.openFlow")).toBe("open-flow");
     expect(actionForMenu("file.saveFlow")).toBe("save-flow");

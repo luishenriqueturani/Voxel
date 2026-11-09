@@ -1,15 +1,13 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { type PointerEvent as ReactPointerEvent, useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MeshPaths } from "../../hooks/useGenerationRequest";
 import type { ImageVersion } from "../../native/generation";
 import { meshUrl } from "../../native/mesh";
 import { Button } from "../ui/button";
+import { ImageStage } from "./ImageStage";
 import { MeshViewer } from "./MeshViewer";
 import { MosaicPreview } from "./MosaicPreview";
-
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 8;
 
 type ImageViewerProps = {
   src: string | null;
@@ -44,8 +42,6 @@ type ImageViewerProps = {
   previousSrc?: string | null;
 };
 
-type Pan = { x: number; y: number };
-
 function Preparing() {
   const { t } = useTranslation();
   return (
@@ -58,12 +54,6 @@ function Preparing() {
 function fileName(path: string): string {
   const parts = path.split(/[/\\]/);
   return parts[parts.length - 1] ?? path;
-}
-
-function zoomByWheel(current: number, deltaY: number): number {
-  const scaled = current * (deltaY < 0 ? 1.1 : 1 / 1.1);
-  const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scaled));
-  return clamped < 1.02 ? MIN_ZOOM : clamped;
 }
 
 export function ImageViewer({
@@ -99,13 +89,7 @@ export function ImageViewer({
   previousSrc = null,
 }: ImageViewerProps) {
   const { t } = useTranslation();
-  const stageRef = useRef<HTMLDivElement>(null);
-  const zoomRef = useRef(MIN_ZOOM);
-  const panRef = useRef<Pan>({ x: 0, y: 0 });
-  const dragRef = useRef<Pan | null>(null);
-  const [zoom, setZoom] = useState(MIN_ZOOM);
-  const [pan, setPan] = useState<Pan>({ x: 0, y: 0 });
-  const [panning, setPanning] = useState(false);
+  const [percent, setPercent] = useState(100);
   const [showMesh, setShowMesh] = useState(true);
   const [wireframe, setWireframe] = useState(false);
   const [textured, setTextured] = useState(true);
@@ -113,74 +97,10 @@ export function ImageViewer({
   const [meshGeneration, setMeshGeneration] = useState(meshFiles?.glb ?? "");
   const [shownSrc, setShownSrc] = useState(src);
   const [comparing, setComparing] = useState(false);
-  const percent = Math.round(zoom * 100);
-  zoomRef.current = zoom;
-  panRef.current = pan;
 
   if (src !== shownSrc) {
     setShownSrc(src);
-    setZoom(MIN_ZOOM);
-    setPan({ x: 0, y: 0 });
     setComparing(false);
-  }
-
-  const onWheel = useCallback((event: WheelEvent) => {
-    const stage = stageRef.current;
-    if (!stage || !event.ctrlKey || event.deltaY === 0) {
-      return;
-    }
-    event.preventDefault();
-    const rect = stage.getBoundingClientRect();
-    const dx = event.clientX - rect.left - rect.width / 2;
-    const dy = event.clientY - rect.top - rect.height / 2;
-    const current = zoomRef.current;
-    const next = zoomByWheel(current, event.deltaY);
-    const factor = next / current;
-    const origin = panRef.current;
-    setZoom(next);
-    setPan(
-      next === MIN_ZOOM
-        ? { x: 0, y: 0 }
-        : {
-            x: dx * (1 - factor) + origin.x * factor,
-            y: dy * (1 - factor) + origin.y * factor,
-          },
-    );
-  }, []);
-
-  const setStage = useCallback(
-    (node: HTMLDivElement | null) => {
-      stageRef.current?.removeEventListener("wheel", onWheel);
-      stageRef.current = node;
-      node?.addEventListener("wheel", onWheel, { passive: false });
-    },
-    [onWheel],
-  );
-
-  function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.button !== 1) {
-      return;
-    }
-    event.preventDefault();
-    dragRef.current = { x: event.clientX, y: event.clientY };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    setPanning(true);
-  }
-
-  function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    const drag = dragRef.current;
-    if (!drag) {
-      return;
-    }
-    const dx = event.clientX - drag.x;
-    const dy = event.clientY - drag.y;
-    dragRef.current = { x: event.clientX, y: event.clientY };
-    setPan((current) => ({ x: current.x + dx, y: current.y + dy }));
-  }
-
-  function endPan() {
-    dragRef.current = null;
-    setPanning(false);
   }
 
   const shownMesh = meshFiles?.optimizedGlb || meshFiles?.glb || "";
@@ -213,65 +133,20 @@ export function ImageViewer({
         ) : src && mosaic ? (
           <MosaicPreview src={src} />
         ) : src ? (
-          <div
-            ref={setStage}
-            data-testid="viewer-stage"
-            role="application"
-            aria-label={t("generation.preview")}
-            className={`relative h-full min-h-0 w-full overflow-hidden ${transparent ? "transparency-grid" : ""} ${panning ? "cursor-grabbing" : "cursor-grab"}`}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={endPan}
-            onPointerCancel={endPan}
-            onMouseDown={(event) => {
-              if (event.button === 1) {
-                event.preventDefault();
-              }
-            }}
+          <ImageStage
+            src={src}
+            alt={t("generation.preview")}
+            transparent={transparent}
+            compareSrc={compareSrc}
+            onPercent={setPercent}
           >
-            {compareSrc ? (
-              <div className="absolute inset-0 grid grid-cols-2">
-                <figure className="relative min-h-0 min-w-0">
-                  <figcaption className="absolute top-2 left-2 z-10 rounded bg-black/60 px-2 py-1 text-xs text-white">
-                    {t("viewer.comparePrevious")}
-                  </figcaption>
-                  <img
-                    alt={t("viewer.comparePrevious")}
-                    draggable={false}
-                    className="pointer-events-none h-full w-full object-contain select-none"
-                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
-                    src={compareSrc}
-                  />
-                </figure>
-                <figure className="relative min-h-0 min-w-0 border-l border-zinc-700">
-                  <figcaption className="absolute top-2 left-2 z-10 rounded bg-black/60 px-2 py-1 text-xs text-white">
-                    {t("viewer.compareCurrent")}
-                  </figcaption>
-                  <img
-                    alt={t("viewer.compareCurrent")}
-                    draggable={false}
-                    className="pointer-events-none h-full w-full object-contain select-none"
-                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
-                    src={src}
-                  />
-                </figure>
-              </div>
-            ) : (
-              <img
-                alt={t("generation.preview")}
-                draggable={false}
-                className="pointer-events-none absolute inset-0 h-full w-full object-contain select-none"
-                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
-                src={src}
-              />
-            )}
             {generating && images > 1 ? (
               <p className="absolute top-3 left-3 z-10 rounded bg-black/70 px-3 py-1 text-sm text-white">
                 {t("generation.image", { image, images })}
               </p>
             ) : null}
             {generating && total === 0 ? <Preparing /> : null}
-          </div>
+          </ImageStage>
         ) : (
           <div className="flex flex-col items-center gap-1 text-sm text-zinc-500">
             {generating && images > 1 ? <p>{t("generation.image", { image, images })}</p> : null}

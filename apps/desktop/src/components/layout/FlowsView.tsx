@@ -19,15 +19,18 @@ import {
   pickFlowToSave,
   updateFlow,
 } from "../../native/flows";
+import { selectableMeshModels, selectableModels } from "../../lib/modelChoice";
+import type { ListedModel } from "../../native/models";
 import { enqueueFlow } from "../../native/queue";
 import { loadTemplates, type PromptTemplate } from "../../native/templates";
 import { Button } from "../ui/button";
 import { FlowItemCard } from "./FlowItemCard";
-import { QueueControls } from "./QueueControls";
+import { FlowPreview } from "./FlowPreview";
 
 type FlowsViewProps = {
   onBack: () => void;
   command: FlowMenuCommand;
+  library?: ListedModel[];
 };
 
 const fieldClass =
@@ -46,8 +49,10 @@ function nextId(): string {
   return globalThis.crypto.randomUUID();
 }
 
-export function FlowsView({ onBack, command }: FlowsViewProps) {
+export function FlowsView({ onBack, command, library = [] }: FlowsViewProps) {
   const { t } = useTranslation();
+  const imageModels = selectableModels(library, t("panel.unknownArchitecture"));
+  const meshModels = selectableMeshModels(library);
   const [flows, setFlows] = useState<FlowDocument[]>([]);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -57,10 +62,6 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
   const selected = flows.find((flow) => flow.id === selectedId) ?? null;
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
-  const template =
-    selected === null
-      ? null
-      : (templates.find((entry) => entry.id === selected.templateId) ?? null);
 
   useEffect(() => {
     void loadFlows().then((rows) => {
@@ -70,6 +71,9 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
         setSelectedId(first.id);
       }
     });
+  }, []);
+
+  useEffect(() => {
     void loadTemplates().then(setTemplates);
   }, []);
 
@@ -208,7 +212,7 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
         </ul>
         {flows.length === 0 ? <p className="text-sm text-zinc-500">{t("flows.empty")}</p> : null}
       </aside>
-      <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+      <section className="flex min-h-0 min-w-0 flex-[1.2] flex-col gap-4 overflow-y-auto p-6">
         <h1 className="text-lg font-semibold">{t("flows.title")}</h1>
         {failure !== null ? <p role="alert">{failure}</p> : null}
         {queued ? <p>{t("flows.queued")}</p> : null}
@@ -223,27 +227,6 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
                 onChange={(event) => void persist({ ...selected, name: event.target.value })}
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t("flows.template")}
-              <select
-                aria-label={t("flows.template")}
-                className={fieldClass}
-                value={selected.templateId ?? ""}
-                onChange={(event) =>
-                  void persist({
-                    ...selected,
-                    templateId: event.target.value === "" ? null : event.target.value,
-                  })
-                }
-              >
-                <option value="">{t("flows.noTemplate")}</option>
-                {templates.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.name}
-                  </option>
-                ))}
-              </select>
-            </label>
             {selected.path !== null ? (
               <p className="text-sm text-zinc-500">{t("flows.savedTo", { path: selected.path })}</p>
             ) : null}
@@ -254,7 +237,6 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
                 {t("templates.delete")}
               </Button>
             </div>
-            <QueueControls />
             <ol className="flex flex-col gap-3">
               {selected.items.map((item, index) => (
                 <li key={item.id}>
@@ -262,7 +244,9 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
                     item={item}
                     index={index}
                     total={selected.items.length}
-                    template={template}
+                    templates={templates}
+                    imageModels={imageModels}
+                    meshModels={meshModels}
                     onChange={(nextItem) => {
                       const current = selectedRef.current;
                       if (current === null) {
@@ -300,7 +284,7 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
               onClick={() =>
                 void persist({
                   ...selected,
-                  items: [...selected.items, blankItem(nextId(), template?.count ?? 1)],
+                  items: [...selected.items, blankItem(nextId())],
                 })
               }
             >
@@ -309,6 +293,7 @@ export function FlowsView({ onBack, command }: FlowsViewProps) {
           </div>
         )}
       </section>
+      <FlowPreview queued={queued} />
     </div>
   );
 }

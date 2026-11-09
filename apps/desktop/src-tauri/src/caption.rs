@@ -1,15 +1,29 @@
 //! Título curto do prompt recente. A imagem não espera este passo.
 
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant};
+
+use serde::Serialize;
+use tauri::{AppHandle, Emitter};
 
 use crate::db::Database;
 use crate::paths::AppPaths;
 
 const TITLE_LIMIT: usize = 60;
+const TITLE_WORDS: usize = 6;
+const TITLE_EVENT: &str = "prompt://title";
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PromptTitlePayload {
+    prompt: String,
+    title: String,
+}
 
 /// Gera o título em segundo plano. Falha silenciosa: o prompt continua como está.
-pub fn schedule(database: &Database, paths: &AppPaths, prompt: &str) {
+pub fn schedule(app: &AppHandle, database: &Database, paths: &AppPaths, prompt: &str) {
     let prompt = prompt.trim();
     if prompt.is_empty() {
         return;
@@ -18,28 +32,30 @@ pub fn schedule(database: &Database, paths: &AppPaths, prompt: &str) {
         .prompt_title(prompt)
         .ok()
         .flatten()
-        .is_some_and(|title| !title.is_empty())
+        .is_some_and(|title| kept_title(&title, prompt))
     {
         return;
     }
+    let app = app.clone();
     let database = database.clone();
     let prompt = prompt.to_owned();
     let models = crate::models::folder(paths, &database);
     tauri::async_runtime::spawn_blocking(move || {
-        if let Some(title) = caption_of(&prompt, &models) {
-            let _ = database.set_prompt_title(&prompt, &title);
+        if let Some(title) = caption_of(&prompt, &models)
+            && database.set_prompt_title(&prompt, &title).is_ok()
+        {
+            let _ = app.emit(TITLE_EVENT, PromptTitlePayload { prompt, title });
         }
     });
 }
 
 fn caption_of(prompt: &str, models: &Path) -> Option<String> {
     if let Ok(command) = std::env::var("VOXEL_CAPTION_CMD") {
-        return run_command(&command, &[], prompt);
+        return run_command(&command, &[], prompt, prompt);
     }
-    if let Some(title) = caption_gguf(prompt, models) {
-        return Some(title);
-    }
-    caption_ollama(prompt)
+    caption_gguf(prompt, models)
+        .or_else(|| caption_ollama(prompt))
+        .or_else(|| heuristic_title(prompt))
 }
 
 fn caption_gguf(prompt: &str, models: &Path) -> Option<String> {
@@ -57,6 +73,7 @@ fn caption_gguf(prompt: &str, models: &Path) -> Option<String> {
             &instruction(prompt),
         ],
         "",
+        prompt,
     )
 }
 
@@ -71,10 +88,29 @@ fn caption_ollama(prompt: &str) -> Option<String> {
         return None;
     }
     let model = ollama_model(&String::from_utf8_lossy(&listed.stdout))?;
+    let prompt_text = instruction(prompt);
+    let quiet = [
+        "run",
+        "--nowordwrap",
+        "--think=false",
+        "--hidethinking",
+        model.as_str(),
+        prompt_text.as_str(),
+    ];
+    if let Some(title) = run_command("ollama", &quiet, "", prompt) {
+        return Some(title);
+    }
     run_command(
         "ollama",
-        &["run", "--nowordwrap", &model, &instruction(prompt)],
+        &[
+            "run",
+            "--nowordwrap",
+            "--think=false",
+            model.as_str(),
+            prompt_text.as_str(),
+        ],
         "",
+        prompt,
     )
 }
 
@@ -165,61 +201,174 @@ fn ollama_model(list: &str) -> Option<String> {
 }
 
 fn instruction(prompt: &str) -> String {
-    format!("Resuma em até 6 palavras, sem aspas e sem ponto final:\n{prompt}\nTítulo:")
+    format!(
+        "Write a 3-6 word image title. Do not copy the prompt. Reply with the title only.\n{prompt}"
+    )
 }
 
-fn run_command(bin: &str, args: &[&str], stdin_text: &str) -> Option<String> {
+fn run_command(bin: &str, args: &[&str], stdin_text: &str, prompt: &str) -> Option<String> {
     let mut child = Command::new(bin);
     child
         .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
-    if stdin_text.is_empty() {
-        let output = child.output().ok()?;
-        if !output.status.success() {
-            return None;
-        }
-        return clean_title(&String::from_utf8_lossy(&output.stdout));
+    if !stdin_text.is_empty() {
+        child.stdin(Stdio::piped());
     }
-    child.stdin(Stdio::piped());
     let mut spawned = child.spawn().ok()?;
-    if let Some(mut stdin) = spawned.stdin.take() {
-        use std::io::Write;
+    if !stdin_text.is_empty()
+        && let Some(mut stdin) = spawned.stdin.take()
+    {
         let _ = stdin.write_all(stdin_text.as_bytes());
     }
-    let output = spawned.wait_with_output().ok()?;
-    if !output.status.success() {
+    let mut stdout = spawned.stdout.take()?;
+    let reader = std::thread::spawn(move || {
+        let mut raw = String::new();
+        let _ = stdout.read_to_string(&mut raw);
+        raw
+    });
+    let Some(status) = wait_limited(&mut spawned, Duration::from_secs(25)) else {
+        let _ = spawned.kill();
+        let _ = spawned.wait();
+        let _ = reader.join();
+        return None;
+    };
+    if !status.success() {
+        let _ = reader.join();
         return None;
     }
-    clean_title(&String::from_utf8_lossy(&output.stdout))
+    let raw = reader.join().ok()?;
+    clean_title(&raw, prompt)
 }
 
-fn clean_title(raw: &str) -> Option<String> {
-    let line = raw
+fn wait_limited(child: &mut Child, limit: Duration) -> Option<std::process::ExitStatus> {
+    let started = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return Some(status),
+            Ok(None) if started.elapsed() >= limit => return None,
+            Ok(None) => std::thread::sleep(Duration::from_millis(40)),
+            Err(_) => return None,
+        }
+    }
+}
+
+fn strip_think(raw: &str) -> String {
+    let mut out = String::new();
+    let mut rest = raw;
+    while let Some(start) = rest.find("<think>") {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + "<think>".len()..];
+        if let Some(end) = after.find("</think>") {
+            rest = &after[end + "</think>".len()..];
+        } else {
+            return out;
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+fn is_noise_line(line: &str) -> bool {
+    let lower = line.trim().to_ascii_lowercase();
+    lower.is_empty()
+        || lower.starts_with("título")
+        || lower.starts_with("thinking")
+        || lower.starts_with("pensando")
+        || matches!(lower.as_str(), "think" | "reasoning" | "wait" | "hmm")
+}
+
+fn kept_title(title: &str, prompt: &str) -> bool {
+    usable_title(title) && !echoes_prompt(title, prompt)
+}
+
+fn usable_title(title: &str) -> bool {
+    let trimmed = title.trim();
+    !trimmed.is_empty() && !is_noise_line(trimmed)
+}
+
+fn echoes_prompt(title: &str, prompt: &str) -> bool {
+    let title = title.trim().to_ascii_lowercase();
+    let prompt = prompt.trim().to_ascii_lowercase();
+    if title.chars().count() < 16 {
+        return false;
+    }
+    prompt.starts_with(&title) || title.starts_with(&prompt)
+}
+
+fn clip_words(title: &str, max: usize) -> String {
+    let words: Vec<&str> = title.split_whitespace().collect();
+    if words.len() <= max {
+        return title.trim().to_owned();
+    }
+    words.into_iter().take(max).collect::<Vec<_>>().join(" ")
+}
+
+fn heuristic_title(prompt: &str) -> Option<String> {
+    let first = prompt.split(',').next()?.trim();
+    let words = first.split_whitespace().count();
+    if !(2..=TITLE_WORDS).contains(&words) {
+        return None;
+    }
+    let chars = first.chars().count();
+    if !(8..=40).contains(&chars) {
+        return None;
+    }
+    kept_title(first, prompt).then(|| first.to_owned())
+}
+
+fn clean_title(raw: &str, prompt: &str) -> Option<String> {
+    let stripped = strip_think(raw);
+    let line = stripped
         .lines()
         .map(str::trim)
-        .find(|line| !line.is_empty() && !line.starts_with("Título"))?;
+        .find(|line| !is_noise_line(line))?;
     let trimmed = line.trim_matches(|mark| mark == '"' || mark == '\'' || mark == '.');
-    let mut title = trimmed.replace('\n', " ");
+    let mut title = clip_words(&trimmed.replace('\n', " "), TITLE_WORDS);
     if title.chars().count() > TITLE_LIMIT {
         title = title.chars().take(TITLE_LIMIT).collect();
     }
     let title = title.trim().to_owned();
-    if title.is_empty() { None } else { Some(title) }
+    kept_title(&title, prompt).then_some(title)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{clean_title, image_weight, ollama_model};
+    use super::{clean_title, heuristic_title, image_weight, ollama_model};
     use std::path::Path;
 
     #[test]
     fn o_titulo_fica_curto_e_sem_aspas() {
         assert_eq!(
-            clean_title("  \"gato no telhado.\"  \n"),
+            clean_title("  \"gato no telhado.\"  \n", "um gato"),
             Some("gato no telhado".to_owned())
         );
-        assert_eq!(clean_title("\n\n"), None);
+        assert_eq!(clean_title("\n\n", "um gato"), None);
+    }
+
+    #[test]
+    fn ignora_o_raciocinio_e_pega_o_titulo() {
+        assert_eq!(
+            clean_title("Thinking\ngato no telhado\n", "um gato"),
+            Some("gato no telhado".to_owned())
+        );
+        assert_eq!(
+            clean_title(
+                "<think>\nlongo raciocínio\n</think>\nfelino no telhado\n",
+                "um gato"
+            ),
+            Some("felino no telhado".to_owned())
+        );
+        assert_eq!(clean_title("Thinking\n", "um gato"), None);
+        assert_eq!(clean_title("Thinking...\n", "um gato"), None);
+    }
+
+    #[test]
+    fn recusa_o_prompt_copiado() {
+        let prompt = "Female mage, age 21, cheerful expression, Bright yellow eyes";
+        assert_eq!(clean_title(prompt, prompt), None);
+        assert_eq!(heuristic_title(prompt).as_deref(), Some("Female mage"));
+        assert_eq!(heuristic_title("um gato"), None);
     }
 
     #[test]

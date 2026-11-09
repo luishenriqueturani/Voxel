@@ -20,3 +20,11 @@ export function selectableModels(
           : model.name,
     }));
 }
+
+export function selectableMeshModels(
+  library: readonly ChoiceModel[],
+): { id: string; name: string }[] {
+  return library
+    .filter((model) => model.installed && model.kind === "mesh")
+    .map((model) => ({ id: model.id, name: model.name }));
+}

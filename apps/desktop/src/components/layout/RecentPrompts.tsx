@@ -2,8 +2,10 @@ import { Star } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { paramsFromHistory } from "../../lib/historyParams";
+import { promptLabel } from "../../lib/promptTitle";
 import {
   hasOlderPrompts,
+  listenToPromptTitle,
   loadOlderPrompts,
   loadRecentPrompts,
   type PromptEntry,
@@ -66,6 +68,36 @@ export function RecentPrompts({
     };
   }, [load, onError]);
 
+  useEffect(() => {
+    let cancelled = false;
+    let stop = () => {};
+    void listenToPromptTitle((payload) => {
+      if (cancelled) {
+        return;
+      }
+      void load(expanded.current).catch((error: unknown) => {
+        if (!cancelled) {
+          onError(error);
+        }
+      });
+      setSelected((current) =>
+        current !== null && current.prompt === payload.prompt
+          ? { ...current, title: payload.title }
+          : current,
+      );
+    }).then((unlisten) => {
+      if (cancelled) {
+        unlisten();
+        return;
+      }
+      stop = unlisten;
+    });
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [load, onError]);
+
   async function toggle(entry: PromptEntry) {
     const pinned = !entry.pinned;
     try {
@@ -102,7 +134,7 @@ export function RecentPrompts({
     return (
       entry.prompt.toLowerCase().includes(needle) ||
       entry.negativePrompt.toLowerCase().includes(needle) ||
-      (entry.title ?? "").toLowerCase().includes(needle)
+      promptLabel(entry).toLowerCase().includes(needle)
     );
   });
   const running =
@@ -147,7 +179,7 @@ export function RecentPrompts({
                   className="min-w-0 flex-1 truncate text-left text-sm"
                   onClick={() => setSelected(entry)}
                 >
-                  {entry.title && entry.title.trim() !== "" ? entry.title : entry.prompt}
+                  {promptLabel(entry)}
                 </button>
                 <button
                   type="button"

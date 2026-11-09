@@ -427,6 +427,7 @@ mod tests {
                 prompt: "ferreiro".to_owned(),
                 count: 1,
                 mesh: MeshMode::All,
+                template_id: None,
                 overrides: FlowOverrides::default(),
             },
             FlowItem {
@@ -434,6 +435,7 @@ mod tests {
                 prompt: "guarda".to_owned(),
                 count: 1,
                 mesh: MeshMode::None,
+                template_id: None,
                 overrides: FlowOverrides::default(),
             },
         ]

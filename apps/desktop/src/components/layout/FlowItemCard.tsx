@@ -3,20 +3,28 @@ import { useTranslation } from "react-i18next";
 import {
   type FlowItem,
   type FlowOverrides,
-  type FlowTemplate,
-  MESH_MODES,
   type MeshMode,
+  clampItemCount,
+  meshForOutput,
   needsAllConfirmation,
+  outputOf,
   resolveItem,
 } from "../../lib/flow";
+import { extraNegative } from "../../lib/templatePrompt";
+import type { PromptTemplate } from "../../native/templates";
 import { Button } from "../ui/button";
-import { ASPECTS } from "./PromptPanel";
+import { ASPECTS, type AspectRatio, frameSize } from "./PromptPanel";
+import { PromptTemplateSelect } from "./PromptTemplateSelect";
+
+type PanelModel = { id: string; name: string };
 
 type FlowItemCardProps = {
   item: FlowItem;
   index: number;
   total: number;
-  template: FlowTemplate | null;
+  templates: PromptTemplate[];
+  imageModels: PanelModel[];
+  meshModels: PanelModel[];
   onChange: (item: FlowItem) => void;
   onMove: (from: number, to: number) => void;
   onRemove: () => void;
@@ -25,18 +33,40 @@ type FlowItemCardProps = {
 const fieldClass =
   "w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100";
 
+const HORIZONTAL = new Set(["4:3", "3:2", "16:9", "21:9"]);
+
 export function FlowItemCard({
   item,
   index,
   total,
-  template,
+  templates,
+  imageModels,
+  meshModels,
   onChange,
   onMove,
   onRemove,
 }: FlowItemCardProps) {
   const { t } = useTranslation();
   const [confirmAll, setConfirmAll] = useState(false);
-  const resolved = resolveItem(template, item);
+  const template = templates.find((entry) => entry.id === item.templateId) ?? null;
+  const resolved = resolveItem(item, template);
+  const mode = outputOf(item.mesh);
+  const aspect = isAspect(resolved.aspect) ? resolved.aspect : "1:1";
+  const size = frameSize(resolved.resolution, aspect);
+
+  function patch(overrides: FlowOverrides) {
+    onChange({ ...item, overrides });
+  }
+
+  function pickOutput(next: "2d" | "3d") {
+    const mesh = meshForOutput(next, item.count);
+    if (needsAllConfirmation(item.count, mesh)) {
+      setConfirmAll(true);
+      return;
+    }
+    setConfirmAll(false);
+    onChange({ ...item, mesh });
+  }
 
   function pickMesh(mesh: MeshMode) {
     if (needsAllConfirmation(item.count, mesh)) {
@@ -65,46 +95,82 @@ export function FlowItemCard({
           {t("flows.removeItem")}
         </Button>
       </header>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        {t("flows.prompt")}
+      <Field label={t("flows.prompt")}>
         <textarea
           aria-label={t("flows.prompt")}
           className={`${fieldClass} min-h-16`}
           value={item.prompt}
           onChange={(event) => onChange({ ...item, prompt: event.target.value })}
         />
-      </label>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        {t("templates.final")}: {resolved.prompt || t("templates.noNegative")}
-      </p>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        {t("panel.count")}
-        <input
-          type="number"
-          min={1}
-          max={64}
-          aria-label={t("panel.count")}
-          className={fieldClass}
-          value={item.count}
-          onChange={(event) => onChange({ ...item, count: Number(event.target.value) })}
+      </Field>
+      {resolved.prompt === "" || resolved.prompt === item.prompt ? null : (
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+          <span className="font-medium">{t("templates.final")}: </span>
+          {resolved.prompt}
+        </p>
+      )}
+      <PromptTemplateSelect
+        templates={templates}
+        templateId={item.templateId ?? ""}
+        prompt={item.prompt}
+        negativePrompt={item.overrides.negative ?? ""}
+        showPreview={false}
+        onChange={(id) => onChange({ ...item, templateId: id === "" ? null : id })}
+      />
+      <Field label={t("panel.negative")}>
+        <textarea
+          aria-label={t("panel.negative")}
+          className={`${fieldClass} min-h-12`}
+          value={resolved.negative}
+          onChange={(event) =>
+            patch({
+              ...item.overrides,
+              negative: extraNegative(template?.negative ?? "", event.target.value),
+            })
+          }
         />
-      </label>
+      </Field>
       <fieldset className="flex flex-col gap-1">
-        <legend className="text-sm font-medium">{t("flows.meshLabel")}</legend>
-        <div className="flex flex-wrap gap-3">
-          {MESH_MODES.map((mesh) => (
-            <label key={mesh} className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name={`mesh-${item.id}`}
-                checked={item.mesh === mesh}
-                onChange={() => pickMesh(mesh)}
-              />
-              {t(`flows.mesh.${mesh}`)}
-            </label>
-          ))}
+        <legend className="text-sm font-medium">{t("panel.output")}</legend>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name={`output-${item.id}`}
+              checked={mode === "2d"}
+              onChange={() => pickOutput("2d")}
+            />
+            {t("panel.output2d")}
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name={`output-${item.id}`}
+              checked={mode === "3d"}
+              onChange={() => pickOutput("3d")}
+            />
+            {t("panel.output3d")}
+          </label>
         </div>
       </fieldset>
+      {mode === "2d" ? (
+        <ImageFields
+          item={item}
+          resolved={resolved}
+          imageModels={imageModels}
+          size={size}
+          onItemChange={onChange}
+          onOverrides={patch}
+        />
+      ) : (
+        <MeshFields
+          item={item}
+          resolved={resolved}
+          meshModels={meshModels}
+          onMesh={pickMesh}
+          onOverrides={patch}
+        />
+      )}
       {confirmAll ? (
         <div className="flex flex-col gap-2 rounded-md bg-zinc-100 p-3 dark:bg-zinc-900">
           <p role="status">{t("flows.confirmAllBody", { count: item.count })}</p>
@@ -123,195 +189,211 @@ export function FlowItemCard({
           </div>
         </div>
       ) : null}
-      <OverridesFields
-        item={item}
-        template={template}
-        onChange={(overrides) => onChange({ ...item, overrides })}
-      />
     </article>
   );
 }
 
-function OverridesFields({
+function ImageFields({
   item,
-  template,
-  onChange,
+  resolved,
+  imageModels,
+  size,
+  onItemChange,
+  onOverrides,
 }: {
   item: FlowItem;
-  template: FlowTemplate | null;
-  onChange: (overrides: FlowOverrides) => void;
+  resolved: ReturnType<typeof resolveItem>;
+  imageModels: PanelModel[];
+  size: { width: number; height: number };
+  onItemChange: (item: FlowItem) => void;
+  onOverrides: (overrides: FlowOverrides) => void;
 }) {
   const { t } = useTranslation();
   const overrides = item.overrides;
-  const resolved = resolveItem(template, item);
-
-  function toggle<Key extends keyof FlowOverrides>(
-    key: Key,
-    enabled: boolean,
-    fallback: NonNullable<FlowOverrides[Key]>,
-  ) {
-    const next = { ...overrides };
-    if (enabled) {
-      next[key] = fallback;
-    } else {
-      delete next[key];
-    }
-    onChange(next);
-  }
-
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-medium">{t("flows.overrides")}</legend>
-      <OverrideToggle
-        label={t("templates.negative")}
-        enabled={overrides.negative !== undefined}
-        onToggle={(enabled) => toggle("negative", enabled, resolved.negative)}
-      >
-        <textarea
-          aria-label={t("templates.negative")}
-          className={`${fieldClass} min-h-12`}
-          value={overrides.negative ?? ""}
-          onChange={(event) => onChange({ ...overrides, negative: event.target.value })}
-        />
-      </OverrideToggle>
-      <OverrideToggle
-        label={t("templates.model2d")}
-        enabled={overrides.model2d !== undefined}
-        onToggle={(enabled) => toggle("model2d", enabled, resolved.model2d)}
-      >
+    <>
+      <Field label={t("panel.count")}>
         <input
-          aria-label={t("templates.model2d")}
+          type="number"
+          min={1}
+          max={64}
+          aria-label={t("panel.count")}
           className={fieldClass}
-          value={overrides.model2d ?? ""}
-          onChange={(event) => onChange({ ...overrides, model2d: event.target.value })}
+          value={item.count}
+          onChange={(event) =>
+            onItemChange({ ...item, count: clampItemCount(Number(event.target.value)) })
+          }
         />
-      </OverrideToggle>
-      <OverrideToggle
-        label={t("templates.model3d")}
-        enabled={overrides.model3d !== undefined}
-        onToggle={(enabled) => toggle("model3d", enabled, resolved.model3d)}
-      >
-        <input
-          aria-label={t("templates.model3d")}
-          className={fieldClass}
-          value={overrides.model3d ?? ""}
-          onChange={(event) => onChange({ ...overrides, model3d: event.target.value })}
-        />
-      </OverrideToggle>
-      <OverrideToggle
-        label={t("panel.resolution")}
-        enabled={overrides.resolution !== undefined}
-        onToggle={(enabled) => toggle("resolution", enabled, resolved.resolution)}
-      >
+      </Field>
+      <ModelSelect
+        label={t("panel.model")}
+        models={imageModels}
+        value={resolved.model2d}
+        onChange={(model2d) => onOverrides({ ...overrides, model2d })}
+      />
+      <Field label={t("panel.resolution")}>
         <select
           aria-label={t("panel.resolution")}
           className={fieldClass}
-          value={String(overrides.resolution ?? resolved.resolution)}
-          onChange={(event) => onChange({ ...overrides, resolution: Number(event.target.value) })}
+          value={String(resolved.resolution)}
+          onChange={(event) =>
+            onOverrides({ ...overrides, resolution: Number(event.target.value) })
+          }
         >
           <option value="512">512</option>
           <option value="768">768</option>
           <option value="1024">1024</option>
         </select>
-      </OverrideToggle>
-      <OverrideToggle
-        label={t("panel.aspect")}
-        enabled={overrides.aspect !== undefined}
-        onToggle={(enabled) => toggle("aspect", enabled, resolved.aspect)}
-      >
+      </Field>
+      <Field label={t("panel.aspect")}>
         <select
           aria-label={t("panel.aspect")}
           className={fieldClass}
-          value={overrides.aspect ?? resolved.aspect}
-          onChange={(event) => onChange({ ...overrides, aspect: event.target.value })}
+          value={resolved.aspect}
+          onChange={(event) => onOverrides({ ...overrides, aspect: event.target.value })}
         >
-          {ASPECTS.map((aspect) => (
-            <option key={aspect} value={aspect}>
-              {aspect}
-            </option>
-          ))}
+          <option value="1:1">1:1</option>
+          <optgroup label={t("panel.aspectHorizontal")}>
+            {ASPECTS.filter((aspect) => HORIZONTAL.has(aspect)).map((aspect) => (
+              <option key={aspect} value={aspect}>
+                {aspect}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label={t("panel.aspectVertical")}>
+            {ASPECTS.filter((aspect) => !HORIZONTAL.has(aspect) && aspect !== "1:1").map(
+              (aspect) => (
+                <option key={aspect} value={aspect}>
+                  {aspect}
+                </option>
+              ),
+            )}
+          </optgroup>
         </select>
-      </OverrideToggle>
-      <OverrideToggle
-        label={t("panel.steps")}
-        enabled={overrides.steps !== undefined}
-        onToggle={(enabled) => toggle("steps", enabled, resolved.steps)}
-      >
+        <span className="text-xs text-zinc-500">
+          {t("panel.size", { width: size.width, height: size.height })}
+        </span>
+      </Field>
+      <Field label={t("panel.steps")}>
         <input
+          type="number"
+          min={1}
+          max={500}
           aria-label={t("panel.steps")}
           className={fieldClass}
-          inputMode="numeric"
-          value={String(overrides.steps ?? "")}
-          onChange={(event) => onChange({ ...overrides, steps: Number(event.target.value) })}
+          value={resolved.steps}
+          onChange={(event) => onOverrides({ ...overrides, steps: Number(event.target.value) })}
         />
-      </OverrideToggle>
-      <OverrideToggle
-        label={t("panel.cfg")}
-        enabled={overrides.cfg !== undefined}
-        onToggle={(enabled) => toggle("cfg", enabled, resolved.cfg)}
-      >
+      </Field>
+      <Field label={t("panel.cfg")}>
         <input
+          type="number"
+          min={0}
+          max={30}
+          step={0.5}
           aria-label={t("panel.cfg")}
           className={fieldClass}
-          inputMode="decimal"
-          value={String(overrides.cfg ?? "")}
-          onChange={(event) => onChange({ ...overrides, cfg: Number(event.target.value) })}
+          value={resolved.cfg}
+          onChange={(event) => onOverrides({ ...overrides, cfg: Number(event.target.value) })}
         />
-      </OverrideToggle>
-      <OverrideToggle
-        label={t("panel.seed")}
-        enabled={overrides.seed !== undefined}
-        onToggle={(enabled) => toggle("seed", enabled, resolved.seed ?? "")}
-      >
-        <input
-          aria-label={t("panel.seed")}
-          className={fieldClass}
-          value={overrides.seed ?? ""}
-          onChange={(event) => onChange({ ...overrides, seed: event.target.value })}
-        />
-      </OverrideToggle>
-      <OverrideToggle
-        label={t("templates.postprocess")}
-        enabled={overrides.postprocess !== undefined}
-        onToggle={(enabled) => toggle("postprocess", enabled, resolved.postprocess)}
-      >
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={overrides.postprocess === true}
-            onChange={(event) => onChange({ ...overrides, postprocess: event.target.checked })}
-          />
-          {t("templates.postprocess")}
-        </label>
-      </OverrideToggle>
-    </fieldset>
+      </Field>
+    </>
   );
 }
 
-function OverrideToggle({
-  label,
-  enabled,
-  onToggle,
-  children,
+function MeshFields({
+  item,
+  resolved,
+  meshModels,
+  onMesh,
+  onOverrides,
 }: {
-  label: string;
-  enabled: boolean;
-  onToggle: (enabled: boolean) => void;
-  children: ReactNode;
+  item: FlowItem;
+  resolved: ReturnType<typeof resolveItem>;
+  meshModels: PanelModel[];
+  onMesh: (mesh: MeshMode) => void;
+  onOverrides: (overrides: FlowOverrides) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-1">
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={enabled}
-          aria-label={t("flows.override", { field: label })}
-          onChange={(event) => onToggle(event.target.checked)}
-        />
-        {label}
-      </label>
-      {enabled ? children : <p className="text-xs text-zinc-500">{t("flows.inherit")}</p>}
+    <>
+      <ModelSelect
+        label={t("templates.model3d")}
+        models={meshModels}
+        value={resolved.model3d}
+        onChange={(model3d) => onOverrides({ ...item.overrides, model3d })}
+      />
+      <fieldset className="flex flex-col gap-1">
+        <legend className="text-sm font-medium">{t("flows.meshLabel")}</legend>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name={`mesh-${item.id}`}
+              checked={item.mesh === "all"}
+              onChange={() => onMesh("all")}
+            />
+            {t("flows.mesh.all")}
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name={`mesh-${item.id}`}
+              checked={item.mesh === "later"}
+              onChange={() => onMesh("later")}
+            />
+            {t("flows.mesh.later")}
+          </label>
+        </div>
+      </fieldset>
+    </>
+  );
+}
+
+function ModelSelect({
+  label,
+  models,
+  value,
+  onChange,
+}: {
+  label: string;
+  models: PanelModel[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Field label={label}>
+      <select
+        aria-label={label}
+        className={fieldClass}
+        disabled={models.length === 0}
+        value={models.some((model) => model.id === value) ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {models.length === 0 ? (
+          <option value="">{t("panel.noModel")}</option>
+        ) : (
+          models.map((model) => (
+            <option key={model.id} value={model.id}>
+              {model.name}
+            </option>
+          ))
+        )}
+      </select>
+    </Field>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 text-sm font-medium">
+      {label}
+      {children}
     </div>
   );
+}
+
+function isAspect(value: string): value is AspectRatio {
+  return (ASPECTS as readonly string[]).includes(value);
 }

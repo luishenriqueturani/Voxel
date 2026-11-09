@@ -37,6 +37,14 @@ const MIGRATIONS: &[Migration] = &[
         version: 9,
         sql: include_str!("../migrations/009_prompt_titles.sql"),
     },
+    Migration {
+        version: 10,
+        sql: include_str!("../migrations/010_prompt_templates.sql"),
+    },
+    Migration {
+        version: 11,
+        sql: include_str!("../migrations/011_item_templates.sql"),
+    },
 ];
 
 struct Migration {
@@ -161,14 +169,14 @@ mod tests {
         let database = migrated();
         database
             .apply_one(&Migration {
-                version: 10,
+                version: 12,
                 sql: "SELECT 1;",
             })
             .unwrap();
 
         assert!(matches!(
             database.migrate(),
-            Err(DbError::NewerThanApp { version: 10 })
+            Err(DbError::NewerThanApp { version: 12 })
         ));
     }
 
@@ -196,7 +204,7 @@ mod tests {
         let database = migrated();
         database
             .apply_one(&Migration {
-                version: 11,
+                version: 13,
                 sql: "SELECT 1;",
             })
             .unwrap();
@@ -204,8 +212,8 @@ mod tests {
         assert!(matches!(
             database.current_version(),
             Err(DbError::Gap {
-                expected: 10,
-                found: 11
+                expected: 12,
+                found: 13
             })
         ));
     }

@@ -23,10 +23,7 @@ impl Database {
         if flow.items.is_empty() {
             return Err(DbError::Invalid("fluxo sem itens"));
         }
-        let template = match flow.template_id.as_deref() {
-            Some(id) => Some(self.template(id)?),
-            None => None,
-        };
+        let templates = self.list_templates()?;
         let job_id = new_id();
         let now = utc_timestamp(unix_now());
         {
@@ -37,7 +34,10 @@ impl Database {
                 params![job_id, flow.id, flow.name, now],
             )?;
             for (position, item) in flow.items.iter().enumerate() {
-                let resolved = resolve_item(template.as_ref(), item);
+                let template_id = item.template_id.as_deref().or(flow.template_id.as_deref());
+                let template =
+                    template_id.and_then(|id| templates.iter().find(|entry| entry.id == id));
+                let resolved = resolve_item(item, template);
                 let payload = serde_json::to_string(&resolved)
                     .map_err(|_| DbError::Invalid("item de fila inválido"))?;
                 let index =
@@ -344,25 +344,7 @@ fn image_paths_of(
 mod tests {
     use crate::db::Database;
     use crate::db::flows::{FlowDraft, FlowItem, FlowOverrides, MeshMode};
-    use crate::db::templates::TemplateDraft;
     use voxel_queue::{Action, next_action};
-
-    fn template() -> TemplateDraft {
-        TemplateDraft {
-            name: "Personagem".to_owned(),
-            body: "{prompt}, T-pose".to_owned(),
-            negative: "fundo".to_owned(),
-            model_2d: "sd15".to_owned(),
-            model_3d: "triposr".to_owned(),
-            resolution: 512,
-            aspect: "1:1".to_owned(),
-            steps: 20,
-            cfg: 7.0,
-            seed: String::new(),
-            count: 1,
-            postprocess: false,
-        }
-    }
 
     fn flow_items() -> Vec<FlowItem> {
         vec![
@@ -371,6 +353,7 @@ mod tests {
                 prompt: "ferreiro".to_owned(),
                 count: 1,
                 mesh: MeshMode::All,
+                template_id: None,
                 overrides: FlowOverrides::default(),
             },
             FlowItem {
@@ -378,6 +361,7 @@ mod tests {
                 prompt: "guarda".to_owned(),
                 count: 1,
                 mesh: MeshMode::None,
+                template_id: None,
                 overrides: FlowOverrides::default(),
             },
         ]
@@ -387,18 +371,17 @@ mod tests {
     fn enfileira_e_retoma_do_mesmo_ponto() {
         let database = Database::open_in_memory().unwrap();
         database.migrate().unwrap();
-        let template = database.create_template(&template()).unwrap();
         let flow = database
             .create_flow(&FlowDraft {
                 name: "NPCs".to_owned(),
-                template_id: Some(template.id),
+                template_id: None,
                 path: None,
                 items: flow_items(),
             })
             .unwrap();
         let job = database.enqueue_flow(&flow.id).unwrap();
         assert_eq!(job.items.len(), 2);
-        assert!(job.items[0].prompt.contains("ferreiro"));
+        assert_eq!(job.items[0].prompt, "ferreiro");
         assert!(!job.end_retry);
         assert_eq!(database.active_queue_job().unwrap().unwrap().id, job.id);
 
@@ -492,5 +475,41 @@ mod tests {
             database.latest_queue_status().unwrap().as_deref(),
             Some("done")
         );
+    }
+
+    #[test]
+    fn enfileira_compondo_o_template() {
+        let database = Database::open_in_memory().unwrap();
+        database.migrate().unwrap();
+        let template = database
+            .create_template(&crate::db::TemplateDraft {
+                name: "Personagem".to_owned(),
+                body: "T-pose".to_owned(),
+                negative: "fundo".to_owned(),
+                placement: crate::db::templates::PromptPlacement::After,
+            })
+            .unwrap();
+        let flow = database
+            .create_flow(&FlowDraft {
+                name: "NPCs".to_owned(),
+                template_id: None,
+                path: None,
+                items: vec![FlowItem {
+                    id: "a".to_owned(),
+                    prompt: "ferreiro".to_owned(),
+                    count: 1,
+                    mesh: MeshMode::None,
+                    template_id: Some(template.id),
+                    overrides: FlowOverrides {
+                        negative: Some("borrado".to_owned()),
+                        ..FlowOverrides::default()
+                    },
+                }],
+            })
+            .unwrap();
+        let job = database.enqueue_flow(&flow.id).unwrap();
+        assert_eq!(job.items[0].prompt, "ferreiro, T-pose");
+        assert_eq!(job.items[0].resolved.prompt, "ferreiro, T-pose");
+        assert_eq!(job.items[0].resolved.negative, "fundo, borrado");
     }
 }

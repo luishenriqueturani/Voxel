@@ -230,7 +230,9 @@ pub fn generate(
         database
             .record_generation(&record_of(&metadata, &output))
             .map_err(|error| error.to_string())?;
-        crate::caption::schedule(database, paths, &request.prompt);
+        if index == 0 {
+            crate::caption::schedule(app, database, paths, &request.prompt);
+        }
         let path = output.display().to_string();
         let _ = app.emit(
             "generation://progress",

@@ -14,6 +14,9 @@ function isItem(value: unknown): value is FlowItem {
     typeof item.prompt === "string" &&
     typeof item.count === "number" &&
     isMeshMode(item.mesh) &&
+    (item.templateId === null ||
+      item.templateId === undefined ||
+      typeof item.templateId === "string") &&
     typeof item.overrides === "object" &&
     item.overrides !== null
   );

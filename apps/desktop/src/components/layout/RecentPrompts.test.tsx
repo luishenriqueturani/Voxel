@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   hasOlderPrompts,
+  listenToPromptTitle,
   loadOlderPrompts,
   loadPromptImages,
   loadRecentPrompts,
@@ -17,6 +18,7 @@ vi.mock("../../native/history", () => ({
   hasOlderPrompts: vi.fn(async () => false),
   loadPromptImages: vi.fn(async () => []),
   setPromptFavorite: vi.fn(async () => undefined),
+  listenToPromptTitle: vi.fn(async () => () => undefined),
 }));
 
 const gato: PromptEntry = {
@@ -135,6 +137,35 @@ describe("RecentPrompts", () => {
       "title",
       "um gato",
     );
+  });
+
+  it("ignora o título Thinking e mostra o prompt", async () => {
+    vi.mocked(loadRecentPrompts).mockResolvedValue([{ ...gato, title: "Thinking" }]);
+    renderList();
+    expect(await screen.findByRole("button", { name: "um gato" })).toBeInTheDocument();
+  });
+
+  it("abre o recente com o título no cabeçalho", async () => {
+    vi.mocked(loadRecentPrompts).mockResolvedValue([{ ...gato, title: "felino no telhado" }]);
+    renderList();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "felino no telhado" }));
+    const dialog = await screen.findByRole("dialog", { name: "felino no telhado" });
+    expect(within(dialog).getByText("um gato")).toBeInTheDocument();
+  });
+
+  it("atualiza o título quando a legenda chega", async () => {
+    vi.mocked(loadRecentPrompts).mockResolvedValue([gato]);
+    let onTitle: ((payload: { prompt: string; title: string }) => void) | undefined;
+    vi.mocked(listenToPromptTitle).mockImplementation(async (handler) => {
+      onTitle = handler;
+      return () => undefined;
+    });
+    renderList();
+    expect(await screen.findByRole("button", { name: "um gato" })).toBeInTheDocument();
+    vi.mocked(loadRecentPrompts).mockResolvedValue([{ ...gato, title: "felino no telhado" }]);
+    onTitle?.({ prompt: "um gato", title: "felino no telhado" });
+    expect(await screen.findByRole("button", { name: "felino no telhado" })).toBeInTheDocument();
   });
 
   it("filtra pela busca e fixa o prompt", async () => {

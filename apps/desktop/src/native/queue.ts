@@ -95,6 +95,26 @@ export function queueCounts(job: QueueJob | null): {
   return { done, total: job.items.length, paused: job.status === "paused" };
 }
 
+const ITEM_STATUSES = ["pending", "images", "mesh", "done", "failed", "cancelled"] as const;
+
+export function itemStatusKey(status: string): (typeof ITEM_STATUSES)[number] {
+  return ITEM_STATUSES.find((item) => item === status) ?? "pending";
+}
+
+export function queueJobFinished(job: QueueJob): boolean {
+  return job.status === "done" || job.status === "cancelled";
+}
+
+export function previewQueueItem(job: QueueJob, pickedId: string | null): QueueItem | null {
+  return (
+    job.items.find((item) => item.id === pickedId) ??
+    job.items.find((item) => item.status === "images" || item.status === "mesh") ??
+    job.items.find((item) => (item.imagePaths?.length ?? 0) > 0) ??
+    job.items[0] ??
+    null
+  );
+}
+
 export function laterItems(job: QueueJob): QueueItem[] {
   return job.items.filter(
     (item) => item.mesh === "later" && item.status === "done" && (item.imagePaths?.length ?? 0) > 0,

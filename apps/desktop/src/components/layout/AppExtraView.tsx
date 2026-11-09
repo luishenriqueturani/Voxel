@@ -65,7 +65,7 @@ export function AppExtraView({
     return <TemplatesView onBack={onWorkspace} />;
   }
   if (view === "flows") {
-    return <FlowsView onBack={onWorkspace} command={flowCommand} />;
+    return <FlowsView onBack={onWorkspace} command={flowCommand} library={library} />;
   }
   if (view === "queue") {
     return <QueueView onBack={onWorkspace} />;

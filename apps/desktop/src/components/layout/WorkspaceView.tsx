@@ -16,7 +16,9 @@ import { pickReferenceImage } from "../../native/background";
 import type { ImageVersion } from "../../native/generation";
 import type { GalleryItem, PromptEntry } from "../../native/history";
 import { pickMeshImages } from "../../native/mesh";
+import type { PromptTemplate } from "../../native/templates";
 import { Button } from "../ui/button";
+import { PromptTemplateSelect } from "./PromptTemplateSelect";
 import { GalleryView } from "./GalleryView";
 import { ImageViewer } from "./ImageViewer";
 import { MaskEditor } from "./MaskEditor";
@@ -42,11 +44,18 @@ function ignorePaths(_paths: string[]) {
   return undefined;
 }
 
+function ignoreTemplate(_id: string) {
+  return undefined;
+}
+
 type WorkspaceViewProps = {
   prompt: string;
   onPromptChange: (value: string) => void;
   negativePrompt: string;
   onNegativePromptChange: (value: string) => void;
+  templates?: PromptTemplate[];
+  templateId?: string;
+  onTemplateChange?: (id: string) => void;
   models: WorkspaceModel[];
   modelId: string;
   onModelChange: (id: string) => void;
@@ -112,6 +121,9 @@ export function WorkspaceView({
   onPromptChange,
   negativePrompt,
   onNegativePromptChange,
+  templates = [],
+  templateId = "",
+  onTemplateChange = ignoreTemplate,
   models,
   modelId,
   onModelChange,
@@ -251,6 +263,15 @@ export function WorkspaceView({
   return (
     <div className="flex min-h-0 flex-1">
       <aside className="flex min-h-0 w-80 shrink-0 flex-col border-r border-zinc-200 dark:border-zinc-800">
+        <div className="shrink-0 px-3 pt-3">
+          <PromptTemplateSelect
+            templates={templates}
+            templateId={templateId}
+            prompt={prompt}
+            negativePrompt={negativePrompt}
+            onChange={onTemplateChange}
+          />
+        </div>
         <PromptPanel
           prompt={prompt}
           onPromptChange={onPromptChange}
@@ -290,6 +311,7 @@ export function WorkspaceView({
           onHistoryError={onHistoryError}
           onRestore={(entry) => {
             setShowGallery(false);
+            onTemplateChange("");
             onRestoreHistory(entry);
           }}
           onGenerate={startGenerate}

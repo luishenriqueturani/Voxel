@@ -1,4 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export type PromptEntry = {
   prompt: string;
@@ -175,6 +176,24 @@ export async function setPromptFavorite(entry: PromptEntry, pinned: boolean): Pr
     return;
   }
   await invoke("set_prompt_favorite", { entry, pinned });
+}
+
+export const TITLE_EVENT = "prompt://title";
+
+export type PromptTitleEvent = {
+  prompt: string;
+  title: string;
+};
+
+export async function listenToPromptTitle(
+  onTitle: (payload: PromptTitleEvent) => void,
+): Promise<() => void> {
+  if (!isTauri()) {
+    return () => undefined;
+  }
+  return listen<PromptTitleEvent>(TITLE_EVENT, (event) => {
+    onTitle(event.payload);
+  });
 }
 
 export async function loadGallery(

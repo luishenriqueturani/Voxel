@@ -13,6 +13,7 @@ import { useAppMenu } from "./hooks/useAppMenu";
 import { useErrorNotice } from "./hooks/useErrorNotice";
 import { useGenerateShortcut } from "./hooks/useGenerateShortcut";
 import { type Frame, useGenerationRequest } from "./hooks/useGenerationRequest";
+import { usePromptTemplates } from "./hooks/usePromptTemplates";
 import { useImageEdit } from "./hooks/useImageEdit";
 import { useMeshDrop } from "./hooks/useMeshDrop";
 import { usePythonEnvironment } from "./hooks/usePythonEnvironment";
@@ -172,6 +173,7 @@ export default function App() {
   });
 
   const python = usePythonEnvironment();
+  const promptTemplates = usePromptTemplates(prompt, negativePrompt, view);
   const {
     request: requestGeneration,
     sendImage,
@@ -200,8 +202,8 @@ export default function App() {
     setFrame,
     setHistoryRevision,
     params,
-    prompt,
-    negativePrompt,
+    prompt: promptTemplates.composed.prompt,
+    negativePrompt: promptTemplates.composed.negative,
     modelId,
     imageBackend,
     reportFailure,
@@ -449,6 +451,9 @@ export default function App() {
             onPromptChange={setPrompt}
             negativePrompt={negativePrompt}
             onNegativePromptChange={setNegativePrompt}
+            templates={promptTemplates.templates}
+            templateId={promptTemplates.templateId}
+            onTemplateChange={promptTemplates.setTemplateId}
             models={imageModels}
             modelId={modelId}
             onModelChange={setModelId}

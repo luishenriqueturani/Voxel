@@ -127,6 +127,7 @@ mod tests {
                     prompt: "ferreiro".to_owned(),
                     count: 2,
                     mesh: MeshMode::Later,
+                    template_id: None,
                     overrides: FlowOverrides::default(),
                 }],
             })

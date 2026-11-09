@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { type PromptTemplate, type TemplateDraft, updateTemplate } from "../../native/templates";
+import {
+  createTemplate,
+  type PromptTemplate,
+  type TemplateDraft,
+  updateTemplate,
+} from "../../native/templates";
 import { TemplatesView } from "./TemplatesView";
 
 const store = vi.hoisted(() => ({ rows: [] as PromptTemplate[] }));
@@ -46,50 +51,57 @@ vi.mock("../../native/templates", () => ({
 }));
 
 describe("biblioteca de templates", () => {
-  it("cria, duplica, renomeia, exclui e monta o prompt do item", async () => {
+  it("abre o cadastro vazio, guia a ênfase e grava ao salvar", async () => {
     store.rows = [];
     const user = userEvent.setup();
     render(<TemplatesView onBack={vi.fn()} />);
     expect(screen.getByText("Nenhum template")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Como escrever o template" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ênfase: destacar uma parte" })).toBeInTheDocument();
+    expect(screen.getByText(/Use \(ideia:1\.3\)/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Criar" }));
-    expect(
-      screen.getByRole("button", { name: "Novo template", pressed: true }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Prompt final" })).toBeInTheDocument();
-    expect(screen.getByText("ferreiro")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nome" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Texto base" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Prompt negativo" })).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Novo template" })).not.toBeInTheDocument();
+    expect(createTemplate).not.toHaveBeenCalled();
 
     const body = screen.getByRole("textbox", { name: "Texto base" });
-    await user.clear(body);
     await user.click(body);
-    await user.paste("{prompt}, T-pose");
+    await user.paste("T-pose");
+    await user.type(screen.getByRole("textbox", { name: "Item de exemplo" }), "ferreiro");
     expect(screen.getByText("ferreiro, T-pose")).toBeInTheDocument();
 
-    const name = screen.getByRole("textbox", { name: "Nome" });
-    await user.clear(name);
-    await user.type(name, "Personagem");
-    await user.click(screen.getByRole("button", { name: "Renomear" }));
+    await user.click(
+      screen.getByRole("checkbox", { name: "Colocar o texto base antes do prompt da geração" }),
+    );
+    expect(screen.getByText("T-pose, ferreiro")).toBeInTheDocument();
+
+    await user.type(screen.getByRole("textbox", { name: "Nome" }), "Personagem");
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(createTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Personagem",
+        body: "T-pose",
+        placement: "before",
+      }),
+    );
     expect(screen.getByRole("button", { name: "Personagem", pressed: true })).toBeInTheDocument();
-    await user.click(screen.getByRole("checkbox", { name: "Pós-processamento 3D" }));
+
+    await user.clear(screen.getByRole("textbox", { name: "Nome" }));
+    await user.type(screen.getByRole("textbox", { name: "Nome" }), "Herói");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     expect(updateTemplate).toHaveBeenCalledWith(
       "id-1",
-      expect.objectContaining({
-        name: "Personagem",
-        body: "{prompt}, T-pose",
-        model2d: "sd15",
-        model3d: "triposr",
-        postprocess: true,
-      }),
+      expect.objectContaining({ name: "Herói", body: "T-pose" }),
     );
 
     await user.click(screen.getByRole("button", { name: "Duplicar" }));
-    expect(
-      screen.getByRole("button", { name: "Personagem cópia", pressed: true }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Herói cópia", pressed: true })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Excluir" }));
-    expect(screen.queryByRole("button", { name: "Personagem cópia" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Personagem", pressed: true })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Herói cópia" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Herói", pressed: true })).toBeInTheDocument();
   });
 });

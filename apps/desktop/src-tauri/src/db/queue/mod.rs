@@ -11,9 +11,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 pub use types::{MeshPick, QueueItem, QueueJob, QueueOutput, QueueResolved, QueueThumb};
 use voxel_queue::{ItemProgress, ItemStatus};
 
-use super::Database;
 use super::flows::{FlowItem, MeshMode as FlowMesh};
-use super::templates::PromptTemplate;
+use super::{Database, PromptTemplate};
 use crate::output::unix_now;
 
 impl Database {
@@ -71,61 +70,35 @@ fn mesh_value(mode: FlowMesh) -> &'static str {
     }
 }
 
-fn resolve_item(template: Option<&PromptTemplate>, item: &FlowItem) -> QueueResolved {
-    let body = template.map_or("{prompt}", |template| template.body.as_str());
-    let negative = item
-        .overrides
-        .negative
-        .clone()
-        .or_else(|| template.map(|template| template.negative.clone()))
-        .unwrap_or_default();
+fn resolve_item(item: &FlowItem, template: Option<&PromptTemplate>) -> QueueResolved {
+    let item_negative = item.overrides.negative.clone().unwrap_or_default();
+    let (prompt, negative) = match template {
+        Some(template) => template.compose(&item.prompt, &item_negative),
+        None => (item.prompt.clone(), item_negative),
+    };
     QueueResolved {
-        prompt: body.replace("{prompt}", &item.prompt),
+        prompt,
         negative,
         model_2d: item
             .overrides
             .model_2d
             .clone()
-            .or_else(|| template.map(|template| template.model_2d.clone()))
             .unwrap_or_else(|| "sd15".to_owned()),
         model_3d: item
             .overrides
             .model_3d
             .clone()
-            .or_else(|| template.map(|template| template.model_3d.clone()))
             .unwrap_or_else(|| "triposr".to_owned()),
-        resolution: item
-            .overrides
-            .resolution
-            .or_else(|| template.map(|template| template.resolution))
-            .unwrap_or(512),
+        resolution: item.overrides.resolution.unwrap_or(512),
         aspect: item
             .overrides
             .aspect
             .clone()
-            .or_else(|| template.map(|template| template.aspect.clone()))
             .unwrap_or_else(|| "1:1".to_owned()),
-        steps: item
-            .overrides
-            .steps
-            .or_else(|| template.map(|template| template.steps))
-            .unwrap_or(20),
-        cfg: item
-            .overrides
-            .cfg
-            .or_else(|| template.map(|template| template.cfg))
-            .unwrap_or(7.0),
-        seed: item
-            .overrides
-            .seed
-            .clone()
-            .or_else(|| template.map(|template| template.seed.clone()))
-            .unwrap_or_default(),
-        postprocess: item
-            .overrides
-            .postprocess
-            .or_else(|| template.map(|template| template.postprocess))
-            .unwrap_or(false),
+        steps: item.overrides.steps.unwrap_or(20),
+        cfg: item.overrides.cfg.unwrap_or(7.0),
+        seed: item.overrides.seed.clone().unwrap_or_default(),
+        postprocess: item.overrides.postprocess.unwrap_or(false),
         count: item.count,
         mesh: mesh_value(item.mesh).to_owned(),
     }

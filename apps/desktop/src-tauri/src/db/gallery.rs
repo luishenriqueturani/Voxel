@@ -344,6 +344,7 @@ mod tests {
                     prompt: "ferreiro".to_owned(),
                     count: 1,
                     mesh: MeshMode::All,
+                    template_id: None,
                     overrides: crate::db::flows::FlowOverrides::default(),
                 }],
             })

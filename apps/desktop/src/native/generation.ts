@@ -137,6 +137,17 @@ export async function cancelGeneration(): Promise<void> {
   await invoke("cancel_generation");
 }
 
+export async function listenToGenerationProgress(
+  onProgress: (progress: GenerationProgress) => void,
+): Promise<() => void> {
+  if (!isTauri()) {
+    return () => undefined;
+  }
+  return listen<GenerationProgress>(GENERATION_EVENT, (event) => {
+    onProgress(event.payload);
+  });
+}
+
 export async function generateImage(
   request: GenerationRequest,
   onProgress: (progress: GenerationProgress) => void,

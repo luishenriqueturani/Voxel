@@ -1,6 +1,7 @@
 import { convertFileSrc, isTauri } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { promptLabel } from "../../lib/promptTitle";
 import { copyPreview, saveGeneratedImage } from "../../native/generation";
 import { loadPromptImages, type PromptEntry, type PromptImage } from "../../native/history";
 import { Button } from "../ui/button";
@@ -53,6 +54,7 @@ export function RecentPromptDialog({ entry, onClose, onRepeat, onError }: Recent
 
   const current = images[index] ?? null;
   const src = current === null ? null : viewerSrc(current.path);
+  const heading = promptLabel(entry);
   const negative =
     entry.negativePrompt.trim() === "" ? t("panel.recentNoNegative") : entry.negativePrompt;
 
@@ -72,8 +74,11 @@ export function RecentPromptDialog({ entry, onClose, onRepeat, onError }: Recent
       >
         <div className="flex w-80 shrink-0 flex-col gap-3 overflow-y-auto border-r border-zinc-200 p-4 dark:border-zinc-800">
           <h2 id="recent-prompt-title" className="text-base font-medium">
-            {entry.prompt}
+            {heading}
           </h2>
+          {heading === entry.prompt ? null : (
+            <p className="text-sm text-zinc-600 dark:text-zinc-300">{entry.prompt}</p>
+          )}
           <p>
             {t("panel.negative")}: {negative}
           </p>

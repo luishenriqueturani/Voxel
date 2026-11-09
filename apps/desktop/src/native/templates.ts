@@ -1,22 +1,19 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import type { PromptPlacement } from "../lib/templatePrompt";
 
 export type PromptTemplate = {
   id: string;
   name: string;
   body: string;
   negative: string;
-  model2d: string;
-  model3d: string;
-  resolution: number;
-  aspect: string;
-  steps: number;
-  cfg: number;
-  seed: string;
-  count: number;
-  postprocess: boolean;
+  placement: PromptPlacement;
 };
 
 export type TemplateDraft = Omit<PromptTemplate, "id">;
+
+function isPlacement(value: unknown): value is PromptPlacement {
+  return value === "before" || value === "after";
+}
 
 function isTemplate(value: unknown): value is PromptTemplate {
   if (typeof value !== "object" || value === null) {
@@ -28,15 +25,7 @@ function isTemplate(value: unknown): value is PromptTemplate {
     typeof template.name === "string" &&
     typeof template.body === "string" &&
     typeof template.negative === "string" &&
-    typeof template.model2d === "string" &&
-    typeof template.model3d === "string" &&
-    typeof template.resolution === "number" &&
-    typeof template.aspect === "string" &&
-    typeof template.steps === "number" &&
-    typeof template.cfg === "number" &&
-    typeof template.seed === "string" &&
-    typeof template.count === "number" &&
-    typeof template.postprocess === "boolean"
+    isPlacement(template.placement)
   );
 }
 

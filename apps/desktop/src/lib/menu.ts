@@ -60,7 +60,7 @@ export function actionForMenu(id: string): MenuEffect | null {
       return "import-model";
     case "models.openFolder":
       return "open-models-folder";
-    case "flows.templates":
+    case "file.templates":
       return "templates";
     case "file.newFlow":
       return "new-flow";

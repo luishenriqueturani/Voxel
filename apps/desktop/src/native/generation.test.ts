@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSlides, isCancelled } from "./generation";
+import { buildSlides, isCancelled, listenToGenerationProgress } from "./generation";
 
 describe("buildSlides", () => {
   it("guarda cada imagem pronta e usa a última prévia se o evento final se perder", () => {
@@ -25,5 +25,13 @@ describe("isCancelled", () => {
     expect(isCancelled(new Error('protocolo: 500: {"message":"cancelado"}'))).toBe(true);
     expect(isCancelled({ message: "cancelado" })).toBe(true);
     expect(isCancelled("modelo ausente")).toBe(false);
+  });
+});
+
+describe("listenToGenerationProgress", () => {
+  it("não escuta fora do aplicativo", async () => {
+    const stop = await listenToGenerationProgress(() => undefined);
+    expect(stop).toBeTypeOf("function");
+    stop();
   });
 });

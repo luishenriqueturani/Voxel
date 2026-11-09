@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectableModels } from "./modelChoice";
+import { selectableMeshModels, selectableModels } from "./modelChoice";
 
 describe("seletor de modelos", () => {
   it("mostra o instalado mesmo sem arquitetura e deixa malha e fundo de fora", () => {
@@ -47,5 +47,33 @@ describe("seletor de modelos", () => {
       { id: "sd15", name: "Stable Diffusion 1.5" },
       { id: "peso.safetensors", name: "peso.safetensors · arquitetura desconhecida" },
     ]);
+  });
+
+  it("lista só as malhas instaladas", () => {
+    expect(
+      selectableMeshModels([
+        {
+          id: "sd15",
+          name: "Stable Diffusion 1.5",
+          installed: true,
+          kind: "image",
+          architecture: null,
+        },
+        {
+          id: "triposr",
+          name: "TripoSR",
+          installed: true,
+          kind: "mesh",
+          architecture: null,
+        },
+        {
+          id: "sf3d",
+          name: "SF3D",
+          installed: false,
+          kind: "mesh",
+          architecture: null,
+        },
+      ]),
+    ).toEqual([{ id: "triposr", name: "TripoSR" }]);
   });
 });
