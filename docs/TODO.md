@@ -327,11 +327,11 @@ Uma semana de uso. O Voltar das configurações está no cabeçalho do conteúdo
 
 ### O que o SD 1.5 não cobre
 
-Coisas novas. A pasta de modelos vem primeiro: `~/.local/share/voxel/models` está enchendo o disco da home. O título por IA e as famílias além do SD 1.5 dependem de uma medição nesta máquina antes de entrar no app.
+Coisas novas. A pasta de modelos vem primeiro: `~/.local/share/voxel/models` está enchendo o disco da home. O título curto usa um GGUF leve se existir, senão o Ollama; a imagem não espera. As famílias além do SD 1.5 seguem o hardware: FP16 e INT8 entram, FP8 fica com ressalva, e a falta de VRAM não impede o usuário de tentar.
 
-- [ ] Escolher a pasta de modelos. O padrão continua o de hoje. A troca pergunta se move os arquivos já baixados. Download e importação usam a pasta escolhida
-- [ ] Título curto no prompt recente, lido por um modelo de texto antes da imagem. Medir primeiro um modelo leve em GGUF nesta máquina. Ollama fica para o caso de essa medição não achar caminho. A imagem não espera um título que falhou
-- [ ] Medir na RX 7600 o que o stable-diffusion.cpp já abre além do SD 1.5: SDXL, Flux quantizado e Qwen Image em INT8, FP16 ou GGUF, dentro dos 8 GB. Ligar as famílias que completam uma imagem. As que não cabem ficam no seletor com o motivo
+- [x] Escolher a pasta de modelos. O padrão continua o de hoje. A troca pergunta se move os arquivos já baixados. Download e importação usam a pasta escolhida
+- [x] Título curto no prompt recente, lido por um modelo de texto antes da imagem. Medir primeiro um modelo leve em GGUF nesta máquina. Ollama fica para o caso de essa medição não achar caminho. A imagem não espera um título que falhou
+- [x] Medir na RX 7600 o que o stable-diffusion.cpp já abre além do SD 1.5: SDXL, Flux quantizado e Qwen Image em INT8, FP16 ou GGUF, dentro dos 8 GB. Ligar as famílias que completam uma imagem. As que não cabem ficam no seletor com o motivo
 
 ---
 

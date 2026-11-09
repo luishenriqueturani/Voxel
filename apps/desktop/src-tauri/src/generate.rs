@@ -177,7 +177,11 @@ pub fn generate(
         choice.current.as_str()
     };
     let bins = discover();
-    let model = resolve_model(paths, &request.model_id, &bins)?;
+    let model = resolve_model(
+        &crate::models::folder(paths, database),
+        &request.model_id,
+        &bins,
+    )?;
     let cli = binary_for(&bins, backend).ok_or("sd-cli ausente")?;
     let limits = limits_of(request);
     let cli_path = cli.display().to_string();
@@ -226,6 +230,7 @@ pub fn generate(
         database
             .record_generation(&record_of(&metadata, &output))
             .map_err(|error| error.to_string())?;
+        crate::caption::schedule(database, paths, &request.prompt);
         let path = output.display().to_string();
         let _ = app.emit(
             "generation://progress",
@@ -415,8 +420,7 @@ fn record_of(metadata: &ImageMetadata, output: &Path) -> GenerationRecord {
     }
 }
 
-fn resolve_model(paths: &AppPaths, model_id: &str, bins: &SdBinaries) -> Result<PathBuf, String> {
-    let folder = paths.data.join("models");
+fn resolve_model(folder: &Path, model_id: &str, bins: &SdBinaries) -> Result<PathBuf, String> {
     if let Ok(catalog) = Catalog::bundled()
         && let Some(model) = catalog.models.iter().find(|model| model.id == model_id)
     {
@@ -430,7 +434,7 @@ fn resolve_model(paths: &AppPaths, model_id: &str, bins: &SdBinaries) -> Result<
     {
         return Ok(path.clone());
     }
-    crate::models::package_store::resolve_installed(&folder, model_id)
+    crate::models::package_store::resolve_installed(folder, model_id)
 }
 
 fn output_root() -> PathBuf {
@@ -534,12 +538,6 @@ mod tests {
         std::fs::create_dir_all(&models).unwrap();
         let file = models.join("local.safetensors");
         std::fs::write(&file, "peso").unwrap();
-        let paths = crate::paths::AppPaths {
-            config: root.join("config"),
-            data,
-            state: root.join("state"),
-            cache: root.join("cache"),
-        };
         let bins = crate::probe::SdBinaries {
             vulkan: None,
             rocm: None,
@@ -547,9 +545,9 @@ mod tests {
             cpu: None,
             model: None,
         };
-        let resolved = super::resolve_model(&paths, "local.safetensors", &bins).unwrap();
+        let resolved = super::resolve_model(&models, "local.safetensors", &bins).unwrap();
         assert_eq!(resolved, file);
-        assert!(super::resolve_model(&paths, "ausente", &bins).is_err());
+        assert!(super::resolve_model(&models, "ausente", &bins).is_err());
         let _ = std::fs::remove_dir_all(&root);
     }
 

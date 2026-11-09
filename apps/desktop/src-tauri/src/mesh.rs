@@ -94,7 +94,7 @@ pub(crate) fn from_image(
     let model = std::env::var("VOXEL_MESH_BACKEND").unwrap_or_else(|_| MESH_MODEL.to_owned());
     let inputs = views_for_model(measured_multiview_models(), &model, &ordered, &primary_path);
     let source = inputs.first().ok_or("vista principal ausente")?;
-    let cutout = cut_file(paths, source)?;
+    let cutout = cut_file(app, paths, source)?;
     let preview = encode_base64(&std::fs::read(&cutout).map_err(|error| error.to_string())?);
     let (glb, obj) = render(app, paths, &cutout)?;
     let folder = Path::new(&glb)
@@ -238,7 +238,7 @@ fn render(app: &AppHandle, paths: &AppPaths, cutout: &Path) -> Result<(String, S
     if !python.is_file() {
         return Err("ambiente 3D ausente".to_owned());
     }
-    let model = installed(paths, MESH_MODEL, "model.ckpt")?;
+    let model = installed(app, paths, MESH_MODEL, "model.ckpt")?;
     let prepared = process_env(backend_of(app, paths), current_isa().as_deref());
     let mut pairs = prepared.set;
     let sources = pythonpath(&worker_src()?, triposr_src().as_deref());
@@ -314,8 +314,13 @@ fn current_isa() -> Option<String> {
         .find_map(|gpu| gpu.isa)
 }
 
-fn installed(paths: &AppPaths, id: &str, filename: &str) -> Result<PathBuf, String> {
-    let folder = paths.data.join("models");
+fn installed(
+    app: &AppHandle,
+    paths: &AppPaths,
+    id: &str,
+    filename: &str,
+) -> Result<PathBuf, String> {
+    let folder = crate::models::folder_from(app, paths);
     if let Ok(catalog) = Catalog::bundled()
         && let Some(model) = catalog.models.iter().find(|model| model.id == id)
     {

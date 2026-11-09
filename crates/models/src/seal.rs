@@ -99,7 +99,7 @@ fn assess(backend: &BackendNeed, facts: &MachineFacts) -> Compatibility {
         {
             return Compatibility::Caveat(Reason::OffloadRam);
         }
-        return Compatibility::Incompatible(Reason::NeedsVram {
+        return Compatibility::Caveat(Reason::NeedsVram {
             required_bytes: required,
             available_bytes: facts.vram_bytes,
         });
@@ -121,7 +121,7 @@ fn assess(backend: &BackendNeed, facts: &MachineFacts) -> Compatibility {
 fn assess_cpu(backend: &BackendNeed, facts: &MachineFacts) -> Compatibility {
     let required = backend.min_ram_bytes.unwrap_or(0);
     if facts.ram_bytes < required {
-        return Compatibility::Incompatible(Reason::NeedsRam {
+        return Compatibility::Caveat(Reason::NeedsRam {
             required_bytes: required,
             available_bytes: facts.ram_bytes,
         });
@@ -148,7 +148,7 @@ fn fallback(model: &Model, facts: &MachineFacts) -> Compatibility {
         .filter_map(|backend| backend.min_vram_bytes)
         .min()
         .unwrap_or(0);
-    Compatibility::Incompatible(Reason::NeedsVram {
+    Compatibility::Caveat(Reason::NeedsVram {
         required_bytes: required,
         available_bytes: facts.vram_bytes,
     })
@@ -158,7 +158,9 @@ fn rank(outcome: &Compatibility) -> u8 {
     match outcome {
         Compatibility::Compatible => 0,
         Compatibility::Caveat(Reason::OffloadRam | Reason::ExperimentalAttention) => 1,
-        Compatibility::Caveat(Reason::UnprovenVram { .. }) => 2,
+        Compatibility::Caveat(
+            Reason::UnprovenVram { .. } | Reason::NeedsVram { .. } | Reason::NeedsRam { .. },
+        ) => 2,
         Compatibility::Caveat(_) => 3,
         Compatibility::Incompatible(_) => 4,
     }
@@ -278,7 +280,7 @@ mod tests {
         let nvidia = machine(8 * 1024 * 1024 * 1024, Some(GpuVendor::Nvidia), false, true);
         assert_eq!(
             compatibility(&model, &nvidia),
-            Compatibility::Incompatible(Reason::NeedsVram {
+            Compatibility::Caveat(Reason::NeedsVram {
                 required_bytes: 16_000_000_000,
                 available_bytes: 8 * 1024 * 1024 * 1024,
             })

@@ -22,7 +22,7 @@ pub fn estimate_by_size(bytes: u64, vram_bytes: u64) -> Compatibility {
     if bytes <= vram_bytes && vram_bytes > 0 {
         Compatibility::Compatible
     } else {
-        Compatibility::Incompatible(Reason::NeedsVram {
+        Compatibility::Caveat(Reason::NeedsVram {
             required_bytes: bytes,
             available_bytes: vram_bytes,
         })
@@ -191,19 +191,16 @@ mod tests {
     use crate::seal::{Compatibility, Reason};
 
     #[test]
-    fn o_tamanho_maior_que_a_vram_e_incompativel() {
+    fn o_tamanho_maior_que_a_vram_fica_com_ressalva() {
         assert_eq!(estimate_by_size(100, 1000), Compatibility::Compatible);
         assert_eq!(
             estimate_by_size(5_000, 1_000),
-            Compatibility::Incompatible(Reason::NeedsVram {
+            Compatibility::Caveat(Reason::NeedsVram {
                 required_bytes: 5_000,
                 available_bytes: 1_000,
             })
         );
-        assert!(matches!(
-            estimate_by_size(10, 0),
-            Compatibility::Incompatible(_)
-        ));
+        assert!(matches!(estimate_by_size(10, 0), Compatibility::Caveat(_)));
     }
 
     #[test]

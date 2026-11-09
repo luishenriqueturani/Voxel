@@ -404,7 +404,7 @@ mod tests {
             .iter()
             .find(|model| model.id == "local.safetensors")
             .unwrap();
-        assert_eq!(local.compatibility, "incompatible");
+        assert_eq!(local.compatibility, "caveat");
         remove_model(&models, "local.safetensors").unwrap();
         assert!(remove_model(&models, "../local.safetensors").is_err());
         let after = list_models(&models, &facts(10_000_000)).unwrap();

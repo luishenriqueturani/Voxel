@@ -1,4 +1,5 @@
 mod background;
+mod caption;
 mod db;
 mod debug_log;
 mod flows;
@@ -51,37 +52,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .setup(|app| {
-            let paths = AppPaths::from_env()?;
-            paths.create_all()?;
-            let app_log = AppLog::start(&paths.state.join("logs"), DEFAULT_RETENTION_DAYS)?;
-            app.manage(app_log);
-            let database = Database::open(&paths.data.join("voxel.db"))?;
-            database.migrate()?;
-            app.manage(database);
-            app.manage(paths);
-            app.manage(SetupGate::default());
-            app.manage(live_job::LiveJobs::default());
-            app.manage(python_env::Environment::default());
-            app.manage(queue_run::QueuePump::default());
-            let handle = app.handle().clone();
-            app.manage(Mutex::new(
-                std::thread::Builder::new()
-                    .name("voxel-queue".into())
-                    .spawn(move || queue_power::pump(&handle))?,
-            ));
-
-            let menu = build_menu(app.handle(), &default_labels())?;
-            app.set_menu(menu)?;
-            app.on_menu_event(|app, event| {
-                if event.id.0 == "file.quit" {
-                    app.exit(0);
-                    return;
-                }
-                let _ = app.emit("menu://action", event.id.0.clone());
-            });
-            Ok(())
-        })
+        .setup(|app| boot(app))
         .invoke_handler(tauri::generate_handler![
             set_menu_labels,
             get_settings,
@@ -117,6 +88,7 @@ pub fn run() {
             import_model,
             remove_model,
             models_directory,
+            set_models_directory,
             python_env::python_environment_status,
             python_env::note_3d_intent,
             python_env::await_python_environment,
@@ -149,6 +121,37 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar a aplicação Tauri");
+}
+
+fn boot(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let paths = AppPaths::from_env()?;
+    paths.create_all()?;
+    let app_log = AppLog::start(&paths.state.join("logs"), DEFAULT_RETENTION_DAYS)?;
+    app.manage(app_log);
+    let database = Database::open(&paths.data.join("voxel.db"))?;
+    database.migrate()?;
+    app.manage(database);
+    app.manage(paths);
+    app.manage(SetupGate::default());
+    app.manage(live_job::LiveJobs::default());
+    app.manage(python_env::Environment::default());
+    app.manage(queue_run::QueuePump::default());
+    let handle = app.handle().clone();
+    app.manage(Mutex::new(
+        std::thread::Builder::new()
+            .name("voxel-queue".into())
+            .spawn(move || queue_power::pump(&handle))?,
+    ));
+    let menu = build_menu(app.handle(), &default_labels())?;
+    app.set_menu(menu)?;
+    app.on_menu_event(|app, event| {
+        if event.id.0 == "file.quit" {
+            app.exit(0);
+            return;
+        }
+        let _ = app.emit("menu://action", event.id.0.clone());
+    });
+    Ok(())
 }
 
 #[tauri::command]
@@ -343,8 +346,12 @@ async fn download_model(
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
-fn list_models(paths: State<'_, AppPaths>) -> Result<Vec<models::ListedModel>, String> {
-    let mut listed = models::list_models(&paths.data.join("models"), &models::current_facts())?;
+fn list_models(
+    database: State<'_, Database>,
+    paths: State<'_, AppPaths>,
+) -> Result<Vec<models::ListedModel>, String> {
+    let mut listed =
+        models::list_models(&models::folder(&paths, &database), &models::current_facts())?;
     if discover().model.is_some()
         && let Some(model) = listed.iter_mut().find(|model| model.id == "sd15")
     {
@@ -355,10 +362,14 @@ fn list_models(paths: State<'_, AppPaths>) -> Result<Vec<models::ListedModel>, S
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
-fn import_model(paths: State<'_, AppPaths>, path: String) -> Result<models::ListedModel, String> {
+fn import_model(
+    database: State<'_, Database>,
+    paths: State<'_, AppPaths>,
+    path: String,
+) -> Result<models::ListedModel, String> {
     let facts = models::current_facts();
     models::import_model(
-        &paths.data.join("models"),
+        &models::folder(&paths, &database),
         std::path::Path::new(&path),
         &facts,
     )
@@ -366,12 +377,38 @@ fn import_model(paths: State<'_, AppPaths>, path: String) -> Result<models::List
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
-fn remove_model(paths: State<'_, AppPaths>, filename: String) -> Result<(), String> {
-    models::remove_model(&paths.data.join("models"), &filename)
+fn remove_model(
+    database: State<'_, Database>,
+    paths: State<'_, AppPaths>,
+    filename: String,
+) -> Result<(), String> {
+    models::remove_model(&models::folder(&paths, &database), &filename)
 }
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
-fn models_directory(paths: State<'_, AppPaths>) -> Result<String, String> {
-    models::ensure_models_dir(&paths.data.join("models")).map(|path| path.display().to_string())
+fn models_directory(
+    database: State<'_, Database>,
+    paths: State<'_, AppPaths>,
+) -> Result<String, String> {
+    models::ensure_models_dir(&models::folder(&paths, &database))
+        .map(|path| path.display().to_string())
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+async fn set_models_directory(
+    database: State<'_, Database>,
+    paths: State<'_, AppPaths>,
+    path: String,
+    move_files: bool,
+) -> Result<String, String> {
+    let database = database.inner().clone();
+    let paths = paths.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        models::set_folder(&paths, &database, std::path::Path::new(&path), move_files)
+            .map(|folder| folder.display().to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }

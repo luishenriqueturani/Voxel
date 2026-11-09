@@ -92,7 +92,7 @@ fn download(
     let token = database.hf_token().map_err(|error| error.to_string())?;
     let file = find_file(API, &choice.repo, &choice.filename, token.as_deref()).map_err(explain)?;
     let job = hub_job(&file, token.as_deref()).map_err(explain)?;
-    let dir = paths.data.join("models");
+    let dir = crate::models::folder(paths, database);
     let destination = package_store::hub_part_path(&dir, &file.repo, &file.filename)?;
     if !destination.is_file() {
         let id = format!("{}/{}", file.repo, file.filename);

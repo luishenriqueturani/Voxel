@@ -35,6 +35,8 @@ type SettingsViewProps = {
   onRemove: (filename: string) => void;
   onOpenFolder: () => void;
   onImport: () => void;
+  onFolderChanged?: () => void;
+  onFolderError?: (error: unknown) => void;
   onBack: () => void;
   environment: PythonProgress | null;
   onReinstallEnvironment: () => void;
@@ -59,6 +61,8 @@ export function SettingsView({
   onRemove,
   onOpenFolder,
   onImport,
+  onFolderChanged,
+  onFolderError,
   onBack,
   environment,
   onReinstallEnvironment,
@@ -170,6 +174,8 @@ export function SettingsView({
             onRemove={onRemove}
             onOpenFolder={onOpenFolder}
             onImport={onImport}
+            onFolderChanged={onFolderChanged}
+            onFolderError={onFolderError}
           />
         ) : section === "environment" ? (
           <EnvironmentSection

@@ -101,7 +101,8 @@ export function RecentPrompts({
     }
     return (
       entry.prompt.toLowerCase().includes(needle) ||
-      entry.negativePrompt.toLowerCase().includes(needle)
+      entry.negativePrompt.toLowerCase().includes(needle) ||
+      (entry.title ?? "").toLowerCase().includes(needle)
     );
   });
   const running =
@@ -146,7 +147,7 @@ export function RecentPrompts({
                   className="min-w-0 flex-1 truncate text-left text-sm"
                   onClick={() => setSelected(entry)}
                 >
-                  {entry.prompt}
+                  {entry.title && entry.title.trim() !== "" ? entry.title : entry.prompt}
                 </button>
                 <button
                   type="button"

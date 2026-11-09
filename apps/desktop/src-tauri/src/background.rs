@@ -59,14 +59,18 @@ fn open_image(app: &AppHandle, path: &str) -> Result<EditedImage, String> {
 }
 
 fn cut_image(app: &AppHandle, paths: &AppPaths, source: &str) -> Result<EditedImage, String> {
-    let output = cut_file(paths, Path::new(source))?;
+    let output = cut_file(app, paths, Path::new(source))?;
     let bytes = std::fs::read(&output).map_err(|error| error.to_string())?;
     emit_preview(app, &output, encode_base64(&bytes), true)
 }
 
-pub(crate) fn cut_file(paths: &AppPaths, source: &Path) -> Result<PathBuf, String> {
+pub(crate) fn cut_file(
+    app: &AppHandle,
+    paths: &AppPaths,
+    source: &Path,
+) -> Result<PathBuf, String> {
     let output = voxel_imaging::sibling_cutout(source);
-    voxel_imaging::remove_background(&u2net_path(paths)?, source, &output)
+    voxel_imaging::remove_background(&u2net_path(app, paths)?, source, &output)
         .map_err(|error| error.to_string())?;
     Ok(output)
 }
@@ -90,8 +94,8 @@ fn emit_preview(
     Ok(EditedImage { path, transparent })
 }
 
-fn u2net_path(paths: &AppPaths) -> Result<PathBuf, String> {
-    let folder = paths.data.join("models");
+fn u2net_path(app: &AppHandle, paths: &AppPaths) -> Result<PathBuf, String> {
+    let folder = crate::models::folder_from(app, paths);
     if let Ok(catalog) = Catalog::bundled()
         && let Some(model) = catalog.models.iter().find(|model| model.id == "u2net")
     {

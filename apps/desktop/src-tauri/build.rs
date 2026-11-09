@@ -35,6 +35,7 @@ fn main() {
             "import_model",
             "remove_model",
             "models_directory",
+            "set_models_directory",
             "python_environment_status",
             "note_3d_intent",
             "await_python_environment",

@@ -10,6 +10,7 @@ export type PromptEntry = {
   cfg: number;
   seed: number;
   pinned: boolean;
+  title?: string;
 };
 
 export type GalleryKind = "image" | "mesh";

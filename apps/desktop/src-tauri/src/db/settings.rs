@@ -96,6 +96,7 @@ pub struct UserSettings {
     pub theme: Option<Theme>,
     pub inhibit_sleep: bool,
     pub queue_finish: QueueFinish,
+    pub models_dir: Option<String>,
 }
 
 impl Default for UserSettings {
@@ -105,6 +106,7 @@ impl Default for UserSettings {
             theme: None,
             inhibit_sleep: true,
             queue_finish: QueueFinish::None,
+            models_dir: None,
         }
     }
 }
@@ -116,6 +118,7 @@ pub struct SettingsUpdate {
     pub theme: Option<Theme>,
     pub inhibit_sleep: Option<bool>,
     pub queue_finish: Option<QueueFinish>,
+    pub models_dir: Option<String>,
 }
 
 impl Database {
@@ -134,6 +137,7 @@ impl Database {
                 .as_deref()
                 .and_then(QueueFinish::parse)
                 .unwrap_or(QueueFinish::None),
+            models_dir: self.get("models_dir")?.filter(|value| !value.is_empty()),
         })
     }
 
@@ -155,7 +159,38 @@ impl Database {
         if let Some(finish) = update.queue_finish {
             self.set("queue_finish", finish.as_str())?;
         }
+        if let Some(models_dir) = &update.models_dir {
+            self.set_models_dir(if models_dir.is_empty() {
+                None
+            } else {
+                Some(models_dir.as_str())
+            })?;
+        }
         self.settings()
+    }
+
+    /// Pasta de modelos escolhida, se não for a padrão.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn models_dir(&self) -> Result<Option<String>, DbError> {
+        Ok(self.get("models_dir")?.filter(|value| !value.is_empty()))
+    }
+
+    /// Grava ou esquece a pasta de modelos.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a escrita falhar.
+    pub fn set_models_dir(&self, path: Option<&str>) -> Result<(), DbError> {
+        if let Some(value) = path.map(str::trim).filter(|value| !value.is_empty()) {
+            self.set("models_dir", value)
+        } else {
+            let connection = self.lock()?;
+            connection.execute("DELETE FROM settings WHERE key = ?1", ["models_dir"])?;
+            Ok(())
+        }
     }
 
     /// Inibe suspensão enquanto a fila gera, salvo se o usuário desligou.

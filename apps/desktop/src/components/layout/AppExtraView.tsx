@@ -105,6 +105,10 @@ export function AppExtraView({
           }
         });
       }}
+      onFolderChanged={() => {
+        void loadModels().then(setLibrary);
+      }}
+      onFolderError={reportFailure}
       onBack={onWorkspace}
       environment={environment}
       onReinstallEnvironment={() => {

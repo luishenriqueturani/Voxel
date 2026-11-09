@@ -194,6 +194,22 @@ export async function modelsDirectory(): Promise<string | null> {
   return typeof value === "string" ? value : null;
 }
 
+export async function pickModelsDirectory(title: string): Promise<string | null> {
+  if (!isTauri()) {
+    return null;
+  }
+  const selected = await open({ directory: true, multiple: false, title });
+  return typeof selected === "string" ? selected : null;
+}
+
+export async function setModelsDirectory(path: string, moveFiles: boolean): Promise<string | null> {
+  if (!isTauri()) {
+    return path;
+  }
+  const value = await invoke("set_models_directory", { path, moveFiles });
+  return typeof value === "string" ? value : null;
+}
+
 export async function importLocalModel(): Promise<boolean> {
   if (!isTauri()) {
     return false;

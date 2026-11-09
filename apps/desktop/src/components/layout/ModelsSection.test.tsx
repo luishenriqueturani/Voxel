@@ -28,9 +28,7 @@ const incompatible: ListedModel = {
   catalog: true,
   compatibility: "incompatible",
   reason: {
-    code: "needs_vram",
-    requiredBytes: 20_000_000_000,
-    availableBytes: 8_000_000_000,
+    code: "requires_cuda",
   },
   architecture: null,
   kind: "image",
@@ -165,15 +163,58 @@ describe("gerenciador de modelos", () => {
     await user.click(screen.getByRole("checkbox", { name: "Mostrar modelos incompatíveis" }));
     await user.click(screen.getByRole("button", { name: "Baixar Enorme" }));
     expect(screen.getByText("Licença de teste")).toBeInTheDocument();
-    expect(screen.getByText(/incompatível com este computador/)).toBeInTheDocument();
+    expect(screen.getByText(/recurso que esta máquina não tem/)).toBeInTheDocument();
     const confirm = screen.getByRole("button", { name: "Baixar mesmo assim" });
     expect(confirm).toBeDisabled();
     expect(onDownload).not.toHaveBeenCalled();
     await user.click(
-      screen.getByRole("checkbox", { name: "Entendi que este modelo não roda neste computador." }),
+      screen.getByRole("checkbox", {
+        name: "Entendi que este modelo pode não rodar neste computador.",
+      }),
     );
     await user.click(confirm);
     expect(onDownload).toHaveBeenCalledWith("huge");
+  });
+
+  it("mostra a ressalva de memória e baixa sem confirmação extra", async () => {
+    const user = userEvent.setup();
+    const onDownload = vi.fn();
+    const caveat: ListedModel = {
+      id: "sdxl",
+      name: "SDXL",
+      license: "OpenRAIL++",
+      bytes: 7_000_000_000,
+      filename: "sdxl.safetensors",
+      installed: false,
+      catalog: true,
+      compatibility: "caveat",
+      reason: {
+        code: "needs_vram",
+        requiredBytes: 16_000_000_000,
+        availableBytes: 8_000_000_000,
+      },
+      architecture: null,
+      kind: "image",
+    };
+    render(
+      <ModelsSection
+        hfTokenConfigured={false}
+        onHfTokenSave={vi.fn()}
+        onHfTokenClear={vi.fn()}
+        models={[compatible, caveat]}
+        onDownload={onDownload}
+        onRemove={vi.fn()}
+        onOpenFolder={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("SDXL")).toBeInTheDocument();
+    expect(screen.getByText(/Com ressalvas — Requer .* de VRAM/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Baixar SDXL" }));
+    expect(screen.getByRole("button", { name: "Confirmar download" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Baixar mesmo assim" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Confirmar download" }));
+    expect(onDownload).toHaveBeenCalledWith("sdxl");
   });
 
   it("remove um modelo importado e abre a pasta", async () => {

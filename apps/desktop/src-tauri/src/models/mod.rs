@@ -1,3 +1,4 @@
+pub(crate) mod dir;
 pub(crate) mod hub_cmd;
 mod library;
 pub(crate) mod package_store;
@@ -8,6 +9,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use voxel_models::{Catalog, Compatibility, MachineFacts, compatibility, fetch, prepare_download};
 
+pub use dir::{folder, folder_from, set_folder};
 pub use library::{
     ListedModel, current_facts, ensure_models_dir, import_model, list_models, remove_model,
 };
@@ -95,7 +97,7 @@ pub fn download(
 ) -> Result<String, String> {
     allow_download(model_id, &current_facts(), confirmed)?;
     let job = job_for(database, model_id)?;
-    let destination = paths.data.join("models").join(file_name(model_id)?);
+    let destination = folder(paths, database).join(file_name(model_id)?);
     let id = model_id.to_owned();
     let mut emitted: Option<Instant> = None;
     fetch(&job, &destination, |phase, received, total| {
@@ -154,7 +156,7 @@ mod tests {
     }
 
     #[test]
-    fn sem_confirmacao_o_incompativel_nao_passa() {
+    fn a_falta_de_vram_nao_bloqueia_o_download() {
         let facts = MachineFacts {
             vram_bytes: 0,
             ram_bytes: 0,
@@ -163,10 +165,6 @@ mod tests {
             rocm: false,
             cuda: false,
         };
-        assert_eq!(
-            allow_download("sd15", &facts, false).unwrap_err(),
-            "confirmação ausente"
-        );
-        assert!(allow_download("sd15", &facts, true).is_ok());
+        assert!(allow_download("sd15", &facts, false).is_ok());
     }
 }

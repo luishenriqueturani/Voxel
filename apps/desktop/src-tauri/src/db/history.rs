@@ -1,5 +1,6 @@
 //! Prompts recentes e favoritos.
 
+use rusqlite::OptionalExtension;
 use serde::{Deserialize, Serialize};
 
 use super::{Database, DbError};
@@ -20,6 +21,8 @@ pub struct PromptEntry {
     pub cfg: f64,
     pub seed: i64,
     pub pinned: bool,
+    #[serde(default)]
+    pub title: String,
 }
 
 /// Imagem de um prompt que ainda pode ser aberta.
@@ -113,6 +116,37 @@ impl Database {
         Ok(())
     }
 
+    /// Título curto já gerado para este prompt, se existir.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a leitura do banco falhar.
+    pub fn prompt_title(&self, prompt: &str) -> Result<Option<String>, DbError> {
+        let connection = self.lock()?;
+        let title: Option<String> = connection
+            .query_row(
+                "SELECT title FROM prompt_titles WHERE prompt = ?1",
+                [prompt],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(title.filter(|value| !value.is_empty()))
+    }
+
+    /// Grava o título curto. A imagem já pode ter saído.
+    ///
+    /// # Errors
+    ///
+    /// Falha se a escrita do banco falhar.
+    pub fn set_prompt_title(&self, prompt: &str, title: &str) -> Result<(), DbError> {
+        self.lock()?.execute(
+            "INSERT INTO prompt_titles (prompt, title, created_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(prompt) DO UPDATE SET title = excluded.title, created_at = excluded.created_at",
+            (prompt, title, utc_timestamp(unix_now())),
+        )?;
+        Ok(())
+    }
+
     /// Imagens da geração mais recente desse prompt que ainda estão no disco.
     ///
     /// # Errors
@@ -149,9 +183,11 @@ impl Database {
     fn favorites(&self) -> Result<Vec<PromptEntry>, DbError> {
         let connection = self.lock()?;
         let mut statement = connection.prepare(
-            "SELECT prompt, negative_prompt, model_id, steps, width, height, cfg, seed
-             FROM favorites
-             ORDER BY id DESC",
+            "SELECT f.prompt, f.negative_prompt, f.model_id, f.steps, f.width, f.height, f.cfg, f.seed,
+                    COALESCE(t.title, '')
+             FROM favorites f
+             LEFT JOIN prompt_titles t ON t.prompt = f.prompt
+             ORDER BY f.id DESC",
         )?;
         let rows = statement
             .query_map([], |row| map_prompt(row, true))?
@@ -162,13 +198,15 @@ impl Database {
     fn latest_prompts(&self, limit: i64) -> Result<Vec<PromptEntry>, DbError> {
         let connection = self.lock()?;
         let mut statement = connection.prepare(
-            "SELECT prompt, COALESCE(negative_prompt, ''), model_id, steps, width, height, cfg, seed
-             FROM generations
-             WHERE id IN (
+            "SELECT g.prompt, COALESCE(g.negative_prompt, ''), g.model_id, g.steps, g.width, g.height, g.cfg, g.seed,
+                    COALESCE(t.title, '')
+             FROM generations g
+             LEFT JOIN prompt_titles t ON t.prompt = g.prompt
+             WHERE g.id IN (
                  SELECT MAX(id) FROM generations
                  GROUP BY prompt, COALESCE(negative_prompt, ''), model_id, steps, width, height, cfg
              )
-             ORDER BY id DESC
+             ORDER BY g.id DESC
              LIMIT ?1",
         )?;
         let rows = statement
@@ -193,6 +231,7 @@ fn map_prompt(row: &rusqlite::Row<'_>, pinned: bool) -> rusqlite::Result<PromptE
         cfg: row.get(6)?,
         seed: row.get(7)?,
         pinned,
+        title: row.get(8).unwrap_or_default(),
     })
 }
 
@@ -266,6 +305,7 @@ mod tests {
             cfg: 7.0,
             seed,
             pinned: false,
+            title: String::new(),
         }
     }
 
@@ -282,6 +322,12 @@ mod tests {
         assert_eq!(recent[0].prompt, "casa");
         assert_eq!(recent[1].prompt, "gato");
         assert_eq!(recent[1].seed, 2);
+        database
+            .set_prompt_title("gato", "felino no telhado")
+            .unwrap();
+        let titled = database.recent_prompts().unwrap();
+        let gato = titled.iter().find(|item| item.prompt == "gato").unwrap();
+        assert_eq!(gato.title, "felino no telhado");
     }
 
     #[test]

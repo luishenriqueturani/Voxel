@@ -127,6 +127,16 @@ describe("RecentPrompts", () => {
     expect(screen.queryByRole("button", { name: "Ver o restante" })).not.toBeInTheDocument();
   });
 
+  it("mostra o título curto no lugar do prompt", async () => {
+    vi.mocked(loadRecentPrompts).mockResolvedValue([{ ...gato, title: "felino no telhado" }]);
+    renderList();
+    expect(await screen.findByRole("button", { name: "felino no telhado" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "felino no telhado" })).toHaveAttribute(
+      "title",
+      "um gato",
+    );
+  });
+
   it("filtra pela busca e fixa o prompt", async () => {
     vi.mocked(loadRecentPrompts).mockResolvedValue([gato, casa]);
     renderList();

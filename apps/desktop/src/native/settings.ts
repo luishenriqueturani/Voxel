@@ -8,6 +8,7 @@ export type StoredSettings = {
   theme: Theme | null;
   inhibitSleep: boolean;
   queueFinish: QueueFinish;
+  modelsDir?: string | null;
 };
 
 export type SettingsUpdate = {
@@ -15,6 +16,7 @@ export type SettingsUpdate = {
   theme?: Theme;
   inhibitSleep?: boolean;
   queueFinish?: QueueFinish;
+  modelsDir?: string | null;
 };
 
 export async function loadStoredSettings(): Promise<StoredSettings | null> {

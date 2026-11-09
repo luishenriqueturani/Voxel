@@ -3,6 +3,11 @@ import { useTranslation } from "react-i18next";
 import type { DownloadProgress, HubPackage, ListedModel, ListedReason } from "../../native/models";
 import { Button } from "../ui/button";
 import { HubSearch } from "./HubSearch";
+import { ModelsFolder } from "./ModelsFolder";
+
+function ignoreFolderError(_error: unknown) {
+  return undefined;
+}
 
 type ModelsSectionProps = {
   hfTokenConfigured: boolean;
@@ -17,6 +22,8 @@ type ModelsSectionProps = {
   onImport: () => void;
   onSearchHub?: (query: string) => Promise<HubPackage[]>;
   onDownloadHub?: (pkg: HubPackage) => Promise<void> | void;
+  onFolderChanged?: () => void;
+  onFolderError?: (error: unknown) => void;
 };
 
 export function ModelsSection({
@@ -32,6 +39,8 @@ export function ModelsSection({
   onImport,
   onSearchHub,
   onDownloadHub,
+  onFolderChanged,
+  onFolderError = ignoreFolderError,
 }: ModelsSectionProps) {
   const { t } = useTranslation();
   const [tokenDraft, setTokenDraft] = useState("");
@@ -81,6 +90,7 @@ export function ModelsSection({
             {t("models.openFolder")}
           </Button>
         </div>
+        <ModelsFolder onChanged={onFolderChanged} onError={onFolderError} />
         <section className="flex flex-col gap-3">
           <h3 className="font-medium">{t("models.downloaded")}</h3>
           {downloaded.length === 0 ? (
